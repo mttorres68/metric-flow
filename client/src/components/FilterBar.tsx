@@ -1,8 +1,9 @@
 /*
  * MetricFlow — FilterBar Component
- * Design: Pastel Command Center — barra de filtros com gerente, revenda, vendedor, status e data
+ * Inclui botão de acesso ao ConfigPanel de regras de negócio.
  */
 
+import { ConfigPanel, ConfigMetricas } from "@/components/ConfigPanel";
 import { Calendar, ChevronDown, Filter, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
@@ -21,6 +22,11 @@ interface FilterBarProps {
   onDataInicioChange: (d: string | undefined) => void;
   onDataFimChange: (d: string | undefined) => void;
   onReset: () => void;
+  // Config de métricas — gerenciado pelo hook useConfigMetricas no Home
+  config: ConfigMetricas;
+  onApply: (next: ConfigMetricas) => void;
+  onConfigReset: () => void;
+  isConfigDirty: boolean;
 }
 
 export default function FilterBar({
@@ -37,42 +43,28 @@ export default function FilterBar({
   onDataInicioChange,
   onDataFimChange,
   onReset,
+  config,
+  onApply,
+  onConfigReset,
+  isConfigDirty,
 }: FilterBarProps) {
   const { data: vendedores = [] } = trpc.dashboard.getVendedores.useQuery();
-  const { data: gerentes = [] } = trpc.dashboard.getGerentes.useQuery();
-  const { data: revendas = [] } = trpc.dashboard.getRevendas.useQuery();
-  const { data: dateRange } = trpc.dashboard.getDateRange.useQuery();
+  const { data: gerentes = [] }   = trpc.dashboard.getGerentes.useQuery();
+  const { data: revendas = [] }   = trpc.dashboard.getRevendas.useQuery();
+  const { data: dateRange }       = trpc.dashboard.getDateRange.useQuery();
 
   const [dataInicio, setDataInicio] = useState(filtroDataInicio || "");
-  const [dataFim, setDataFim] = useState(filtroDataFim || "");
+  const [dataFim, setDataFim]       = useState(filtroDataFim || "");
 
-  useEffect(() => {
-    setDataInicio(filtroDataInicio || "");
-  }, [filtroDataInicio]);
-
-  useEffect(() => {
-    setDataFim(filtroDataFim || "");
-  }, [filtroDataFim]);
-
-  const handleDataInicioChange = (value: string) => {
-    setDataInicio(value);
-    onDataInicioChange(value || undefined);
-  };
-
-  const handleDataFimChange = (value: string) => {
-    setDataFim(value);
-    onDataFimChange(value || undefined);
-  };
+  useEffect(() => { setDataInicio(filtroDataInicio || ""); }, [filtroDataInicio]);
+  useEffect(() => { setDataFim(filtroDataFim || ""); },       [filtroDataFim]);
 
   return (
     <div
       className="bg-white rounded-2xl px-5 py-3.5 flex flex-wrap items-center gap-3"
-      style={{
-        border: "1px solid oklch(0.93 0.006 240)",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-      }}
+      style={{ border: "1px solid oklch(0.93 0.006 240)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
     >
-      {/* Filtro Data Início */}
+      {/* Data Início */}
       <div className="flex items-center gap-2">
         <Calendar className="w-4 h-4 text-slate-400" />
         <span className="text-xs font-700 text-slate-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>
@@ -81,7 +73,7 @@ export default function FilterBar({
         <input
           type="date"
           value={dataInicio}
-          onChange={(e) => handleDataInicioChange(e.target.value)}
+          onChange={(e) => { setDataInicio(e.target.value); onDataInicioChange(e.target.value || undefined); }}
           min={dateRange?.minDate}
           max={dateRange?.maxDate}
           className="pl-3 pr-3 py-1.5 rounded-xl text-sm font-600 text-slate-700 bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
@@ -89,7 +81,7 @@ export default function FilterBar({
         />
       </div>
 
-      {/* Filtro Data Fim */}
+      {/* Data Fim */}
       <div className="flex items-center gap-2">
         <span className="text-xs font-700 text-slate-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>
           Data Fim
@@ -97,7 +89,7 @@ export default function FilterBar({
         <input
           type="date"
           value={dataFim}
-          onChange={(e) => handleDataFimChange(e.target.value)}
+          onChange={(e) => { setDataFim(e.target.value); onDataFimChange(e.target.value || undefined); }}
           min={dateRange?.minDate}
           max={dateRange?.maxDate}
           className="pl-3 pr-3 py-1.5 rounded-xl text-sm font-600 text-slate-700 bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
@@ -107,37 +99,27 @@ export default function FilterBar({
 
       <div className="w-px h-6 bg-slate-100" />
 
-      {/* Filtro Gerente */}
+      {/* Gerente */}
       <div className="flex items-center gap-2">
         <Filter className="w-4 h-4 text-slate-400" />
-        <span className="text-xs font-700 text-slate-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>
-          Gerente
-        </span>
+        <span className="text-xs font-700 text-slate-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>Gerente</span>
         <div className="relative">
           <select
             value={filtroGerente !== undefined ? String(filtroGerente) : "todos"}
-            onChange={(e) =>
-              onGerenteChange(e.target.value === "todos" ? undefined : Number(e.target.value))
-            }
+            onChange={(e) => onGerenteChange(e.target.value === "todos" ? undefined : Number(e.target.value))}
             className="appearance-none pl-3 pr-8 py-1.5 rounded-xl text-sm font-600 text-slate-700 bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
             style={{ fontWeight: 600 }}
           >
             <option value="todos">Todos</option>
-            {gerentes.map((g) => (
-              <option key={g.id} value={String(g.id)}>
-                {g.label}
-              </option>
-            ))}
+            {gerentes.map((g) => <option key={g.id} value={String(g.id)}>{g.label}</option>)}
           </select>
           <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
       </div>
 
-      {/* Filtro Revenda */}
+      {/* Revenda */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-700 text-slate-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>
-          Revenda
-        </span>
+        <span className="text-xs font-700 text-slate-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>Revenda</span>
         <div className="relative">
           <select
             value={filtroRevenda || "todos"}
@@ -146,21 +128,15 @@ export default function FilterBar({
             style={{ fontWeight: 600 }}
           >
             <option value="todos">Todas</option>
-            {revendas.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.label}
-              </option>
-            ))}
+            {revendas.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
           </select>
           <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
       </div>
 
-      {/* Filtro Vendedor */}
+      {/* Vendedor */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-700 text-slate-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>
-          Vendedor
-        </span>
+        <span className="text-xs font-700 text-slate-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>Vendedor</span>
         <div className="relative">
           <select
             value={filtroVendedor || "todos"}
@@ -169,21 +145,15 @@ export default function FilterBar({
             style={{ fontWeight: 600 }}
           >
             <option value="todos">Todos</option>
-            {vendedores.map((v) => (
-              <option key={v.id} value={String(v.id)}>
-                {v.label}
-              </option>
-            ))}
+            {vendedores.map((v) => <option key={v.id} value={String(v.id)}>{v.label}</option>)}
           </select>
           <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
       </div>
 
-      {/* Filtro Status */}
+      {/* Status */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-700 text-slate-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>
-          Status
-        </span>
+        <span className="text-xs font-700 text-slate-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>Status</span>
         <div className="relative">
           <select
             value={filtroStatus || "todos"}
@@ -200,7 +170,7 @@ export default function FilterBar({
         </div>
       </div>
 
-      {/* Botão Limpar */}
+      {/* Ações — agrupadas na direita */}
       <div className="flex items-center gap-2 ml-auto">
         <button
           onClick={onReset}
@@ -210,6 +180,17 @@ export default function FilterBar({
           <RefreshCw className="w-3.5 h-3.5" />
           Limpar
         </button>
+
+        {/* Separador */}
+        <div className="w-px h-5 bg-slate-100" />
+
+        {/* Botão de configurações — abre o ConfigPanel */}
+        <ConfigPanel
+          config={config}
+          onApply={onApply}
+          onReset={onConfigReset}
+          isDirty={isConfigDirty}
+        />
       </div>
     </div>
   );
