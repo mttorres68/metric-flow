@@ -1,36 +1,41 @@
 /*
  * MetricFlow — Metrics Calculator Service
- * Implementa a lógica de cálculo de métricas do código Python
+ * Inteligência de Negócio espelhada do metrics_calculator.py
  */
 
 import { ProcessedVisita } from "./googleSheetsService";
-import { REPORT_CONFIG } from "../config";
 
+// Configurações Globais de Regras de Negócio (Baseado no config.py)
+const CONFIG = {
+  DIST_LIMIT: 300, // metros
+  SHORT_VISIT_MINUTES: 3, // minutos
+  START_THRESHOLD: 8 * 60 + 45, // 08:45 em minutos
+  END_THRESHOLD: 15 * 60, // 15:00 em minutos
+  LUNCH_START: 12 * 60 + 15, // 12:15 em minutos
+  LUNCH_END: 13 * 60 + 45, // 13:45 em minutos
+  AFTERNOON_START: 14 * 60, // 14:00 em minutos
+};
+
+// --- Tipagens Atualizadas ---
 export interface KPIs {
   receita_total: number;
-  receita_trend: number;
-  clientes_visitados: number;
   taxa_conversao: number;
+  clientes_unicos_visitados: number;
+  cobertura_perc: number;
+  visitas_curtas_perc: number;
+  visitas_adequadas_perc: number;
   tempo_medio_visita: number;
-  distancia_total: number;
+  distancia_total_km: number;
+  visitas_almoco: number;
+  visitas_tarde_perc: number;
+  visitas_curtas_count: number;
+  visitas_com_duracao_valida: number;
 }
 
 export interface GraficoData {
-  evolucao_horaria: Array<{
-    hora: string;
-    acumulado: number;
-    visitas: number;
-  }>;
-  vendedores: Array<{
-    vendedor: string;
-    clientes: number;
-    receita: number;
-  }>;
-  motivos_nao_venda: Array<{
-    motivo: string;
-    quantidade: number;
-    cor: string;
-  }>;
+  evolucao_horaria: Array<{ hora: string; acumulado: number; visitas: number }>;
+  vendedores: Array<{ vendedor: string; clientes: number; receita: number; curtas_perc: number }>;
+  motivos_nao_venda: Array<{ motivo: string; quantidade: number; cor: string }>;
 }
 
 export interface DashboardMetrics {
@@ -39,152 +44,190 @@ export interface DashboardMetrics {
   graficos: GraficoData;
 }
 
-export function calcularKPIs(visitas: ProcessedVisita[]): KPIs {
-  const visitasConvertidas = visitas.filter((v) => v.status === "convertido");
-  const receitaTotal = visitasConvertidas.reduce((sum, v) => sum + v.valorNumerico, 0);
-  const clientesUnicos = new Set(visitas.map((v) => v.codCliente)).size;
-  const taxaConversao = visitas.length > 0 ? (visitasConvertidas.length / visitas.length) * 100 : 0;
+// --- Funções Auxiliares (Iguais ao Python) ---
 
-  // Calcular tempo médio de visita
-  let tempoTotalMinutos = 0;
-  let visitasComTempo = 0;
-  for (const v of visitas) {
-    if (v.tempoVisita && v.tempoVisita !== "ND") {
-      const [horas, minutos] = v.tempoVisita.split(":").map(Number);
-      if (!isNaN(horas) && !isNaN(minutos)) {
-        tempoTotalMinutos += horas * 60 + minutos;
-        visitasComTempo++;
-      }
-    }
-  }
-  const tempoMedio = visitasComTempo > 0 ? tempoTotalMinutos / visitasComTempo : 0;
-
-  // Calcular distância total (simplificado)
-  let distanciaTotal = 0;
-  for (const v of visitas) {
-    if (v.distR && v.distR !== "ND") {
-      const dist = parseFloat(String(v.distR).replace(",", "."));
-      if (!isNaN(dist)) {
-        distanciaTotal += dist;
-      }
-    }
-  }
-
-  return {
-    receita_total: receitaTotal,
-    receita_trend: 12.4, // Valor fixo por enquanto
-    clientes_visitados: clientesUnicos,
-    taxa_conversao: taxaConversao,
-    tempo_medio_visita: tempoMedio,
-    distancia_total: distanciaTotal / 1000, // Converter para km
-  };
+function parseDistance(distStr: any): number {
+  if (!distStr || distStr === "ND") return 0;
+  const limpo = String(distStr).replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, "");
+  const val = parseFloat(limpo);
+  return isNaN(val) ? 0 : val;
 }
 
-export function calcularGraficos(visitas: ProcessedVisita[]): GraficoData {
-  // Evolução horária
-  const evolucaoPorHora: Record<string, { acumulado: number; visitas: number }> = {};
-  let acumulado = 0;
-
-  for (const v of visitas) {
-    if (v.horaInicio && v.horaInicio !== "ND") {
-      const hora = v.horaInicio.substring(0, 5); // HH:MM
-      if (!evolucaoPorHora[hora]) {
-        evolucaoPorHora[hora] = { acumulado: 0, visitas: 0 };
-      }
-      acumulado += v.valorNumerico;
-      evolucaoPorHora[hora].acumulado = acumulado;
-      evolucaoPorHora[hora].visitas += 1;
-    }
+function parseTimeToMinutes(timeStr: any): number | null {
+  if (!timeStr || timeStr === "ND") return null;
+  const partes = String(timeStr).split(":");
+  if (partes.length >= 2) {
+    const horas = parseInt(partes[0], 10);
+    const minutos = parseInt(partes[1], 10);
+    if (!isNaN(horas) && !isNaN(minutos)) return horas * 60 + minutos;
   }
-
-  const evolucao_horaria = Object.entries(evolucaoPorHora)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([hora, data]) => ({
-      hora,
-      acumulado: data.acumulado,
-      visitas: data.visitas,
-    }));
-
-  // Clientes por vendedor
-  const vendedorMap: Record<number, { clientes: number; receita: number }> = {};
-  const clientesPorVendedor: Record<number, Set<number>> = {};
-
-  for (const v of visitas) {
-    if (!vendedorMap[v.vendedor]) {
-      vendedorMap[v.vendedor] = { clientes: 0, receita: 0 };
-      clientesPorVendedor[v.vendedor] = new Set();
-    }
-    clientesPorVendedor[v.vendedor].add(v.codCliente);
-    vendedorMap[v.vendedor].receita += v.valorNumerico;
-  }
-
-  const vendedores = Object.entries(vendedorMap)
-    .map(([vendedor, data]) => ({
-      vendedor: `V0${vendedor}`,
-      clientes: clientesPorVendedor[Number(vendedor)].size,
-      receita: data.receita,
-    }))
-    .sort((a, b) => b.clientes - a.clientes);
-
-  // Motivos de não venda
-  const motivosMap: Record<string, number> = {};
-  const cores: Record<string, string> = {
-    "Sem dinheiro": "#FF6B6B",
-    "Recusou a compra": "#FFA500",
-    "Estoque cheio": "#4ECDC4",
-    "Comprou em adega": "#95E1D3",
-    "Pedido via HeiShop": "#C7CEEA",
-    "Fechado no momento da visita": "#B19CD9",
-    "Encerrou atividade": "#DDA0DD",
-    Inadimplente: "#EE82EE",
-    "Motivo não identificado": "#D3D3D3",
-  };
-
-  for (const v of visitas) {
-    if (v.status === "nao_convertido") {
-      motivosMap[v.motivo] = (motivosMap[v.motivo] || 0) + 1;
-    }
-  }
-
-  const motivos_nao_venda = Object.entries(motivosMap)
-    .map(([motivo, quantidade]) => ({
-      motivo,
-      quantidade,
-      cor: cores[motivo] || "#CCCCCC",
-    }))
-    .sort((a, b) => b.quantidade - a.quantidade);
-
-  return {
-    evolucao_horaria,
-    vendedores,
-    motivos_nao_venda,
-  };
+  return null;
 }
 
-export function filtrarVisitas(
-  visitas: ProcessedVisita[],
-  filtroVendedor?: string,
-  filtroStatus?: string
-): ProcessedVisita[] {
-  return visitas.filter((v) => {
-    const matchVendedor = !filtroVendedor || v.vendedor === Number(filtroVendedor);
-    const matchStatus = !filtroStatus || v.status === filtroStatus;
-    return matchVendedor && matchStatus;
-  });
-}
+// --- Motor de Cálculo ---
 
 export function calcularMetricas(
-  visitas: ProcessedVisita[],
+  visitasBrutas: ProcessedVisita[],
   filtroVendedor?: string,
   filtroStatus?: string
 ): DashboardMetrics {
-  const visitasFiltradas = filtrarVisitas(visitas, filtroVendedor, filtroStatus);
-  const kpis = calcularKPIs(visitasFiltradas);
-  const graficos = calcularGraficos(visitasFiltradas);
+  
+  // 1. PRÉ-PROCESSAMENTO: Limpeza de dados e conversões
+  const visitasMapeadas = visitasBrutas.map((v) => {
+    const distNumeric = parseDistance(v.distR);
+    const duracaoMin = parseTimeToMinutes(v.tempoVisita);
+    const inicioMin = parseTimeToMinutes(v.horaInicio);
+    
+    return {
+      ...v,
+      distNumeric,
+      duracaoMin,
+      inicioMin,
+      isCurta: duracaoMin !== null ? duracaoMin < CONFIG.SHORT_VISIT_MINUTES : false,
+    };
+  });
+
+  // 2. FILTRO DE FALSAS VISITAS (Regra de Negócio principal do Python)
+  // Remove duração < 3min E distância > 500m
+  let visitasValidas = visitasMapeadas.filter((v) => {
+    const isFalsa = v.isCurta && v.distNumeric > CONFIG.DIST_LIMIT;
+    return !isFalsa;
+  });
+
+  // 3. APLICAÇÃO DE FILTROS DO DASHBOARD (Vendedor / Status)
+  if (filtroVendedor) {
+    visitasValidas = visitasValidas.filter((v) => v.vendedor === Number(filtroVendedor));
+  }
+  if (filtroStatus) {
+    visitasValidas = visitasValidas.filter((v) => v.status === filtroStatus);
+  }
+
+  // Se não sobrar nada, retorna zerado
+  if (visitasValidas.length === 0) {
+    return _retornarMetricasZeradas();
+  }
+
+  // --- CÁLCULO DE KPIs ---
+  const convertidas = visitasValidas.filter((v) => v.status === "convertido");
+  const receitaTotal = convertidas.reduce((sum, v) => sum + v.valorNumerico, 0);
+  const taxaConversao = (convertidas.length / visitasValidas.length) * 100;
+
+  // Clientes Únicos e Cobertura
+  // Nota: Aqui consideramos total_clientes da base filtrada. Em prod, você pode cruzar com uma tabela de clientes mestre
+  const clientesUnicos = new Set(visitasValidas.map((v) => v.codCliente));
+  
+  // Qualidade das Visitas
+  let visitasCurtasCount = 0;
+  let visitasComDuracaoValida = 0;
+  let somaDuracao = 0;
+  let distanciaTotalMetros = 0;
+
+  // Períodos (Almoço / Tarde)
+  let visitasAlmocoCount = 0;
+  let visitasTardeCount = 0;
+
+  visitasValidas.forEach((v) => {
+    distanciaTotalMetros += v.distNumeric;
+
+    if (v.duracaoMin !== null) {
+      visitasComDuracaoValida++;
+      somaDuracao += v.duracaoMin;
+      if (v.isCurta) visitasCurtasCount++;
+    }
+
+    if (v.inicioMin !== null) {
+      if (v.inicioMin >= CONFIG.LUNCH_START && v.inicioMin <= CONFIG.LUNCH_END) {
+        visitasAlmocoCount++;
+      }
+      if (v.inicioMin >= CONFIG.AFTERNOON_START) {
+        visitasTardeCount++;
+      }
+    }
+  });
+
+  const kpis: KPIs = {
+    receita_total: receitaTotal,
+    taxa_conversao: taxaConversao,
+    clientes_unicos_visitados: clientesUnicos.size,
+    cobertura_perc: 100, // Necessita total_carteira geral para ser < 100% real
+    visitas_curtas_perc: visitasComDuracaoValida > 0 ? (visitasCurtasCount / visitasComDuracaoValida) * 100 : 0,
+    visitas_adequadas_perc: visitasComDuracaoValida > 0 ? ((visitasComDuracaoValida - visitasCurtasCount) / visitasComDuracaoValida) * 100 : 0,
+    tempo_medio_visita: visitasComDuracaoValida > 0 ? somaDuracao / visitasComDuracaoValida : 0,
+    distancia_total_km: distanciaTotalMetros / 1000,
+    visitas_almoco: visitasAlmocoCount,
+    visitas_tarde_perc: visitasValidas.length > 0 ? (visitasTardeCount / visitasValidas.length) * 100 : 0,
+    visitas_curtas_count: visitasCurtasCount,
+    visitas_com_duracao_valida: visitasComDuracaoValida,
+  };
+
+  // --- CÁLCULO DE GRÁFICOS ---
+  const evolucaoPorHora: Record<string, { acumulado: number; visitas: number }> = {};
+  let acumulado = 0;
+
+  // Evolução Horária
+  visitasValidas.forEach((v) => {
+    if (v.horaInicio && v.horaInicio !== "ND") {
+      const hora = v.horaInicio.substring(0, 5);
+      if (!evolucaoPorHora[hora]) evolucaoPorHora[hora] = { acumulado: 0, visitas: 0 };
+      if (v.status === "convertido") acumulado += v.valorNumerico;
+      evolucaoPorHora[hora].acumulado = acumulado;
+      evolucaoPorHora[hora].visitas += 1;
+    }
+  });
+
+  // Vendedores Ranking
+  const vendedorMap: Record<number, { clientes: Set<number>; receita: number; curtas: number; totalComTempo: number }> = {};
+  visitasValidas.forEach((v) => {
+    if (!vendedorMap[v.vendedor]) {
+      vendedorMap[v.vendedor] = { clientes: new Set(), receita: 0, curtas: 0, totalComTempo: 0 };
+    }
+    vendedorMap[v.vendedor].clientes.add(v.codCliente);
+    if (v.status === "convertido") vendedorMap[v.vendedor].receita += v.valorNumerico;
+    
+    if (v.duracaoMin !== null) {
+      vendedorMap[v.vendedor].totalComTempo++;
+      if (v.isCurta) vendedorMap[v.vendedor].curtas++;
+    }
+  });
+
+  const vendedoresRanking = Object.entries(vendedorMap)
+    .map(([vendedor, data]) => ({
+      vendedor: `V0${vendedor}`,
+      clientes: data.clientes.size,
+      receita: data.receita,
+      curtas_perc: data.totalComTempo > 0 ? (data.curtas / data.totalComTempo) * 100 : 0,
+    }))
+    .sort((a, b) => b.receita - a.receita);
 
   return {
     kpis,
-    visitas: visitasFiltradas.slice(0, 50), // Limitar a 50 para a tabela
-    graficos,
+    visitas: visitasValidas.slice(0, 100), // Envia as 100 primeiras para a tabela do painel
+    graficos: {
+      evolucao_horaria: Object.entries(evolucaoPorHora).sort().map(([h, d]) => ({ hora: h, ...d })),
+      vendedores: vendedoresRanking,
+      motivos_nao_venda: _calcularMotivos(visitasValidas),
+    },
+  };
+}
+
+function _calcularMotivos(visitas: any[]) {
+  const motivosMap: Record<string, number> = {};
+  visitas.filter(v => v.status === "nao_convertido").forEach(v => {
+    motivosMap[v.motivo] = (motivosMap[v.motivo] || 0) + 1;
+  });
+  return Object.entries(motivosMap)
+    .map(([motivo, quantidade]) => ({ motivo, quantidade, cor: "#" + Math.floor(Math.random()*16777215).toString(16) }))
+    .sort((a, b) => b.quantidade - a.quantidade);
+}
+
+function _retornarMetricasZeradas(): DashboardMetrics {
+  return {
+    kpis: {
+      receita_total: 0, taxa_conversao: 0, clientes_unicos_visitados: 0, cobertura_perc: 0,
+      visitas_curtas_perc: 0, visitas_adequadas_perc: 0, tempo_medio_visita: 0,
+      distancia_total_km: 0, visitas_almoco: 0, visitas_tarde_perc: 0, visitas_com_duracao_valida: 0, visitas_curtas_count: 0
+    },
+    visitas: [],
+    graficos: { evolucao_horaria: [], vendedores: [], motivos_nao_venda: [] }
   };
 }
