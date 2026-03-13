@@ -100,13 +100,13 @@ export default function KPICard({
         opacity: 0,
       }}
     >
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-2">
         <div>
           <p className="text-xs font-700 text-slate-500 uppercase tracking-wider mb-1" style={{ fontWeight: 700 }}>
             {title}
           </p>
           <p
-            className="text-3xl font-900 text-slate-800 leading-none"
+            className="text-2xl font-900 text-slate-800 leading-none"
             style={{ fontWeight: 900, fontFamily: "'Nunito', sans-serif" }}
           >
             {prefix}
@@ -115,7 +115,7 @@ export default function KPICard({
           </p>
         </div>
         <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ background: colors.iconBg }}
         >
           <span style={{ color: colors.iconColor }}>{icon}</span>
