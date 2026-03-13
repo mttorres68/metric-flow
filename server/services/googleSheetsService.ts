@@ -29,7 +29,7 @@ export interface RawVisita {
   "Tempo Vis.": string;
   "Valor Ped.": string;
   "Tipo Cobr.": string;
-  "Dist. PV": string;
+  "Dist. PV": string; // Distância ao Ponto de Venda — base do filtro de raio (Python: Dist_PV_Numeric)
   "F/R"?: string;
 }
 
@@ -38,7 +38,7 @@ export interface ProcessedVisita {
   vendedor: number;
   gerente: number;
   revenda: string;
-  data: string; // YYYY-MM-DD
+  data: string;         // YYYY-MM-DD
   cliente: string;
   codCliente: number;
   seqERP: number;
@@ -46,10 +46,11 @@ export interface ProcessedVisita {
   valorPedido: string;
   valorNumerico: number;
   tipoCobr: string | number;
-  horaInicio: string;
+  horaInicio: string;   // "HH:MM:SS" ou "ND"
   horaFim: string;
-  tempoVisita: string;
-  distR: string | number;
+  tempoVisita: string;  // "HH:MM:SS" ou "ND" — duração da visita
+  distR: string;        // Dist. R — distância percorrida (não usada no filtro de raio)
+  distPV: string;       // Dist. PV — distância ao PDV (usada no filtro de raio, igual ao Python)
   status: "convertido" | "nao_convertido" | "sem_visita";
   motivo: string;
 }
@@ -61,7 +62,6 @@ export async function loadGoogleSheetsData(): Promise<RawVisita[]> {
       timeout: 30000,
     });
 
-    // Parse CSV
     const records = parse(response.data, {
       columns: true,
       skip_empty_lines: true,
@@ -77,15 +77,12 @@ export async function loadGoogleSheetsData(): Promise<RawVisita[]> {
 
 export function converterValorPedido(valor: string): number {
   try {
-    // Remover caracteres não numéricos, exceto vírgula e ponto
     let cleaned = String(valor).trim();
     cleaned = cleaned.replace(/[^0-9,.]/g, "");
 
-    // Se contém ambos vírgula e ponto, assumir que ponto é separador de milhar
     if (cleaned.includes(",") && cleaned.includes(".")) {
       cleaned = cleaned.replace(".", "").replace(",", ".");
     } else if (cleaned.includes(",")) {
-      // Se só tem vírgula, converter para ponto
       cleaned = cleaned.replace(",", ".");
     }
 
@@ -98,21 +95,18 @@ export function converterValorPedido(valor: string): number {
 
 export function classificarVisita(
   visita: RawVisita,
-  tempoVisitaMinutos: number | null
+  _tempoVisitaMinutos: number | null
 ): { status: "convertido" | "nao_convertido" | "sem_visita"; motivo: string } {
   const valor = converterValorPedido(visita["Valor Ped."]);
 
-  // Se não há horário de início, não foi visitado
   if (visita["Ini. Hour"] === "ND" || !visita["Ini. Hour"]) {
     return { status: "sem_visita", motivo: "Sem visita registrada" };
   }
 
-  // Se tem valor numérico > 0, foi convertido
   if (valor > 0) {
     return { status: "convertido", motivo: "Pedido realizado" };
   }
 
-  // Caso contrário, não foi convertido - extrair motivo
   const valorPedidoStr = String(visita["Valor Ped."]).trim();
   const motivos: Record<string, string> = {
     "SEM DINHEIRO": "Sem dinheiro",
@@ -141,10 +135,8 @@ export function processarVisitas(rawVisitas: RawVisita[]): ProcessedVisita[] {
     const valor = converterValorPedido(v["Valor Ped."]);
     const { status, motivo } = classificarVisita(v, null);
 
-    // Converter data para formato YYYY-MM-DD
     let dataFormatada = "";
     if (v.data) {
-      // Esperado formato DD/MM/YYYY
       const partes = v.data.split("/");
       if (partes.length === 3) {
         dataFormatada = `${partes[2]}-${partes[1]}-${partes[0]}`;
@@ -170,6 +162,7 @@ export function processarVisitas(rawVisitas: RawVisita[]): ProcessedVisita[] {
       horaFim: v["Hora Fin."],
       tempoVisita: v["Tempo Vis."],
       distR: v["Dist. R"],
+      distPV: v["Dist. PV"] ?? "",   // campo adicionado — usado no filtro de raio
       status,
       motivo,
     };
