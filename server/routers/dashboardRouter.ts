@@ -5,121 +5,100 @@
 
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
-import { loadGoogleSheetsData, processarVisitas } from "../services/googleSheetsService";
 import { calcularMetricas } from "../services/metricsCalculator";
+import { getVisitasData, invalidarCache, getCacheInfo } from "../services/dataCache";
 
-// Cache para evitar múltiplas requisições ao Google Sheets
-let cachedVisitas: ReturnType<typeof processarVisitas> | null = null;
-let lastCacheTime = 0;
-const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutos
-
-async function getVisitasData() {
-  const now = Date.now();
-
-  // Se cache ainda é válido, retornar dados em cache
-  if (cachedVisitas && now - lastCacheTime < CACHE_DURATION_MS) {
-    console.log("[Dashboard] Usando dados em cache");
-    return cachedVisitas;
-  }
-
-  console.log("[Dashboard] Carregando dados do Google Sheets...");
-  try {
-    const rawData = await loadGoogleSheetsData();
-    cachedVisitas = processarVisitas(rawData);
-    lastCacheTime = now;
-    console.log(`[Dashboard] ✓ ${cachedVisitas.length} visitas processadas`);
-    return cachedVisitas;
-  } catch (error) {
-    console.error("[Dashboard] Erro ao carregar dados:", error);
-    // Se houver erro e temos cache antigo, usar mesmo que expirado
-    if (cachedVisitas) {
-      console.log("[Dashboard] Usando cache expirado como fallback");
-      return cachedVisitas;
-    }
-    throw new Error("Falha ao carregar dados do painel");
-  }
-}
+// Schema reutilizável para os parâmetros de configuração dinâmica
+// O frontend envia esses valores a partir do painel de configurações
+const configMetricasSchema = z.object({
+  raioPDV:             z.number().min(50).max(5000).optional(),  // metros
+  minutosCurta:        z.number().min(1).max(30).optional(),      // minutos
+  limiteInicioTardio:  z.string().regex(/^\d{2}:\d{2}$/).optional(), // "HH:MM"
+  alertaCurtasPerc:    z.number().min(0).max(100).optional(),
+  alertaCoberturaPerc: z.number().min(0).max(100).optional(),
+  alertaTardePerc:     z.number().min(0).max(100).optional(),
+});
 
 export const dashboardRouter = router({
+
   getMetrics: publicProcedure
     .input(
       z.object({
-        vendedor: z.string().optional(),
-        status: z.enum(["convertido", "nao_convertido", "sem_visita"]).optional(),
-        gerente: z.number().optional(),
-        revenda: z.string().optional(),
+        // Filtros de dados
+        vendedor:   z.string().optional(),
+        status:     z.enum(["convertido", "nao_convertido", "sem_visita"]).optional(),
+        gerente:    z.number().optional(),
+        revenda:    z.string().optional(),
         dataInicio: z.string().optional(), // YYYY-MM-DD
-        dataFim: z.string().optional(), // YYYY-MM-DD
+        dataFim:    z.string().optional(), // YYYY-MM-DD
+        // Parâmetros de configuração dinâmica (enviados pelo frontend)
+        config:     configMetricasSchema.optional(),
       })
     )
     .query(async ({ input }) => {
       let visitas = await getVisitasData();
 
-      // Aplicar filtros de gerente e revenda
-      if (input.gerente !== undefined) {
-        visitas = visitas.filter((v) => v.gerente === input.gerente);
-      }
-      if (input.revenda) {
-        visitas = visitas.filter((v) => v.revenda === input.revenda);
-      }
+      // Filtros de dimensão
+      if (input.gerente !== undefined) visitas = visitas.filter((v) => v.gerente === input.gerente);
+      if (input.revenda)               visitas = visitas.filter((v) => v.revenda === input.revenda);
+      if (input.dataInicio)            visitas = visitas.filter((v) => v.data >= input.dataInicio!);
+      if (input.dataFim)               visitas = visitas.filter((v) => v.data <= input.dataFim!);
 
-      // Aplicar filtros de data
-      if (input.dataInicio) {
-        visitas = visitas.filter((v) => v.data >= input.dataInicio!);
-      }
-      if (input.dataFim) {
-        visitas = visitas.filter((v) => v.data <= input.dataFim!);
-      }
-
-      const metricas = calcularMetricas(visitas, input.vendedor, input.status);
-      return metricas;
+      return calcularMetricas(visitas, input.vendedor, input.status, input.config);
     }),
 
-  // Endpoint para forçar refresh dos dados
+  // Força refresh do cache compartilhado
   refreshData: publicProcedure.mutation(async () => {
-    console.log("[Dashboard] Forçando refresh dos dados...");
-    cachedVisitas = null;
-    lastCacheTime = 0;
+    invalidarCache();
     const visitas = await getVisitasData();
     return { success: true, recordCount: visitas.length };
   }),
 
-  // Endpoint para obter lista de vendedores
+  // Informações sobre o estado do cache (útil para o frontend exibir "atualizado há X min")
+  getCacheInfo: publicProcedure.query(() => {
+    return getCacheInfo();
+  }),
+
+  // Listas de opções para os filtros do dashboard
   getVendedores: publicProcedure.query(async () => {
     const visitas = await getVisitasData();
-    const vendedores = Array.from(new Set(visitas.map((v) => v.vendedor)))
+    return Array.from(new Set(visitas.map((v) => v.vendedor)))
       .sort((a, b) => a - b)
       .map((v) => ({ id: v, label: `V0${v}` }));
-    return vendedores;
   }),
 
-  // Endpoint para obter lista de gerentes
   getGerentes: publicProcedure.query(async () => {
     const visitas = await getVisitasData();
-    const gerentes = Array.from(new Set(visitas.map((v) => v.gerente)))
+    return Array.from(new Set(visitas.map((v) => v.gerente)))
       .sort((a, b) => a - b)
       .map((v) => ({ id: v, label: `Gerente ${v}` }));
-    return gerentes;
   }),
 
-  // Endpoint para obter lista de revendas
   getRevendas: publicProcedure.query(async () => {
     const visitas = await getVisitasData();
-    const revendas = Array.from(new Set(visitas.map((v) => v.revenda)))
+    return Array.from(new Set(visitas.map((v) => v.revenda)))
       .sort()
       .map((v) => ({ id: v, label: v }));
-    return revendas;
   }),
 
-  // Endpoint para obter intervalo de datas disponíveis
   getDateRange: publicProcedure.query(async () => {
     const visitas = await getVisitasData();
-    const datas = visitas.map((v) => v.data).filter((d) => d && d.length > 0);
-    const datasOrdenadas = datas.sort();
-    
+    const datas = visitas.map((v) => v.data).filter((d) => d?.length > 0).sort();
     return {
-      minDate: datasOrdenadas.length > 0 ? datasOrdenadas[0] : "",
-      maxDate: datasOrdenadas.length > 0 ? datasOrdenadas[datasOrdenadas.length - 1] : "",
+      minDate: datas[0]  ?? "",
+      maxDate: datas[datas.length - 1] ?? "",
+    };
+  }),
+
+  // Retorna os valores padrão de configuração para o frontend pré-preencher o painel
+  getConfigPadrao: publicProcedure.query(() => {
+    return {
+      raioPDV:             500,
+      minutosCurta:        3,
+      limiteInicioTardio:  "08:45",
+      alertaCurtasPerc:    10,
+      alertaCoberturaPerc: 100,
+      alertaTardePerc:     25,
     };
   }),
 });

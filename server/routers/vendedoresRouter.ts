@@ -5,61 +5,27 @@
 
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
-import { loadGoogleSheetsData, processarVisitas } from "../services/googleSheetsService";
-
-// Cache compartilhado com dashboard
-let cachedVisitas: ReturnType<typeof processarVisitas> | null = null;
-let lastCacheTime = 0;
-const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutos
-
-async function getVisitasData() {
-  const now = Date.now();
-
-  if (cachedVisitas && now - lastCacheTime < CACHE_DURATION_MS) {
-    return cachedVisitas;
-  }
-
-  try {
-    const rawData = await loadGoogleSheetsData();
-    cachedVisitas = processarVisitas(rawData);
-    lastCacheTime = now;
-    return cachedVisitas;
-  } catch (error) {
-    console.error("[Vendedores] Erro ao carregar dados:", error);
-    if (cachedVisitas) {
-      return cachedVisitas;
-    }
-    throw new Error("Falha ao carregar dados de vendedores");
-  }
-}
+import { getVisitasData } from "../services/dataCache";
 
 export const vendedoresRouter = router({
+
   // Lista de todos os vendedores com resumo de performance
   listar: publicProcedure
     .input(
       z.object({
-        gerente: z.number().optional(),
-        revenda: z.string().optional(),
+        gerente:    z.number().optional(),
+        revenda:    z.string().optional(),
         dataInicio: z.string().optional(),
-        dataFim: z.string().optional(),
+        dataFim:    z.string().optional(),
       })
     )
     .query(async ({ input }) => {
       let visitas = await getVisitasData();
 
-      // Aplicar filtros
-      if (input.gerente !== undefined) {
-        visitas = visitas.filter((v) => v.gerente === input.gerente);
-      }
-      if (input.revenda) {
-        visitas = visitas.filter((v) => v.revenda === input.revenda);
-      }
-      if (input.dataInicio) {
-        visitas = visitas.filter((v) => v.data >= input.dataInicio!);
-      }
-      if (input.dataFim) {
-        visitas = visitas.filter((v) => v.data <= input.dataFim!);
-      }
+      if (input.gerente !== undefined) visitas = visitas.filter((v) => v.gerente === input.gerente);
+      if (input.revenda)               visitas = visitas.filter((v) => v.revenda === input.revenda);
+      if (input.dataInicio)            visitas = visitas.filter((v) => v.data >= input.dataInicio!);
+      if (input.dataFim)               visitas = visitas.filter((v) => v.data <= input.dataFim!);
 
       const vendedoresMap: Record<
         number,
@@ -68,8 +34,8 @@ export const vendedoresRouter = router({
           totalVisitas: number;
           visitasConvertidas: number;
           receita: number;
-          taxaConversao: number;
-          tempoMedioVisita: number;
+          somaTempo: number;
+          visitasComTempo: number;
           clientesUnicos: Set<number>;
         }
       > = {};
@@ -81,101 +47,83 @@ export const vendedoresRouter = router({
             totalVisitas: 0,
             visitasConvertidas: 0,
             receita: 0,
-            taxaConversao: 0,
-            tempoMedioVisita: 0,
+            somaTempo: 0,
+            visitasComTempo: 0,
             clientesUnicos: new Set(),
           };
         }
 
-        const vend = vendedoresMap[v.vendedor];
-        vend.totalVisitas++;
-        vend.clientesUnicos.add(v.codCliente);
+        const vd = vendedoresMap[v.vendedor];
+        vd.totalVisitas++;
+        vd.clientesUnicos.add(v.codCliente);
 
         if (v.status === "convertido") {
-          vend.visitasConvertidas++;
-          vend.receita += v.valorNumerico;
+          vd.visitasConvertidas++;
+          vd.receita += v.valorNumerico;
         }
 
-        // Calcular tempo médio
         if (v.tempoVisita && v.tempoVisita !== "ND") {
-          const [horas, minutos] = v.tempoVisita.split(":").map(Number);
-          if (!isNaN(horas) && !isNaN(minutos)) {
-            vend.tempoMedioVisita += horas * 60 + minutos;
+          const [h, m] = v.tempoVisita.split(":").map(Number);
+          if (!isNaN(h) && !isNaN(m)) {
+            vd.somaTempo += h * 60 + m;
+            vd.visitasComTempo++;
           }
         }
       }
 
-      // Converter para array e calcular percentuais
-      const vendedores = Object.values(vendedoresMap)
+      return Object.values(vendedoresMap)
         .map((v) => ({
-          vendedor: v.vendedor,
-          nomeVendedor: `V0${v.vendedor}`,
-          totalVisitas: v.totalVisitas,
+          vendedor:        v.vendedor,
+          nomeVendedor:    `V0${v.vendedor}`,
+          totalVisitas:    v.totalVisitas,
           visitasConvertidas: v.visitasConvertidas,
-          receita: v.receita,
-          taxaConversao: v.totalVisitas > 0 ? (v.visitasConvertidas / v.totalVisitas) * 100 : 0,
-          tempoMedioVisita:
-            v.visitasConvertidas > 0 ? v.tempoMedioVisita / v.visitasConvertidas : 0,
-          clientesUnicos: v.clientesUnicos.size,
+          receita:         v.receita,
+          taxaConversao:   v.totalVisitas > 0 ? (v.visitasConvertidas / v.totalVisitas) * 100 : 0,
+          tempoMedioVisita: v.visitasComTempo > 0 ? v.somaTempo / v.visitasComTempo : 0,
+          clientesUnicos:  v.clientesUnicos.size,
         }))
         .sort((a, b) => b.receita - a.receita);
-
-      return vendedores;
     }),
 
   // Detalhes de um vendedor específico
   detalhes: publicProcedure
     .input(
       z.object({
-        vendedor: z.number(),
-        gerente: z.number().optional(),
-        revenda: z.string().optional(),
+        vendedor:   z.number(),
+        gerente:    z.number().optional(),
+        revenda:    z.string().optional(),
         dataInicio: z.string().optional(),
-        dataFim: z.string().optional(),
+        dataFim:    z.string().optional(),
       })
     )
     .query(async ({ input }) => {
       let visitas = await getVisitasData();
 
-      // Filtrar por vendedor
       visitas = visitas.filter((v) => v.vendedor === input.vendedor);
+      if (input.gerente !== undefined) visitas = visitas.filter((v) => v.gerente === input.gerente);
+      if (input.revenda)               visitas = visitas.filter((v) => v.revenda === input.revenda);
+      if (input.dataInicio)            visitas = visitas.filter((v) => v.data >= input.dataInicio!);
+      if (input.dataFim)               visitas = visitas.filter((v) => v.data <= input.dataFim!);
 
-      // Aplicar filtros adicionais
-      if (input.gerente !== undefined) {
-        visitas = visitas.filter((v) => v.gerente === input.gerente);
-      }
-      if (input.revenda) {
-        visitas = visitas.filter((v) => v.revenda === input.revenda);
-      }
-      if (input.dataInicio) {
-        visitas = visitas.filter((v) => v.data >= input.dataInicio!);
-      }
-      if (input.dataFim) {
-        visitas = visitas.filter((v) => v.data <= input.dataFim!);
-      }
-
-      const totalVisitas = visitas.length;
-      const visitasConvertidas = visitas.filter((v) => v.status === "convertido").length;
-      const receita = visitas
+      const totalVisitas        = visitas.length;
+      const visitasConvertidas  = visitas.filter((v) => v.status === "convertido").length;
+      const receita             = visitas
         .filter((v) => v.status === "convertido")
         .reduce((sum, v) => sum + v.valorNumerico, 0);
+      const clientesUnicos      = new Set(visitas.map((v) => v.codCliente)).size;
 
       const motivosNaoVenda: Record<string, number> = {};
       visitas
         .filter((v) => v.status === "nao_convertido")
-        .forEach((v) => {
-          motivosNaoVenda[v.motivo] = (motivosNaoVenda[v.motivo] || 0) + 1;
-        });
-
-      const clientesUnicos = new Set(visitas.map((v) => v.codCliente)).size;
+        .forEach((v) => { motivosNaoVenda[v.motivo] = (motivosNaoVenda[v.motivo] || 0) + 1; });
 
       return {
-        vendedor: input.vendedor,
-        nomeVendedor: `V0${input.vendedor}`,
+        vendedor:        input.vendedor,
+        nomeVendedor:    `V0${input.vendedor}`,
         totalVisitas,
         visitasConvertidas,
         receita,
-        taxaConversao: totalVisitas > 0 ? (visitasConvertidas / totalVisitas) * 100 : 0,
+        taxaConversao:   totalVisitas > 0 ? (visitasConvertidas / totalVisitas) * 100 : 0,
         clientesUnicos,
         motivosNaoVenda,
       };
@@ -185,64 +133,45 @@ export const vendedoresRouter = router({
   clientes: publicProcedure
     .input(
       z.object({
-        vendedor: z.number(),
-        gerente: z.number().optional(),
-        revenda: z.string().optional(),
+        vendedor:   z.number(),
+        gerente:    z.number().optional(),
+        revenda:    z.string().optional(),
         dataInicio: z.string().optional(),
-        dataFim: z.string().optional(),
+        dataFim:    z.string().optional(),
       })
     )
     .query(async ({ input }) => {
       let visitas = await getVisitasData();
 
-      // Filtrar por vendedor
       visitas = visitas.filter((v) => v.vendedor === input.vendedor);
-
-      // Aplicar filtros adicionais
-      if (input.gerente !== undefined) {
-        visitas = visitas.filter((v) => v.gerente === input.gerente);
-      }
-      if (input.revenda) {
-        visitas = visitas.filter((v) => v.revenda === input.revenda);
-      }
-      if (input.dataInicio) {
-        visitas = visitas.filter((v) => v.data >= input.dataInicio!);
-      }
-      if (input.dataFim) {
-        visitas = visitas.filter((v) => v.data <= input.dataFim!);
-      }
+      if (input.gerente !== undefined) visitas = visitas.filter((v) => v.gerente === input.gerente);
+      if (input.revenda)               visitas = visitas.filter((v) => v.revenda === input.revenda);
+      if (input.dataInicio)            visitas = visitas.filter((v) => v.data >= input.dataInicio!);
+      if (input.dataFim)               visitas = visitas.filter((v) => v.data <= input.dataFim!);
 
       const clientesMap: Record<
         number,
-        {
-          codCliente: number;
-          cliente: string;
-          visitas: number;
-          convertido: boolean;
-          receita: number;
-          ultimaVisita: string;
-        }
+        { codCliente: number; cliente: string; visitas: number; convertido: boolean; receita: number; ultimaVisita: string }
       > = {};
 
       for (const v of visitas) {
         if (!clientesMap[v.codCliente]) {
           clientesMap[v.codCliente] = {
-            codCliente: v.codCliente,
-            cliente: v.cliente,
-            visitas: 0,
-            convertido: false,
-            receita: 0,
+            codCliente:   v.codCliente,
+            cliente:      v.cliente,
+            visitas:      0,
+            convertido:   false,
+            receita:      0,
             ultimaVisita: v.data,
           };
         }
 
-        const cliente = clientesMap[v.codCliente];
-        cliente.visitas++;
-        cliente.ultimaVisita = v.data > cliente.ultimaVisita ? v.data : cliente.ultimaVisita;
-
+        const c = clientesMap[v.codCliente];
+        c.visitas++;
+        if (v.data > c.ultimaVisita) c.ultimaVisita = v.data;
         if (v.status === "convertido") {
-          cliente.convertido = true;
-          cliente.receita += v.valorNumerico;
+          c.convertido = true;
+          c.receita += v.valorNumerico;
         }
       }
 
