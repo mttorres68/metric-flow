@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import VendedoresLista from "./pages/VendedoresLista";
 import VendedorDetalhes from "./pages/VendedorDetalhes";
+import Compliance from "./pages/Compliance";
 // MetricFlow — Pastel Command Center — tema claro com pastéis
 
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
       <Route path={"/vendedores"} component={VendedoresLista} />
       <Route path={"/vendedor/:vendedor"} component={VendedorDetalhes} />
       <Route path={"/404"} component={NotFound} />
+      <Route path="/compliance" component={Compliance} />
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
