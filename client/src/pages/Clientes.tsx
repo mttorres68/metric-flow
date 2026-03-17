@@ -34,7 +34,15 @@ const STATUS_CONFIG = {
     sem_visita: { label: "Sem visita", icon: MinusCircle, color: "text-slate-400", bg: "bg-slate-50 border-slate-200" },
 } as const;
 
-type SortKey = "totalVisitas" | "convertidas" | "naoConvertidas" | "ultimaVisita";
+type SortKey = "totalVisitas" | "convertidas" | "naoConvertidas" | "ultimaVisita" | "totalDuracaoMin";
+
+// Formata minutos para "Xh YYmin" ou "YYmin"
+function formatDuracao(min: number): string {
+    if (min <= 0) return "—";
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return h > 0 ? `${h}h ${String(m).padStart(2, "0")}min` : `${m}min`;
+}
 type SortDir = "asc" | "desc";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,6 +241,7 @@ export default function Clientes() {
                                     <ThSort k="totalVisitas" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>Visitas</ThSort>
                                     <ThSort k="convertidas" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>Conv.</ThSort>
                                     <ThSort k="naoConvertidas" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>Não Conv.</ThSort>
+                                    <ThSort k="totalDuracaoMin" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>Duração total</ThSort>
                                     <th className="px-5 py-3 text-left text-xs text-slate-500 uppercase tracking-widest" style={{ fontWeight: 700 }}>Status</th>
                                     <th className="px-5 py-3 text-left text-xs text-slate-500 uppercase tracking-widest" style={{ fontWeight: 700 }}>Motivo freq.</th>
                                     <ThSort k="ultimaVisita" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort} align="left">Última visita</ThSort>
@@ -241,7 +250,7 @@ export default function Clientes() {
                             <tbody>
                                 {tabelaFiltrada.length === 0 ? (
                                     <tr>
-                                        <td colSpan={9} className="px-5 py-12 text-center text-sm text-slate-400">
+                                        <td colSpan={10} className="px-5 py-12 text-center text-sm text-slate-400">
                                             Nenhum cliente encontrado
                                         </td>
                                     </tr>
@@ -278,6 +287,9 @@ export default function Clientes() {
                                                 <td className="px-5 py-3.5 text-sm tabular-nums text-slate-700 text-right" style={{ fontWeight: 700 }}>{c.totalVisitas}</td>
                                                 <td className="px-5 py-3.5 text-sm tabular-nums text-green-600 text-right" style={{ fontWeight: 600 }}>{c.convertidas}</td>
                                                 <td className="px-5 py-3.5 text-sm tabular-nums text-right" style={{ fontWeight: 600, color: c.naoConvertidas > 0 ? "#EF4444" : "#94A3B8" }}>{c.naoConvertidas}</td>
+                                                <td className="px-5 py-3.5 text-sm tabular-nums text-right text-slate-600" style={{ fontWeight: 600 }}>
+                                                    {formatDuracao(c.totalDuracaoMin)}
+                                                </td>
                                                 <td className="px-5 py-3.5">
                                                     <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs ${statusCfg.bg} ${statusCfg.color}`} style={{ fontWeight: 700 }}>
                                                         <StatusIcon className="w-3 h-3" />
@@ -310,7 +322,7 @@ export default function Clientes() {
                                             {/* Visitas expandidas */}
                                             {isExp && (
                                                 <tr key={`${c.codCliente}-exp`} className="border-b border-slate-100">
-                                                    <td colSpan={9} className="bg-slate-50/60 px-6 py-4">
+                                                    <td colSpan={10} className="bg-slate-50/60 px-6 py-4">
                                                         <p className="text-xs text-slate-500 mb-3" style={{ fontWeight: 700 }}>
                                                             HISTÓRICO DE VISITAS — {c.visitas.length} {c.visitas.length === 1 ? "registro" : "registros"}
                                                         </p>

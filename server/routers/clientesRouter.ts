@@ -41,6 +41,7 @@ export const clientesRouter = router({
                 convertidas: number;
                 naoConvertidas: number;
                 semVisita: number;
+                somaDuracaoMin: number;   // soma de todas as durações válidas em minutos
                 vendedores: Set<number>;
                 ultimaVisita: string;
                 motivoFrequente: Record<string, number>; // acumulador temporário
@@ -66,6 +67,7 @@ export const clientesRouter = router({
                         convertidas: 0,
                         naoConvertidas: 0,
                         semVisita: 0,
+                        somaDuracaoMin: 0,
                         vendedores: new Set(),
                         ultimaVisita: v.data,
                         motivoFrequente: {},
@@ -81,6 +83,14 @@ export const clientesRouter = router({
                 if (v.status === "convertido") c.convertidas++;
                 else if (v.status === "sem_visita") c.semVisita++;
                 else c.naoConvertidas++;
+
+                // Acumula duração — converte "HH:MM:SS" para minutos
+                if (v.tempoVisita && v.tempoVisita !== "ND") {
+                    const partes = v.tempoVisita.split(":");
+                    if (partes.length >= 2) {
+                        c.somaDuracaoMin += parseInt(partes[0]) * 60 + parseInt(partes[1]) + (parseInt(partes[2] ?? "0") / 60);
+                    }
+                }
 
                 // Acumula motivos (ignora os padrões de convertido/sem_visita)
                 if (v.status === "nao_convertido") {
@@ -124,6 +134,7 @@ export const clientesRouter = router({
                     ultimaVisita: c.ultimaVisita,
                     motivoFrequente,
                     statusPredominante: statusPred,
+                    totalDuracaoMin: Math.round(c.somaDuracaoMin), // minutos inteiros, arredondado
                     // Visitas mais recentes primeiro
                     visitas: c.visitas.sort((a, b) => {
                         const dataDiff = b.data.localeCompare(a.data);
