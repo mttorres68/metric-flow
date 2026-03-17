@@ -85,6 +85,8 @@ export default function VendedoresLista() {
   const handleNavigate = (page: string) => {
     if (page === "dashboard") { window.location.href = "/"; return; }
     if (page === "compliance") { window.location.href = "/compliance"; return; }
+    if (page === "clientes") { window.location.href = "/clientes"; return; }
+
 
     if (page !== "vendedores") {
       toast.info(`Módulo "${page}" em breve`, { description: "Esta seção está em desenvolvimento." });

@@ -5,6 +5,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { dashboardRouter } from "./routers/dashboardRouter";
 import { vendedoresRouter } from "./routers/vendedoresRouter";
 import { complianceRouter } from "./routers/complianceRouter ";
+import { clientesRouter } from "./routers/clientesRouter";
 
 
 export const appRouter = router({
@@ -13,6 +14,7 @@ export const appRouter = router({
   dashboard: dashboardRouter,
   vendedores: vendedoresRouter,
   compliance: complianceRouter,
+  clientes: clientesRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

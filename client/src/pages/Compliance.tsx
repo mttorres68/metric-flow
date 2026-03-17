@@ -112,6 +112,8 @@ export default function Compliance() {
     const handleNavigate = (page: string) => {
         if (page === "dashboard") { window.location.href = "/"; return; }
         if (page === "vendedores") { window.location.href = "/vendedores"; return; }
+        if (page === "clientes") { window.location.href = "/clientes"; return; }
+
         if (page !== "compliance") {
             toast.info(`Módulo "${page}" em breve`);
             return;

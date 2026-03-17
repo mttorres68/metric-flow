@@ -70,7 +70,7 @@ export default function Home() {
   const handleNavigate = (page: string) => {
     if (page === "vendedores") { window.location.href = "/vendedores"; return; }
     if (page === "compliance") { window.location.href = "/compliance"; return; }
-
+    if (page === "clientes") { window.location.href = "/clientes"; return; }
     if (page !== "dashboard") {
       toast.info(`Módulo "${page}" em breve`, { description: "Esta seção está em desenvolvimento." });
       return;

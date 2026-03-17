@@ -8,12 +8,11 @@ import {
   CircleCheckBig,
   Home,
   LineChart,
-  Map,
-  Settings,
+  Map,  
   ShoppingCart,
-  TrendingUp,
-  Users,
-  
+  SquareUserRound,
+  TrendingUp,  
+  UsersRound,  
 } from "lucide-react";
 
 interface SidebarProps {
@@ -23,8 +22,10 @@ interface SidebarProps {
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: Home },
-  { id: "vendedores", label: "Vendedores", icon: Users },
+  { id: "vendedores", label: "Vendedores", icon: SquareUserRound },
   { id: "compliance", label: "Compliance", icon: CircleCheckBig },
+  { id: "clientes", label: "Clientes", icon: UsersRound },
+
 
   { id: "pedidos", label: "Pedidos", icon: ShoppingCart },
   { id: "rotas", label: "Rotas", icon: Map },
@@ -70,16 +71,16 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
               <li key={item.id}>
                 <button
                   onClick={() => onNavigate(item.id)}
-                  disabled={item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance"}
+                  disabled={item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes"}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-600 transition-all duration-200 ${
-                    item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance"
+                    item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes"
                       ? "text-slate-300 cursor-not-allowed opacity-50"
                       : isActive
                       ? "bg-indigo-50 text-indigo-600"
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                   }`}
                   style={{ fontWeight: isActive ? 700 : 500 }}
-                  title={item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" ? "Esta seção está em desenvolvimento" : ""}
+                  title={item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" ? "Esta seção está em desenvolvimento" : ""}
                 >
                   <Icon
                     className={`w-4.5 h-4.5 flex-shrink-0 ${
