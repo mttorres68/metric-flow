@@ -5,6 +5,7 @@
 
 import {
   BarChart2,
+  CircleCheckBig,
   Home,
   LineChart,
   Map,
@@ -12,6 +13,7 @@ import {
   ShoppingCart,
   TrendingUp,
   Users,
+  
 } from "lucide-react";
 
 interface SidebarProps {
@@ -22,6 +24,8 @@ interface SidebarProps {
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "vendedores", label: "Vendedores", icon: Users },
+  { id: "compliance", label: "Compliance", icon: CircleCheckBig },
+
   { id: "pedidos", label: "Pedidos", icon: ShoppingCart },
   { id: "rotas", label: "Rotas", icon: Map },
   { id: "tendencias", label: "Tendências", icon: TrendingUp },
@@ -48,7 +52,7 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
             <span className="font-900 text-slate-800 text-lg leading-tight block" style={{ fontWeight: 900 }}>
               MetricFlow
             </span>
-            <span className="text-xs text-slate-400 font-500">Duttra SRN</span>
+            <span className="text-xs text-slate-400 font-500">HNK</span>
           </div>
         </div>
       </div>
@@ -66,16 +70,16 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
               <li key={item.id}>
                 <button
                   onClick={() => onNavigate(item.id)}
-                  disabled={item.id !== "dashboard" && item.id !== "vendedores"}
+                  disabled={item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance"}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-600 transition-all duration-200 ${
-                    item.id !== "dashboard" && item.id !== "vendedores"
+                    item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance"
                       ? "text-slate-300 cursor-not-allowed opacity-50"
                       : isActive
                       ? "bg-indigo-50 text-indigo-600"
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                   }`}
                   style={{ fontWeight: isActive ? 700 : 500 }}
-                  title={item.id !== "dashboard" && item.id !== "vendedores" ? "Esta seção está em desenvolvimento" : ""}
+                  title={item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" ? "Esta seção está em desenvolvimento" : ""}
                 >
                   <Icon
                     className={`w-4.5 h-4.5 flex-shrink-0 ${
