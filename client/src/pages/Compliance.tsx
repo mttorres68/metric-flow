@@ -47,11 +47,27 @@ export default function Compliance() {
 
     // ── Filtros persistidos ────────────────────────────────────────────────
     const [filtros, setFiltros] = useState<Record<string, any>>(loadFilters);
+
+    // Usa callback form do setState para sempre partir do estado mais recente,
+    // evitando o problema de closure stale quando duas atualizações seguidas ocorrem.
     const setFiltro = (k: string, v: any) => {
-        const next = { ...filtros, [k]: v ?? undefined };
-        setFiltros(next);
-        localStorage.setItem(FILTER_KEY, JSON.stringify(next));
+        setFiltros(prev => {
+            const next = { ...prev, [k]: v ?? undefined };
+            localStorage.setItem(FILTER_KEY, JSON.stringify(next));
+            return next;
+        });
     };
+
+    // Atualiza múltiplas chaves de uma vez — necessário ao trocar revenda,
+    // que deve também zerar o vendedor selecionado em um único render.
+    const setFiltrosMulti = (parcial: Record<string, any>) => {
+        setFiltros(prev => {
+            const next = { ...prev, ...parcial };
+            localStorage.setItem(FILTER_KEY, JSON.stringify(next));
+            return next;
+        });
+    };
+
     const resetFiltros = () => { setFiltros({}); localStorage.removeItem(FILTER_KEY); };
     const temFiltro = Object.values(filtros).some(Boolean);
 
@@ -96,9 +112,7 @@ export default function Compliance() {
     const handleNavigate = (page: string) => {
         if (page === "dashboard") { window.location.href = "/"; return; }
         if (page === "vendedores") { window.location.href = "/vendedores"; return; }
-        if (page === "compliance") { window.location.href = "/compliance"; return; }
-
-        if (page !== "rotas") {
+        if (page !== "compliance") {
             toast.info(`Módulo "${page}" em breve`);
             return;
         }
@@ -159,7 +173,7 @@ export default function Compliance() {
 
                         <div className="flex items-center gap-2">
                             <label className="text-xs text-slate-500 whitespace-nowrap" style={{ fontWeight: 600 }}>Revenda</label>
-                            <select value={filtros.revenda ?? ""} onChange={e => { setFiltro("revenda", e.target.value || undefined); setFiltro("vendedor", undefined); }}
+                            <select value={filtros.revenda ?? ""} onChange={e => setFiltrosMulti({ revenda: e.target.value || undefined, vendedor: undefined })}
                                 className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200">
                                 <option value="">Todas</option>
                                 {revendas.map(r => <option key={r} value={r}>{r}</option>)}
