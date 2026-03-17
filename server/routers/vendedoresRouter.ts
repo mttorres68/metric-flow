@@ -107,10 +107,23 @@ export const vendedoresRouter = router({
 
       const totalVisitas        = visitas.length;
       const visitasConvertidas  = visitas.filter((v) => v.status === "convertido").length;
+      const semVisita           = visitas.filter((v) => v.status === "sem_visita").length;
       const receita             = visitas
         .filter((v) => v.status === "convertido")
         .reduce((sum, v) => sum + v.valorNumerico, 0);
       const clientesUnicos      = new Set(visitas.map((v) => v.codCliente)).size;
+
+      // Tempo médio: visitas com tempoVisita válido
+      const visitasComTempo = visitas.filter(v => v.tempoVisita && v.tempoVisita !== "ND");
+      let tempoMedioVisita = 0;
+      if (visitasComTempo.length > 0) {
+        const somaMin = visitasComTempo.reduce((sum, v) => {
+          const partes = String(v.tempoVisita).split(":");
+          if (partes.length >= 2) return sum + parseInt(partes[0]) * 60 + parseInt(partes[1]);
+          return sum;
+        }, 0);
+        tempoMedioVisita = somaMin / visitasComTempo.length;
+      }
 
       const motivosNaoVenda: Record<string, number> = {};
       visitas
@@ -122,9 +135,11 @@ export const vendedoresRouter = router({
         nomeVendedor:    `V0${input.vendedor}`,
         totalVisitas,
         visitasConvertidas,
+        semVisita,
         receita,
         taxaConversao:   totalVisitas > 0 ? (visitasConvertidas / totalVisitas) * 100 : 0,
         clientesUnicos,
+        tempoMedioVisita,
         motivosNaoVenda,
       };
     }),
