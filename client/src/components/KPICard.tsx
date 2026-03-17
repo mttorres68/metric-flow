@@ -5,10 +5,11 @@
 
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Badge } from "./ui/badge";
 
 interface KPICardProps {
   title: string;
-  value: string;
+  value: string | number;
   numericValue?: number;
   prefix?: string;
   suffix?: string;
@@ -122,8 +123,9 @@ export default function KPICard({
         </div>
       </div>
 
-      {trend !== undefined && (
-        <div className="flex items-center gap-1.5">
+
+      <div className="flex items-center gap-1.5">
+        {trend !== undefined && (
           <div
             className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-700"
             style={{
@@ -137,13 +139,17 @@ export default function KPICard({
             ) : (
               <TrendingDown className="w-3 h-3" />
             )}
-            {Math.abs(trend)}%
+            {trend && Math.abs(trend)}%
           </div>
-          {trendLabel && (
-            <span className="text-xs text-slate-400">{trendLabel}</span>
-          )}
-        </div>
-      )}
+        )}
+        {trendLabel && (
+          <Badge variant="outline" >
+
+            <span className="text-xs text-slate-800">{trendLabel}</span>
+          </Badge>
+        )}
+      </div>
+
     </div>
   );
 }
