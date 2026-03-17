@@ -15,7 +15,6 @@ import {
   DollarSign,
   MapPin,
   Target,
-  Users,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -25,6 +24,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Legend,
   ResponsiveContainer,
   Tooltip,
@@ -45,30 +45,32 @@ export default function Home() {
   // Filtros de dados — persistidos no localStorage via useFilterState
   const {
     filters,
-    setVendedor:   setFiltroVendedor,
-    setStatus:     setFiltroStatus,
-    setGerente:    setFiltroGerente,
-    setRevenda:    setFiltroRevenda,
+    setVendedor: setFiltroVendedor,
+    setStatus: setFiltroStatus,
+    setGerente: setFiltroGerente,
+    setRevenda: setFiltroRevenda,
     setDataInicio: setFiltroDataInicio,
-    setDataFim:    setFiltroDataFim,
-    reset:         resetFiltros,
+    setDataFim: setFiltroDataFim,
+    reset: resetFiltros,
   } = useFilterState();
 
   // Configuração de regras de negócio — persiste no localStorage
   const { config, apply: applyConfig, reset: resetConfig, isDirty: isConfigDirty } = useConfigMetricas();
 
   const { data: dashboardData, isLoading, error } = trpc.dashboard.getMetrics.useQuery({
-    vendedor:   filters.vendedor,
-    status:     filters.status as "convertido" | "nao_convertido" | "sem_visita" | undefined,
-    gerente:    filters.gerente,
-    revenda:    filters.revenda,
+    vendedor: filters.vendedor,
+    status: filters.status as "convertido" | "nao_convertido" | "sem_visita" | undefined,
+    gerente: filters.gerente,
+    revenda: filters.revenda,
     dataInicio: filters.dataInicio,
-    dataFim:    filters.dataFim,
+    dataFim: filters.dataFim,
     config,
   });
 
   const handleNavigate = (page: string) => {
     if (page === "vendedores") { window.location.href = "/vendedores"; return; }
+    if (page === "compliance") { window.location.href = "/compliance"; return; }
+
     if (page !== "dashboard") {
       toast.info(`Módulo "${page}" em breve`, { description: "Esta seção está em desenvolvimento." });
       return;
@@ -112,9 +114,6 @@ export default function Home() {
     ? kpis.receita_total / kpis.clientes_unicos_visitados
     : 0;
 
-  const percAdequadas = kpis.visitas_brutas_raio > 0
-    ? ((kpis.visitas_brutas_raio - kpis.visitas_curtas_count) / kpis.visitas_brutas_raio) * 100
-    : 0;
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -138,8 +137,8 @@ export default function Home() {
                 <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                 {[
                   kpis.alertas.cobertura && "Cobertura",
-                  kpis.alertas.curtas    && "Relâmpagos",
-                  kpis.alertas.tarde     && "Tarde",
+                  kpis.alertas.curtas && "Relâmpagos",
+                  kpis.alertas.tarde && "Tarde",
                 ].filter(Boolean).join(" · ")} em alerta
               </div>
             )}
@@ -176,7 +175,7 @@ export default function Home() {
           />
 
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <KPICard
               title="Receita Total"
               value={`R$ ${kpis.receita_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
@@ -191,29 +190,18 @@ export default function Home() {
               value={`${kpis.cobertura_perc.toFixed(1)}%`}
               icon={<Target className="w-5 h-5" />}
               colorClass={kpis.alertas.cobertura ? "orange" : "green"}
-              trend={kpis.clientes_unicos_visitados}
-              trendLabel={`de ${kpis.total_carteira} clientes`}
+              //trend={kpis.clientes_unicos_visitados}
+              trendLabel={`${kpis.clientes_unicos_visitados}/${kpis.total_carteira} clientes`}
               delay={50}
-            />
-            <KPICard
-              title="Clientes Únicos"
-              value={String(kpis.clientes_unicos_visitados)}
-              icon={<Users className="w-5 h-5" />}
-              colorClass="blue"
-              trend={Number(kpis.taxa_conversao.toFixed(1))}
-              trendLabel="% Conversão"
-              delay={100}
             />
             <KPICard
               title="Visitas Relâmpago"
               value={`${kpis.visitas_curtas_perc.toFixed(1)}%`}
               icon={<Clock className="w-5 h-5" />}
               colorClass={kpis.alertas.curtas ? "orange" : "blue"}
-              trend={kpis.alertas.curtas
-                ? -Number(kpis.visitas_curtas_perc.toFixed(1))
-                :  Number(kpis.visitas_curtas_perc.toFixed(1))}
-              trendLabel={`${kpis.visitas_curtas_count}/${kpis.visitas_brutas_raio} no raio`}
-              delay={150}
+              trend={kpis.visitas_curtas_count}
+              trendLabel={`${kpis.visitas_curtas_count}/${kpis.visitas_brutas_raio} visitas`}
+              delay={100}
             />
             <KPICard
               title="Visitas no Almoço"
@@ -222,16 +210,15 @@ export default function Home() {
               colorClass="purple"
               trend={Number(kpis.visitas_tarde_perc.toFixed(1))}
               trendLabel={`% Após 14h${kpis.alertas.tarde ? " ⚠" : ""}`}
-              delay={200}
+              delay={150}
             />
             <KPICard
               title="Tempo Médio"
               value={`${kpis.tempo_medio_visita.toFixed(1)} min`}
               icon={<Clock className="w-5 h-5" />}
               colorClass="blue"
-              trend={Number(percAdequadas.toFixed(1))}
-              trendLabel={`% Adequadas (>${config.minutosCurta}m)`}
-              delay={250}
+              trendLabel={`(${kpis.visitas_com_duracao_valida}) visitas com duração`}
+              delay={200}
             />
           </div>
 
@@ -266,7 +253,7 @@ export default function Home() {
                   <Tooltip contentStyle={{ background: "white", border: "1px solid #E2E8F0", borderRadius: "12px", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", fontSize: 12 }} />
                   <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                   <Area type="monotone" dataKey="acumulado" name="Receita" stroke="#6C8EF5" strokeWidth={2.5} fill="url(#gradReceita)" dot={{ fill: "#6C8EF5", r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
-                  <Area type="monotone" dataKey="visitas"   name="Visitas" stroke="#34C78A" strokeWidth={2}   fill="url(#gradVisitas)"  dot={{ fill: "#34C78A", r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                  <Area type="monotone" dataKey="visitas" name="Visitas" stroke="#34C78A" strokeWidth={2} fill="url(#gradVisitas)" dot={{ fill: "#34C78A", r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -279,23 +266,33 @@ export default function Home() {
                 </p>
               </div>
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={graficos.vendedores ?? []} margin={{ top: 5, right: 5, left: -20, bottom: 0 }} barSize={28}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                  <XAxis dataKey="vendedor" tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ background: "white", border: "1px solid #E2E8F0", borderRadius: "12px", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", fontSize: 12 }}
-                    formatter={(value: any, name: string) => [
-                      name === "curtas_perc" ? `${Number(value).toFixed(1)}%` : value,
-                      name === "curtas_perc" ? "% Relâmpago" : "Clientes",
-                    ]}
-                  />
-                  <Bar dataKey="clientes" name="Clientes" radius={[6, 6, 0, 0]}>
-                    {(graficos.vendedores ?? []).map((_: any, i: number) => (
-                      <Cell key={`cell-${i}`} fill={PASTEL_COLORS[i % PASTEL_COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
+                {(() => {
+                  const vendedoresOrdenados = [...(graficos.vendedores ?? [])].sort((a: any, b: any) => b.clientes - a.clientes);
+                  return (
+                    <BarChart data={vendedoresOrdenados} margin={{ top: 22, right: 5, left: -20, bottom: 0 }} barSize={28}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                      <XAxis dataKey="vendedor" tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={true} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={false} tickLine={true} />
+                      <Tooltip
+                        contentStyle={{ background: "white", border: "1px solid #E2E8F0", borderRadius: "12px", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", fontSize: 12 }}
+                        formatter={(value: any, name: string) => [
+                          name === "curtas_perc" ? `${Number(value).toFixed(1)}%` : value,
+                          name === "curtas_perc" ? "% Relâmpago" : "Clientes",
+                        ]}
+                      />
+                      <Bar dataKey="clientes" name="Clientes" radius={[6, 6, 0, 0]}>
+                        <LabelList
+                          dataKey="clientes"
+                          position="insideTop"
+                          style={{ fontSize: 11, fontWeight: 700, fill: "#64748B" }}
+                        />
+                        {(graficos.vendedores ?? []).map((_: any, i: number) => (
+                          <Cell key={`cell-${i}`} fill={PASTEL_COLORS[i % PASTEL_COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  );
+                })()}
               </ResponsiveContainer>
             </div>
           </div>
