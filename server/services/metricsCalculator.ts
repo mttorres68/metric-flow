@@ -72,6 +72,7 @@ export interface KPIs {
   cobertura_perc: number;           // únicos dentro do raio / total carteira
   clientes_unicos_visitados: number;
   total_carteira: number;
+  //total_visitas: number; // qtd total de visitas realizada, todas realizadas dentro do raio sem unificar o cliente
 
   // Qualidade
   visitas_curtas_perc: number;      // curtas / brutas dentro do raio
@@ -125,10 +126,12 @@ export interface DashboardMetrics {
 
 /**
  * Converte "Dist. PV" para número em metros.
- * Mesmo algoritmo do converter_distancia_pv() do Python.
+ * ND ou vazio → 0, igual ao Python converter_distancia_pv() que usa fillna(0).
+ * Linhas sem visita (sem_visita) têm Duracao=null e nunca entram no filtro de raio,
+ * portanto o 0 não as contamina — apenas visitas com duração chegam até aqui.
  */
 function parseDistPV(distStr: any): number {
-  if (!distStr || distStr === "ND") return 0;
+  if (!distStr || distStr === "ND" || String(distStr).trim() === "") return 0;
   const limpo = String(distStr)
     .trim()
     .replace(/\./g, "")      // remove separador de milhar
@@ -170,6 +173,9 @@ export function calcularMetricas(
 
   const cfg = resolverConfig(config);
 
+  const _label = `[metricsCalc] filtro=${filtroVendedor ?? "todos"} status=${filtroStatus ?? "todos"}`;
+  console.group(_label);
+
   // ── 1. PRÉ-PROCESSAMENTO ──────────────────────────────────────────────
   const visitasMapeadas = visitasBrutas.map((v) => {
     const distPVNum  = parseDistPV(v.distPV);
@@ -186,13 +192,30 @@ export function calcularMetricas(
     };
   });
 
+  console.log("① entrada          total=%d  raio=%dm  curta<%dmin",
+    visitasMapeadas.length, cfg.raioPDV, cfg.minutosCurta);
+
   // ── 2. FILTRO DE FALSAS VISITAS ───────────────────────────────────────
-  // Remove registros onde duração < minutosCurta E distância > raioPDV
-  // (GPS errado ou registro espúrio — mesma lógica do Python)
-  let visitasValidas = visitasMapeadas.filter((v) => {
-    const isFalsa = v.isCurta && v.distPVNum > cfg.raioPDV;
-    return !isFalsa;
-  });
+  const falsasVisitas = visitasMapeadas.filter((v) => v.isCurta && v.distPVNum > cfg.raioPDV);
+  let visitasValidas = visitasMapeadas.filter((v) => !(v.isCurta && v.distPVNum > cfg.raioPDV));
+
+  console.log("② falsas removidas=%d  válidas=%d", falsasVisitas.length, visitasValidas.length);
+  if (falsasVisitas.length > 0) {
+    console.table(falsasVisitas.map((v) => ({
+      vendedor: v.vendedor, cliente: v.codCliente,
+      distPV: v.distPVNum.toFixed(1) + "m", duracao: v.duracaoMin?.toFixed(1) + "min",
+    })));
+  }
+
+  // ── CARTEIRA TOTAL ────────────────────────────────────────────────────
+  // Usa visitasMapeadas (ANTES de remover falsas) — igual ao Python que usa df completo.
+  // Falsas visitas e sem_visita ainda pertencem à carteira do vendedor.
+  const visitasParaCarteira = filtroVendedor
+    ? visitasMapeadas.filter((v) => v.vendedor === Number(filtroVendedor))
+    : visitasMapeadas;
+  const totalCarteira = new Set(visitasParaCarteira.map((v) => v.codCliente)).size;
+
+  console.log("③ carteira         totalCarteira=%d  (inclui sem_visita e falsas)", totalCarteira);
 
   // ── 3. FILTROS DO DASHBOARD ───────────────────────────────────────────
   if (filtroVendedor) {
@@ -202,49 +225,69 @@ export function calcularMetricas(
     visitasValidas = visitasValidas.filter((v) => v.status === filtroStatus);
   }
 
+  console.log("④ pós-filtros      válidas=%d", visitasValidas.length);
+
   if (visitasValidas.length === 0) {
+    console.warn("  ⚠ sem visitas após filtros — retornando zeros");
+    console.groupEnd();
     return _retornarMetricasZeradas(cfg);
   }
 
   // ── 4. SEGMENTOS DENTRO DO RAIO ───────────────────────────────────────
-  // Brutas dentro do raio: todas as linhas (inclui re-visitas ao mesmo cliente)
-  const dentroRaioBrutas = visitasValidas.filter((v) => v.dentroDoRaio);
-
-  // Únicas dentro do raio: um cliente visitado 2x conta como 1
-  // Usado como numerador de cobertura (mesmo critério do Python)
-  const dentroRaioUnico = dentroRaioBrutas.filter(
+  // Apenas visitas COM duração — igual ao Python: df_valido = df[Duracao.notna()]
+  // Sem este filtro, sem_visita com distPV=ND→0 entraria como "dentro do raio"
+  // e inflaria visitasUnicasRaio e cobertura incorretamente.
+  const visitasComDuracao  = visitasValidas.filter((v) => v.duracaoMin !== null);
+  const dentroRaioBrutas   = visitasComDuracao.filter((v) => v.dentroDoRaio);
+  const dentroRaioUnico    = dentroRaioBrutas.filter(
     (v, i, arr) => arr.findIndex((x) => x.codCliente === v.codCliente) === i
   );
 
-  // Total carteira = clientes distintos em toda a base filtrada (inclui não-visitados)
-  const totalCarteira = new Set(visitasValidas.map((v) => v.codCliente)).size;
-
   const visitasBrutasRaio  = dentroRaioBrutas.length;
   const visitasUnicasRaio  = dentroRaioUnico.length;
+  const foraRaio           = visitasComDuracao.length - visitasBrutasRaio;
+
+  console.log("⑤ raio             brutas=%d  únicas=%d  fora_raio=%d",
+    visitasBrutasRaio, visitasUnicasRaio, foraRaio);
 
   // ── 5. MÉTRICAS DE QUALIDADE (sobre raio) ─────────────────────────────
-  // Curtas: sobre únicos dentro do raio (mesmo critério exato do Python)
-  const visitasCurtas = dentroRaioUnico.filter((v) => v.isCurta).length;
+  const visitasCurtasUnicas = dentroRaioUnico.filter((v) => v.isCurta).length;
   const visitas_curtas_perc = visitasUnicasRaio > 0
-    ? (visitasCurtas / visitasUnicasRaio) * 100
+    ? (visitasCurtasUnicas / visitasUnicasRaio) * 100
     : 0;
+
+  console.log("⑥ relâmpago        curtas_únicas=%d  únicas_raio=%d  %%=%.1f",
+    visitasCurtasUnicas, visitasUnicasRaio, visitas_curtas_perc);
 
   // ── 6. HORÁRIOS (sobre brutas dentro do raio) ─────────────────────────
   let visitas_almoco = 0;
   let visitasTarde   = 0;
-  let somaDuracao    = 0;
-  let comDuracao     = 0;
 
   for (const v of dentroRaioBrutas) {
     if (v.inicioMin !== null) {
       if (v.inicioMin >= JANELA_ALMOCO_INICIO && v.inicioMin <= JANELA_ALMOCO_FIM) visitas_almoco++;
       if (v.inicioMin >= JANELA_TARDE_INICIO) visitasTarde++;
     }
+  }
+
+  console.log("⑦ horários         almoço=%d  tarde=%d  %%tarde=%.1f",
+    visitas_almoco, visitasTarde,
+    visitasBrutasRaio > 0 ? (visitasTarde / visitasBrutasRaio) * 100 : 0);
+
+  // Tempo médio: média de TODAS as visitas válidas (com duração não nula),
+  // sem filtro de raio e sem filtro de duração mínima — igual ao Python.
+  let somaDuracao = 0;
+  let comDuracao  = 0;
+  for (const v of visitasValidas) {
     if (v.duracaoMin !== null) {
       somaDuracao += v.duracaoMin;
       comDuracao++;
     }
   }
+
+  const tempoMedio = comDuracao > 0 ? somaDuracao / comDuracao : 0;
+  console.log("⑧ tempo médio      visitas_com_duracao=%d  média=%.1fmin  (sem filtro raio/min)",
+    comDuracao, tempoMedio);
 
   // ── 7. FINANCEIRO ─────────────────────────────────────────────────────
   const convertidas   = visitasValidas.filter((v) => v.status === "convertido");
@@ -252,6 +295,9 @@ export function calcularMetricas(
   const taxaConversao = visitasValidas.length > 0
     ? (convertidas.length / visitasValidas.length) * 100
     : 0;
+
+  console.log("⑨ financeiro       receita=%.2f  convertidas=%d  conversão=%.1f%%",
+    receitaTotal, convertidas.length, taxaConversao);
 
   // ── 8. KPIs FINAIS ────────────────────────────────────────────────────
   const cobertura_perc = totalCarteira > 0
@@ -262,13 +308,19 @@ export function calcularMetricas(
     ? (visitasTarde / visitasBrutasRaio) * 100
     : 0;
 
+  console.log("⑩ cobertura        %d/%d = %.1f%%", visitasUnicasRaio, totalCarteira, cobertura_perc);
+  console.log("   config usada    raioPDV=%dm  curta<%dmin  alertas: cobertura<%d%% curtas>%d%% tarde<%d%%",
+    cfg.raioPDV, cfg.minutosCurta,
+    cfg.alertaCoberturaPerc, cfg.alertaCurtasPerc, cfg.alertaTardePerc);
+  console.groupEnd();
+
   const kpis: KPIs = {
     cobertura_perc,
     clientes_unicos_visitados: visitasUnicasRaio,
     total_carteira:            totalCarteira,
 
     visitas_curtas_perc,
-    visitas_curtas_count:      visitasCurtas,
+    visitas_curtas_count:      visitasCurtasUnicas,
     visitas_brutas_raio:       visitasBrutasRaio,
 
     visitas_almoco,
