@@ -19,7 +19,7 @@ export interface RawVisita {
   "Razão Social": string;
   "Seq. ERP": number;
   "Seq. PT": number;
-  "Dist. P": string;
+  "Dist. PV": string;
   "Dist. R": string;
   "Dif. PxR": string;
   "Vel. Méd.": string;
@@ -29,7 +29,6 @@ export interface RawVisita {
   "Tempo Vis.": string;
   "Valor Ped.": string;
   "Tipo Cobr.": string;
-  "Dist. PV": string; // Distância ao Ponto de Venda — base do filtro de raio (Python: Dist_PV_Numeric)
   "F/R"?: string;
 }
 
@@ -117,7 +116,20 @@ export function classificarVisita(
     "FECHADO NO MOMENTO DA VISTA": "Fechado no momento da visita",
     "FECHADO NO DIA DA VISITA": "Fechado no dia da visita",
     "FECHADO (ENCERROU ATIVIDADE)": "Encerrou atividade",
-    INADIMPLENTE: "Inadimplente",
+    "BLOQUEADO (ATIVO NO PALM)": "Bloqueado (Ativo no Palm)",
+    "INADIMPLENTE": "Inadimplente",
+    "COMPRADOR DO PDV AUSENTE": "Comprador do PDV ausente",
+    "DESISTIU":"Desistiu",
+    "DONO DO PDV AUSENTE": "Dono do PDV ausente",
+    "EXCLUSIVO CONCORRENTE": "Exclusivo Concorrente",
+    "DEBITO/PEND.": "Débito/pend.",
+    "REJEITA MARCA": "Rejeita a marca",
+    "FECHADO": "Fechado",
+    "AUSENTE": "Ausente",
+    "SEM VASILHAME": "Sem vasilhame",
+    "PRECO": "Preço",
+    "PDV EM REFORMA":"PDV em reforma" ,
+    "0,00 ":"Sem venda", 
     "0,00": "Sem registro",
   };
 
