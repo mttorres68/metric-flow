@@ -71,6 +71,8 @@ export default function Home() {
     if (page === "vendedores") { window.location.href = "/vendedores"; return; }
     if (page === "compliance") { window.location.href = "/compliance"; return; }
     if (page === "clientes") { window.location.href = "/clientes"; return; }
+    if (page === "relatorio") { window.location.href = "/relatorio"; return; }
+
     if (page !== "dashboard") {
       toast.info(`Módulo "${page}" em breve`, { description: "Esta seção está em desenvolvimento." });
       return;

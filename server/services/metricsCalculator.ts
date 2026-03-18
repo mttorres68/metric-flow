@@ -72,7 +72,6 @@ export interface KPIs {
   cobertura_perc: number;           // únicos dentro do raio / total carteira
   clientes_unicos_visitados: number;
   total_carteira: number;
-  //total_visitas: number; // qtd total de visitas realizada, todas realizadas dentro do raio sem unificar o cliente
 
   // Qualidade
   visitas_curtas_perc: number;      // curtas / brutas dentro do raio
@@ -355,27 +354,72 @@ export function calcularMetricas(
     }
   });
 
-  // Ranking por vendedor — cobertura individual
+  // Ranking por vendedor — cobertura individual + dados do relatório
   const vendedorMap: Record<
     number,
-    { clientesRaio: Set<number>; totalCarteira: Set<number>; receita: number; curtas: number; totalRaioUnico: number }
+    {
+      revenda:         string;
+      clientesRaio:    Set<number>;
+      totalCarteira:   Set<number>;
+      receita:         number;
+      curtas:          number;
+      totalRaioUnico:  number;
+      brutasRaio:      number;
+      visitasAlmoco:   number;
+      visitasTarde:    number;
+      hrInicioMin:     number | null;
+      hrFimMin:        number | null;
+    }
   > = {};
+
+  // Precisamos do fimMin — parseia horaFim para minutos
+  const parseFim = (horaFim: string): number | null => {
+    if (!horaFim || horaFim === "ND") return null;
+    const p = horaFim.split(":");
+    if (p.length < 2) return null;
+    const h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+    return isNaN(h) || isNaN(m) ? null : h * 60 + m;
+  };
 
   visitasValidas.forEach((v) => {
     if (!vendedorMap[v.vendedor]) {
       vendedorMap[v.vendedor] = {
-        clientesRaio:  new Set(),
-        totalCarteira: new Set(),
-        receita: 0,
-        curtas: 0,
+        revenda:        v.revenda,
+        clientesRaio:   new Set(),
+        totalCarteira:  new Set(),
+        receita:        0,
+        curtas:         0,
         totalRaioUnico: 0,
+        brutasRaio:     0,
+        visitasAlmoco:  0,
+        visitasTarde:   0,
+        hrInicioMin:    null,
+        hrFimMin:       null,
       };
     }
     const vd = vendedorMap[v.vendedor];
     vd.totalCarteira.add(v.codCliente);
 
-    if (v.dentroDoRaio) {
-      // Deduplicar por cliente para cobertura individual
+    if (v.dentroDoRaio && v.duracaoMin !== null) {
+      vd.brutasRaio++;
+
+      // Hora início (primeira visita dentro do raio)
+      if (v.inicioMin !== null) {
+        if (vd.hrInicioMin === null || v.inicioMin < vd.hrInicioMin) vd.hrInicioMin = v.inicioMin;
+      }
+      // Hora fim (última visita dentro do raio — usa horaFim)
+      const fimMin = parseFim(v.horaFim);
+      if (fimMin !== null) {
+        if (vd.hrFimMin === null || fimMin > vd.hrFimMin) vd.hrFimMin = fimMin;
+      }
+
+      // Almoço e tarde sobre brutas dentro do raio
+      if (v.inicioMin !== null) {
+        if (v.inicioMin >= JANELA_ALMOCO_INICIO && v.inicioMin <= JANELA_ALMOCO_FIM) vd.visitasAlmoco++;
+        if (v.inicioMin >= JANELA_TARDE_INICIO) vd.visitasTarde++;
+      }
+
+      // Cobertura: deduplica por cliente
       if (!vd.clientesRaio.has(v.codCliente)) {
         vd.clientesRaio.add(v.codCliente);
         vd.totalRaioUnico++;
@@ -385,17 +429,38 @@ export function calcularMetricas(
     if (v.status === "convertido") vd.receita += v.valorNumerico;
   });
 
+  // Converte minutos → "HH:MM:SS"
+  const minToHHMM = (min: number | null): string => {
+    if (min === null) return "ND";
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  };
+
   const vendedoresRanking = Object.entries(vendedorMap)
     .map(([vendedor, d]) => ({
-      vendedor:      `V0${vendedor}`,
-      clientes:      d.clientesRaio.size,
-      receita:       d.receita,
-      curtas_perc:   d.totalRaioUnico > 0 ? (d.curtas / d.totalRaioUnico) * 100 : 0,
+      vendedor:       `V0${vendedor}`,
+      vendedorCod:    Number(vendedor),
+      revenda:        d.revenda,
+      clientes:       d.clientesRaio.size,
+      receita:        d.receita,
+      curtas_perc:    d.totalRaioUnico > 0 ? (d.curtas / d.totalRaioUnico) * 100 : 0,
       cobertura_perc: d.totalCarteira.size > 0
         ? (d.clientesRaio.size / d.totalCarteira.size) * 100
         : 0,
+      hrInicio:          minToHHMM(d.hrInicioMin),
+      hrFim:             minToHHMM(d.hrFimMin),
+      visitasAlmoco:     d.visitasAlmoco,
+      visitasTarde:      d.visitasTarde,
+      visitasBrutasRaio: d.brutasRaio,
+      totalCarteira:     d.totalCarteira.size,
+      visitasUnicasRaio: d.clientesRaio.size,
+      curtasCount:       d.curtas,
+      percTarde:    d.brutasRaio     > 0 ? (d.visitasTarde / d.brutasRaio)          * 100 : 0,
+      percCurtas:   d.totalRaioUnico > 0 ? (d.curtas       / d.totalRaioUnico)      * 100 : 0,
+      percCobertura: d.totalCarteira.size > 0 ? (d.clientesRaio.size / d.totalCarteira.size) * 100 : 0,
     }))
-    .sort((a, b) => b.receita - a.receita);
+    .sort((a, b) => a.revenda.localeCompare(b.revenda) || a.vendedorCod - b.vendedorCod);
 
   return {
     kpis,
@@ -415,8 +480,8 @@ export function calcularMetricas(
 // ---------------------------------------------------------------------------
 
 const CORES_MOTIVO = [
-  "#4e79a7", "#f28e2b", "#e15759", "#76b7b2",
-  "#59a14f", "#edc948", "#b07aa1", "#ff9da7",
+  "#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#445552", "#07004D", "#FF5154",
+  "#59a14f", "#edc948", "#b07aa1", "#ff9da7", "#42E2B8", "#2D82B7"
 ];
 
 function _calcularMotivos(visitas: any[]) {

@@ -113,6 +113,7 @@ export default function Compliance() {
         if (page === "dashboard") { window.location.href = "/"; return; }
         if (page === "vendedores") { window.location.href = "/vendedores"; return; }
         if (page === "clientes") { window.location.href = "/clientes"; return; }
+        if (page === "relatorio") { window.location.href = "/relatorio"; return; }
 
         if (page !== "compliance") {
             toast.info(`Módulo "${page}" em breve`);

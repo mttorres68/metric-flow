@@ -54,6 +54,7 @@ export default function VendedorDetalhes() {
 
   const handleNavigate = (page: string) => {
     if (page === "dashboard") setLocation("/");
+    if (page === "relatorio") { window.location.href = "/relatorio"; return; }
     else if (page === "vendedores") setLocation("/vendedores");
     setActivePage(page);
   };
