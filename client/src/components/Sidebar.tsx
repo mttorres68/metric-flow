@@ -5,6 +5,7 @@
 
 import {
   BarChart2,
+  BarChartHorizontal,
   CircleCheckBig,
   Home,
   LineChart,
@@ -26,10 +27,10 @@ const navItems = [
   { id: "compliance", label: "Compliance", icon: CircleCheckBig },
   { id: "clientes", label: "Clientes", icon: UsersRound },
   { id: "relatorio", label: "Relatórios", icon: BarChart2 },
-
+  { id: "relatorio_semanal", label: "Rel. Semanal", icon: BarChartHorizontal },
+  { id: "rota_coaching", label: "Rota Coaching", icon: Map },
 
   { id: "pedidos", label: "Pedidos", icon: ShoppingCart },
-  { id: "rotas", label: "Rotas", icon: Map },
   { id: "tendencias", label: "Tendências", icon: TrendingUp },
   { id: "analises", label: "Análises", icon: LineChart },
 ];
@@ -71,16 +72,16 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
               <li key={item.id}>
                 <button
                   onClick={() => onNavigate(item.id)}
-                  disabled={item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" && item.id !== "relatorio"}
+                  disabled={item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" && item.id !== "relatorio" && item.id !== "relatorio_semanal" && item.id !== "rota_coaching" }
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-600 transition-all duration-200 ${
-                    item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" && item.id !== "relatorio"
+                    item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" && item.id !== "relatorio" && item.id !== "relatorio_semanal" && item.id !== "rota_coaching" 
                       ? "text-slate-300 cursor-not-allowed opacity-50"
                       : isActive
                       ? "bg-indigo-50 text-indigo-600"
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                   }`}
                   style={{ fontWeight: isActive ? 700 : 500 }}
-                  title={item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" && item.id !== "relatorio" ? "Esta seção está em desenvolvimento" : ""}
+                  title={item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" && item.id !== "relatorio" && item.id !== "relatorio_semanal" && item.id !== "rota_coaching"  ? "Esta seção está em desenvolvimento" : ""}
                 >
                   <Icon
                     className={`w-4.5 h-4.5 flex-shrink-0 ${
