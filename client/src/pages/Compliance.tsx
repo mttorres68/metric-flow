@@ -109,17 +109,16 @@ export default function Compliance() {
         topN: 5,
     });
 
+    // ── Navegação ───────────────────────────────────────────────────────────────
     const handleNavigate = (page: string) => {
-        if (page === "dashboard") { window.location.href = "/"; return; }
-        if (page === "vendedores") { window.location.href = "/vendedores"; return; }
-        if (page === "clientes") { window.location.href = "/clientes"; return; }
-        if (page === "relatorio") { window.location.href = "/relatorio"; return; }
-
-        if (page !== "compliance") {
-            toast.info(`Módulo "${page}" em breve`);
-            return;
-        }
-        setActivePage(page);
+        const rotas: Record<string, string> = {
+            dashboard: "/", vendedores: "/vendedores",
+            compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
+            relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",
+        };
+        if (rotas[page]) { window.location.href = rotas[page]; return; }
+        if (page !== "compliance") toast.info(`Módulo "${page}" em breve`);
+        else setActivePage(page);
     };
 
     // Clientes filtrados por busca
@@ -279,8 +278,8 @@ export default function Compliance() {
                                 <button key={m.motivo}
                                     onClick={() => setMotivoSelecionado(m.motivo === motivoSelecionado ? null : m.motivo)}
                                     className={`w-full text-left rounded-xl p-4 border transition-all ${motivoSelecionado === m.motivo
-                                            ? "border-indigo-300 bg-indigo-50 shadow-sm"
-                                            : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50/80"
+                                        ? "border-indigo-300 bg-indigo-50 shadow-sm"
+                                        : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50/80"
                                         }`}
                                     style={{ boxShadow: motivoSelecionado === m.motivo ? "0 2px 8px rgba(99,102,241,0.12)" : "0 1px 3px rgba(0,0,0,0.04)" }}>
 
@@ -501,7 +500,7 @@ export default function Compliance() {
                                                                         <td className="py-2 text-slate-600 tabular-nums">{v.duracao === "ND" ? "—" : v.duracao}</td>
                                                                         <td className="py-2 tabular-nums">
                                                                             <span className={`px-1.5 py-0.5 rounded-md ${v.distPV === "ND" ? "text-slate-400" :
-                                                                                    parseFloat(v.distPV.replace(",", ".")) > 500 ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
+                                                                                parseFloat(v.distPV.replace(",", ".")) > 500 ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
                                                                                 }`} style={{ fontWeight: 600 }}>
                                                                                 {v.distPV === "ND" ? "—" : `${v.distPV}m`}
                                                                             </span>

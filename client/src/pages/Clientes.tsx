@@ -110,13 +110,16 @@ export default function Clientes() {
         dataFim: filtros.dataFim,
     });
 
+    // ── Navegação ───────────────────────────────────────────────────────────────
     const handleNavigate = (page: string) => {
-        if (page === "dashboard") { window.location.href = "/"; return; }
-        if (page === "vendedores") { window.location.href = "/vendedores"; return; }
-        if (page === "compliance") { window.location.href = "/compliance"; return; }
-        if (page === "relatorio") { window.location.href = "/relatorio"; return; }
-        if (page !== "clientes") { toast.info(`Módulo "${page}" em breve`); return; }
-        setActivePage(page);
+        const rotas: Record<string, string> = {
+            dashboard: "/", vendedores: "/vendedores",
+            compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
+            relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",
+        };
+        if (rotas[page]) { window.location.href = rotas[page]; return; }
+        if (page !== "clientes") toast.info(`Módulo "${page}" em breve`);
+        else setActivePage(page);
     };
 
     // ── Tabela filtrada e ordenada ────────────────────────────────────────────
@@ -366,10 +369,10 @@ export default function Clientes() {
                                                                                 <td className="py-2 pr-6 text-slate-600 tabular-nums">{v.duracao === "ND" ? "—" : v.duracao}</td>
                                                                                 <td className="py-2 pr-6 tabular-nums">
                                                                                     <span className={`px-1.5 py-0.5 rounded-md text-xs ${v.distPV === "ND"
-                                                                                            ? "text-slate-400"
-                                                                                            : distAlta
-                                                                                                ? "bg-red-50 text-red-600"
-                                                                                                : "bg-green-50 text-green-700"
+                                                                                        ? "text-slate-400"
+                                                                                        : distAlta
+                                                                                            ? "bg-red-50 text-red-600"
+                                                                                            : "bg-green-50 text-green-700"
                                                                                         }`} style={{ fontWeight: 600 }}>
                                                                                         {v.distPV === "ND" ? "—" : `${v.distPV}m`}
                                                                                     </span>

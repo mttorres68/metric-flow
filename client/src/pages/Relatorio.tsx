@@ -71,17 +71,19 @@ export default function Relatorio() {
         config,
     });
 
+    // ── Navegação ───────────────────────────────────────────────────────────────
     const handleNavigate = (page: string) => {
         const rotas: Record<string, string> = {
-            dashboard: "/",
-            vendedores: "/vendedores",
-            compliance: "/compliance",
-            clientes: "/clientes",
+            dashboard: "/", vendedores: "/vendedores",
+            compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
+            relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",
         };
         if (rotas[page]) { window.location.href = rotas[page]; return; }
         if (page !== "relatorio") toast.info(`Módulo "${page}" em breve`);
         else setActivePage(page);
     };
+    console.log(handleNavigate);
+    
 
     // Agrupa vendedores por revenda — campo agora vem do backend
     const porRevenda = useMemo(() => {

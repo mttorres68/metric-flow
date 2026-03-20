@@ -67,17 +67,16 @@ export default function Home() {
     config,
   });
 
+  // ── Navegação ───────────────────────────────────────────────────────────────
   const handleNavigate = (page: string) => {
-    if (page === "vendedores") { window.location.href = "/vendedores"; return; }
-    if (page === "compliance") { window.location.href = "/compliance"; return; }
-    if (page === "clientes") { window.location.href = "/clientes"; return; }
-    if (page === "relatorio") { window.location.href = "/relatorio"; return; }
-
-    if (page !== "dashboard") {
-      toast.info(`Módulo "${page}" em breve`, { description: "Esta seção está em desenvolvimento." });
-      return;
-    }
-    setActivePage(page);
+    const rotas: Record<string, string> = {
+      dashboard: "/", vendedores: "/vendedores",
+      compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio", 
+      relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",
+    };
+    if (rotas[page]) { window.location.href = rotas[page]; return; }
+    if (page !== "/") toast.info(`Módulo "${page}" em breve`);
+    else setActivePage(page);
   };
 
   const handleReset = () => resetFiltros();

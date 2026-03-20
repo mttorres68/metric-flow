@@ -76,23 +76,22 @@ export default function VendedoresLista() {
   };
 
   const { data: vendedores = [], isLoading, error } = trpc.vendedores.listar.useQuery({
-    gerente:    filtros.gerente,
-    revenda:    filtros.revenda,
+    gerente: filtros.gerente,
+    revenda: filtros.revenda,
     dataInicio: filtros.dataInicio,
-    dataFim:    filtros.dataFim,
+    dataFim: filtros.dataFim,
   });
 
+  // ── Navegação ───────────────────────────────────────────────────────────────
   const handleNavigate = (page: string) => {
-    if (page === "dashboard") { window.location.href = "/"; return; }
-    if (page === "compliance") { window.location.href = "/compliance"; return; }
-    if (page === "clientes") { window.location.href = "/clientes"; return; }
-    if (page === "relatorio") { window.location.href = "/relatorio"; return; }
-
-    if (page !== "vendedores") {
-      toast.info(`Módulo "${page}" em breve`, { description: "Esta seção está em desenvolvimento." });
-      return;
-    }
-    setActivePage(page);
+    const rotas: Record<string, string> = {
+      dashboard: "/", vendedores: "/vendedores",
+      compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
+      relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",
+    };
+    if (rotas[page]) { window.location.href = rotas[page]; return; }
+    if (page !== "vendedores") toast.info(`Módulo "${page}" em breve`);
+    else setActivePage(page);
   };
 
   // Tabela filtrada + ordenada
@@ -118,10 +117,10 @@ export default function VendedoresLista() {
   );
 
   // KPIs gerais
-  const totalReceita    = vendedores.reduce((s, v) => s + v.receita, 0);
-  const totalVisitas    = vendedores.reduce((s, v) => s + v.totalVisitas, 0);
+  const totalReceita = vendedores.reduce((s, v) => s + v.receita, 0);
+  const totalVisitas = vendedores.reduce((s, v) => s + v.totalVisitas, 0);
   const totalConversoes = vendedores.reduce((s, v) => s + v.visitasConvertidas, 0);
-  const taxaMedia       = totalVisitas > 0 ? (totalConversoes / totalVisitas) * 100 : 0;
+  const taxaMedia = totalVisitas > 0 ? (totalConversoes / totalVisitas) * 100 : 0;
 
   const temFiltro = Object.values(filtros).some(v => v !== undefined && v !== "");
 
@@ -223,9 +222,9 @@ export default function VendedoresLista() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {([
               { label: "Receita Total", value: `R$ ${totalReceita.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: <DollarSign className="w-8 h-8 text-indigo-400" />, bg: "linear-gradient(135deg,#F0F9FF 0%,#E0F2FE 100%)" },
-              { label: "Total Visitas",  value: totalVisitas,            icon: <Users className="w-8 h-8 text-emerald-400" />, bg: "linear-gradient(135deg,#F0FDF4 0%,#DCFCE7 100%)" },
-              { label: "Conversões",     value: totalConversoes,         icon: <TrendingUp className="w-8 h-8 text-orange-400" />, bg: "linear-gradient(135deg,#FFF7ED 0%,#FEF3C7 100%)" },
-              { label: "Taxa Média",     value: `${taxaMedia.toFixed(1)}%`, icon: <BarChart3 className="w-8 h-8 text-purple-400" />, bg: "linear-gradient(135deg,#FAF5FF 0%,#F3E8FF 100%)" },
+              { label: "Total Visitas", value: totalVisitas, icon: <Users className="w-8 h-8 text-emerald-400" />, bg: "linear-gradient(135deg,#F0FDF4 0%,#DCFCE7 100%)" },
+              { label: "Conversões", value: totalConversoes, icon: <TrendingUp className="w-8 h-8 text-orange-400" />, bg: "linear-gradient(135deg,#FFF7ED 0%,#FEF3C7 100%)" },
+              { label: "Taxa Média", value: `${taxaMedia.toFixed(1)}%`, icon: <BarChart3 className="w-8 h-8 text-purple-400" />, bg: "linear-gradient(135deg,#FAF5FF 0%,#F3E8FF 100%)" },
             ] as const).map(({ label, value, icon, bg }) => (
               <div key={label} className="rounded-2xl p-5" style={{ border: "1px solid oklch(0.93 0.006 240)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", background: bg }}>
                 <div className="flex items-center justify-between">

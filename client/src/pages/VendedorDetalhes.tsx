@@ -27,12 +27,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
 
 const STATUS_COLORS = {
-  convertido:    "#34C78A",
+  convertido: "#34C78A",
   nao_convertido: "#FF6B6B",
-  sem_visita:    "#94A3B8",
+  sem_visita: "#94A3B8",
 };
 
 export default function VendedorDetalhes() {
@@ -52,11 +53,16 @@ export default function VendedorDetalhes() {
     { enabled: !!vendedorId }
   );
 
+  // ── Navegação ───────────────────────────────────────────────────────────────
   const handleNavigate = (page: string) => {
-    if (page === "dashboard") setLocation("/");
-    if (page === "relatorio") { window.location.href = "/relatorio"; return; }
-    else if (page === "vendedores") setLocation("/vendedores");
-    setActivePage(page);
+    const rotas: Record<string, string> = {
+      dashboard: "/", vendedores: "/vendedores",
+      compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
+      relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",
+    };
+    if (rotas[page]) { window.location.href = rotas[page]; return; }
+    if (page !== "vendedores") toast.info(`Módulo "${page}" em breve`);
+    else setActivePage(page);
   };
 
   if (!match || !vendedorId) return (
@@ -89,9 +95,9 @@ export default function VendedorDetalhes() {
   // Dados para gráfico de status — separa sem_visita
   const naoConvertidos = detalhes.totalVisitas - detalhes.visitasConvertidas - (detalhes.semVisita ?? 0);
   const dadosStatus = [
-    { name: "Convertidos",     value: detalhes.visitasConvertidas,       fill: STATUS_COLORS.convertido },
-    { name: "Não Convertidos", value: naoConvertidos,                    fill: STATUS_COLORS.nao_convertido },
-    { name: "Sem Visita",      value: detalhes.semVisita ?? 0,           fill: STATUS_COLORS.sem_visita },
+    { name: "Convertidos", value: detalhes.visitasConvertidas, fill: STATUS_COLORS.convertido },
+    { name: "Não Convertidos", value: naoConvertidos, fill: STATUS_COLORS.nao_convertido },
+    { name: "Sem Visita", value: detalhes.semVisita ?? 0, fill: STATUS_COLORS.sem_visita },
   ].filter(d => d.value > 0);
 
   // Motivos ordenados por quantidade
