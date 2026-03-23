@@ -7,6 +7,7 @@ import { vendedoresRouter } from "./routers/vendedoresRouter";
 import { complianceRouter } from "./routers/complianceRouter ";
 import { clientesRouter } from "./routers/clientesRouter";
 import { infleetRouter } from "./routers/infleetRouter";
+import { ptRouter } from "./routers/ptRouter";
 
 
 export const appRouter = router({
@@ -17,6 +18,7 @@ export const appRouter = router({
   compliance: complianceRouter,
   clientes: clientesRouter,
   infleet: infleetRouter,
+  pt: ptRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
