@@ -24,8 +24,7 @@ export const REPORT_CONFIG = {
 
 // Google Sheets Configuration
 export const GOOGLE_SHEETS_CONFIG = {
-  SHEET_ID: "1OqQwxZBvg14IXuCkV7g_FrONFqgEGXPK5zmWySG8ye8",
-  GID: "1758030009", 
+  SHEET_ID: process.env.SHEET_ID,
   // 👇 AQUI ESTÁ A CORREÇÃO: Usando a rota de exportação direta do Google
-  CSV_URL: "https://docs.google.com/spreadsheets/d/1OqQwxZBvg14IXuCkV7g_FrONFqgEGXPK5zmWySG8ye8/export?format=csv&gid=1758030009",
+  CSV_URL: `https://docs.google.com/spreadsheets/d/${process.env.SHEET_ID}/export?format=csv&gid=${process.env.GID}`,
 };
