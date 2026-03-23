@@ -68,6 +68,8 @@ interface RotaRow {
         dentro_raio:      boolean | null;
         lat_ga:           number | null;
         lon_ga:           number | null;
+        lat_vend?:        number | null;
+        lon_vend?:        number | null;
         lat_pdv?:         number | null;
         lon_pdv?:         number | null;
         fonte_distancia?: 'app' | 'haversine' | 'sem_dado';
@@ -117,6 +119,136 @@ function loadFilters() {
 // Componente principal
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Componente de Mapa — Leaflet via CDN (sem instalar dependências)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface MapPonto {
+    lat: number;
+    lon: number;
+    tipo: 'pdv' | 'ga' | 'vend';
+    label: string;
+    cor: string;
+    info?: string;
+}
+
+function RotaMap({ pontos, gaId }: { pontos: MapPonto[]; gaId: string }) {
+    const mapRef = React.useRef<HTMLDivElement>(null);
+    const instanceRef = React.useRef<any>(null);
+
+    React.useEffect(() => {
+        if (!mapRef.current || pontos.length === 0) return;
+
+        // Carrega Leaflet CSS se ainda não carregado
+        if (!document.getElementById('leaflet-css')) {
+            const link = document.createElement('link');
+            link.id = 'leaflet-css';
+            link.rel = 'stylesheet';
+            link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+            document.head.appendChild(link);
+        }
+
+        const loadLeaflet = () => new Promise<any>(resolve => {
+            if ((window as any).L) { resolve((window as any).L); return; }
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+            script.onload = () => resolve((window as any).L);
+            document.head.appendChild(script);
+        });
+
+        loadLeaflet().then(L => {
+            if (!mapRef.current) return;
+
+            // Destrói instância anterior se existir
+            if (instanceRef.current) {
+                instanceRef.current.remove();
+                instanceRef.current = null;
+            }
+
+            const map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: true });
+            instanceRef.current = map;
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                maxZoom: 19,
+            }).addTo(map);
+
+            const bounds: [number, number][] = [];
+
+            pontos.forEach(p => {
+                bounds.push([p.lat, p.lon]);
+
+                // Ícone SVG customizado por tipo
+                const svgIcon = (cor: string, letra: string) => L.divIcon({
+                    className: '',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14],
+                    html: `<div style="width:28px;height:28px;border-radius:50%;background:${cor};border:2px solid white;
+                        box-shadow:0 2px 6px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;
+                        font-weight:700;font-size:11px;color:white;font-family:monospace;">${letra}</div>`,
+                });
+
+                const iconMap: Record<string, [string, string]> = {
+                    pdv:  ['#64748b', 'P'],
+                    ga:   ['#6366f1', 'G'],
+                    vend: ['#0ea5e9', 'V'],
+                };
+                const [cor2, letra2] = iconMap[p.tipo] ?? ['#94a3b8', '?'];
+
+                const marker = L.marker([p.lat, p.lon], { icon: svgIcon(cor2, letra2) });
+                marker.bindPopup(`
+                    <div style="font-family:monospace;font-size:12px;min-width:160px">
+                        <div style="font-weight:700;margin-bottom:4px">${p.label}</div>
+                        <div style="color:#64748b;font-size:11px">${p.info ?? ''}</div>
+                        <div style="color:#94a3b8;font-size:10px;margin-top:2px">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</div>
+                    </div>
+                `);
+                marker.addTo(map);
+            });
+
+            if (bounds.length === 1) {
+                map.setView(bounds[0], 16);
+            } else if (bounds.length > 1) {
+                map.fitBounds(bounds, { padding: [30, 30], maxZoom: 17 });
+            }
+        });
+
+        return () => {
+            if (instanceRef.current) {
+                instanceRef.current.remove();
+                instanceRef.current = null;
+            }
+        };
+    }, [pontos]);
+
+    if (pontos.length === 0) {
+        return (
+            <div className="flex items-center justify-center h-40 bg-slate-50 rounded-xl border border-slate-100 text-slate-400 text-xs">
+                Nenhuma coordenada disponível para exibir no mapa
+            </div>
+        );
+    }
+
+    return (
+        <div className="mt-3 rounded-xl overflow-hidden border border-slate-200" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+            {/* Legenda do mapa */}
+            <div className="flex items-center gap-4 px-3 py-2 bg-slate-50 border-b border-slate-100 flex-wrap">
+                <span className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Mapa da Rota — {gaId}</span>
+                <span className="flex items-center gap-1 text-xs text-slate-500">
+                    <span style={{ background: '#64748b' }} className="w-4 h-4 rounded-full inline-block"/>PDV (cadastro)
+                </span>
+                <span className="flex items-center gap-1 text-xs text-slate-500">
+                    <span style={{ background: '#6366f1' }} className="w-4 h-4 rounded-full inline-block"/>GA (app)
+                </span>
+                <span className="flex items-center gap-1 text-xs text-slate-500">
+                    <span style={{ background: '#0ea5e9' }} className="w-4 h-4 rounded-full inline-block"/>Vendedor (GPS)
+                </span>
+            </div>
+            <div ref={mapRef} style={{ height: '420px', width: '100%', background: '#f8fafc' }} />
+        </div>
+    );
+}
+
 export default function RotaCoaching() {
     const [activePage, setActivePage] = useState("rota_coaching");
     const [aba, setAba] = useState<"coaching" | "frota">("coaching");
@@ -128,6 +260,9 @@ export default function RotaCoaching() {
 
     // Infleet — veículos selecionados
     const [vehiclesSel, setVehiclesSel] = useState<string[]>([]);
+
+    // Mapa — chave da linha com mapa aberto (rowKey = index)
+    const [mapRowKey, setMapRowKey] = useState<number | null>(null);
 
     // ── Filtros ─────────────────────────────────────────────────────────────────
     const setFiltro = (k: string, v: any) => {
@@ -523,30 +658,37 @@ export default function RotaCoaching() {
                                                                                                     <th className="px-3 py-2 text-center font-bold">Resp. GA</th>
                                                                                                     <th className="px-3 py-2 text-center font-bold">Distância</th>
                                                                                                     <th className="px-3 py-2 text-center font-bold">Status</th>
+                                                                                                    <th className="px-3 py-2 text-center font-bold">Coords Vendedor</th>
+                                                                                                    <th className="px-3 py-2 text-center font-bold">Coords GA</th>
+                                                                                                    <th className="px-3 py-2 text-center font-bold">Coords PDV</th>
                                                                                                 </tr>
                                                                                             </thead>
                                                                                             <tbody>
                                                                                                 {row.geo_detalhes.map((g, gi) => {
-                                                                                                    const temGa   = g.tem_ga ?? false;
-                                                                                                    const dist    = g.distancia_m ?? null;
-                                                                                                    const hIni    = g.hora_ini_vend ?? null;
-                                                                                                    const hFim    = g.hora_fim_vend ?? null;
-                                                                                                    const hGA     = g.hora_ga ?? null;
-                                                                                                    const codPt   = g.cod_cliente_pt ?? g.cliente;
-                                                                                                    const idGaFull = g.id_cliente_ga ?? null;
+                                                                                                    const temGa    = g.tem_ga ?? false;
+                                                                                                    const dist     = g.distancia_m ?? null;
+                                                                                                    const hIni     = g.hora_ini_vend ?? null;
+                                                                                                    const hFim     = g.hora_fim_vend ?? null;
+                                                                                                    const hGA      = g.hora_ga ?? null;
+                                                                                                    const codPt    = g.cod_cliente_pt ?? g.cliente;
+                                                                                                    const idGaFull  = g.id_cliente_ga ?? null;
                                                                                                     const idGaShort = idGaFull?.includes('-') ? idGaFull.split('-').slice(-2).join('-') : idGaFull;
-                                                                                                    const valorPed = g.valor_ped ?? '—';
-                                                                                                    const q1      = g.q1_status_pdv ?? null;
-                                                                                                    const razao   = g.razao_social ?? '';
+                                                                                                    const valorPed  = g.valor_ped ?? '—';
+                                                                                                    const q1        = g.q1_status_pdv ?? null;
+                                                                                                    const razao     = g.razao_social ?? '';
+                                                                                                    const latGa     = g.lat_ga   ?? null;
+                                                                                                    const lonGa     = g.lon_ga   ?? null;
+                                                                                                    const latVend   = g.lat_vend ?? null;
+                                                                                                    const lonVend   = g.lon_vend ?? null;
+                                                                                                    const latPdv    = g.lat_pdv  ?? null;
+                                                                                                    const lonPdv    = g.lon_pdv  ?? null;
 
-                                                                                                    // Cor da linha: verde se GA confirmou presença, amarelo se GA não foi, branco se sem info
                                                                                                     const rowBg = temGa
                                                                                                         ? g.dentro_raio === true  ? "bg-green-50/60"
                                                                                                         : g.dentro_raio === false ? "bg-red-50/40"
                                                                                                         : "bg-blue-50/30"
                                                                                                         : gi % 2 === 1 ? "bg-slate-50/40" : "";
 
-                                                                                                    // Formata resposta do vendedor
                                                                                                     const isVenda = /^\d/.test(valorPed) && valorPed !== '0,00' && valorPed !== '—';
                                                                                                     const respVendColor = isVenda ? "#16a34a" : "#94a3b8";
 
@@ -618,6 +760,30 @@ export default function RotaCoaching() {
                                                                                                                     : <span className="text-slate-300 text-xs">sem GA</span>
                                                                                                                 }
                                                                                                             </td>
+
+                                                                                                            {/* Coords Vendedor */}
+                                                                                                            <td className="px-3 py-2 text-center font-mono text-slate-500 text-xs whitespace-nowrap">
+                                                                                                                {latVend !== null && lonVend !== null
+                                                                                                                    ? `${latVend.toFixed(5)}, ${lonVend.toFixed(5)}`
+                                                                                                                    : <span className="text-slate-200">·</span>
+                                                                                                                }
+                                                                                                            </td>
+
+                                                                                                            {/* Coords GA */}
+                                                                                                            <td className="px-3 py-2 text-center font-mono text-indigo-400 text-xs whitespace-nowrap">
+                                                                                                                {temGa && latGa !== null && lonGa !== null
+                                                                                                                    ? `${latGa.toFixed(5)}, ${lonGa.toFixed(5)}`
+                                                                                                                    : <span className="text-slate-200">·</span>
+                                                                                                                }
+                                                                                                            </td>
+
+                                                                                                            {/* Coords PDV */}
+                                                                                                            <td className="px-3 py-2 text-center font-mono text-slate-400 text-xs whitespace-nowrap">
+                                                                                                                {latPdv !== null && lonPdv !== null
+                                                                                                                    ? `${latPdv.toFixed(5)}, ${lonPdv.toFixed(5)}`
+                                                                                                                    : <span className="text-slate-200">·</span>
+                                                                                                                }
+                                                                                                            </td>
                                                                                                         </tr>
                                                                                                     );
                                                                                                 })}
@@ -626,20 +792,50 @@ export default function RotaCoaching() {
                                                                                     </div>
 
                                                                                     {/* Legenda */}
-                                                                                    <div className="flex gap-3 mt-2 flex-wrap">
-                                                                                        <span className="flex items-center gap-1 text-xs text-slate-400">
-                                                                                            <span className="w-3 h-3 rounded bg-green-100 border border-green-200 inline-block"/>GA confirmado próximo
-                                                                                        </span>
-                                                                                        <span className="flex items-center gap-1 text-xs text-slate-400">
-                                                                                            <span className="w-3 h-3 rounded bg-red-50 border border-red-200 inline-block"/>GA distante
-                                                                                        </span>
-                                                                                        <span className="flex items-center gap-1 text-xs text-slate-400">
-                                                                                            <span className="w-3 h-3 rounded bg-blue-50 border border-blue-200 inline-block"/>GA visitou (sem coord PDV)
-                                                                                        </span>
-                                                                                        <span className="flex items-center gap-1 text-xs text-slate-400">
-                                                                                            <span className="w-3 h-3 rounded bg-slate-50 border border-slate-200 inline-block"/>Só vendedor
-                                                                                        </span>
+                                                                                    <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
+                                                                                        <div className="flex gap-3 flex-wrap">
+                                                                                            <span className="flex items-center gap-1 text-xs text-slate-400">
+                                                                                                <span className="w-3 h-3 rounded bg-green-100 border border-green-200 inline-block"/>GA confirmado próximo
+                                                                                            </span>
+                                                                                            <span className="flex items-center gap-1 text-xs text-slate-400">
+                                                                                                <span className="w-3 h-3 rounded bg-red-50 border border-red-200 inline-block"/>GA distante
+                                                                                            </span>
+                                                                                            <span className="flex items-center gap-1 text-xs text-slate-400">
+                                                                                                <span className="w-3 h-3 rounded bg-blue-50 border border-blue-200 inline-block"/>GA visitou (sem coord PDV)
+                                                                                            </span>
+                                                                                            <span className="flex items-center gap-1 text-xs text-slate-400">
+                                                                                                <span className="w-3 h-3 rounded bg-slate-50 border border-slate-200 inline-block"/>Só vendedor
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        {/* Botão abrir mapa */}
+                                                                                        <button
+                                                                                            onClick={() => setMapRowKey(mapRowKey === idx ? null : idx)}
+                                                                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                                                                                                mapRowKey === idx
+                                                                                                    ? "bg-indigo-600 text-white border-indigo-600"
+                                                                                                    : "bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                                                                                            }`}
+                                                                                        >
+                                                                                            <MapPin size={13}/>
+                                                                                            {mapRowKey === idx ? "Fechar mapa" : "Ver no mapa"}
+                                                                                        </button>
                                                                                     </div>
+
+                                                                                    {/* Mapa */}
+                                                                                    {mapRowKey === idx && (() => {
+                                                                                        const pontos: MapPonto[] = [];
+                                                                                        row.geo_detalhes!.forEach(g => {
+                                                                                            const cli = g.cod_cliente_pt ?? g.cliente;
+                                                                                            const razao = (g.razao_social ?? '').slice(0, 25);
+                                                                                            if (g.lat_pdv && g.lon_pdv)
+                                                                                                pontos.push({ lat: g.lat_pdv, lon: g.lon_pdv, tipo: 'pdv', label: `PDV ${cli}`, info: razao });
+                                                                                            if (g.lat_ga && g.lon_ga && g.tem_ga)
+                                                                                                pontos.push({ lat: g.lat_ga, lon: g.lon_ga, tipo: 'ga', label: `GA → ${cli}`, info: `${g.hora_ga ?? ''} ${g.q1_status_pdv ?? ''}` });
+                                                                                            if (g.lat_vend && g.lon_vend)
+                                                                                                pontos.push({ lat: g.lat_vend, lon: g.lon_vend, tipo: 'vend', label: `Vend → ${cli}`, info: `${g.hora_ini_vend ?? ''} ${g.valor_ped ?? ''}` });
+                                                                                        });
+                                                                                        return <RotaMap pontos={pontos} gaId={row.gaId} />;
+                                                                                    })()}
                                                                                 </div>
                                                                                 );
                                                                             })()}
