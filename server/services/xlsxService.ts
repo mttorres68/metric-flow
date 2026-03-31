@@ -113,6 +113,23 @@ export async function loadGoogleSheetsData(): Promise<RawVisita[]> {
         );
     }
 
+    const jsonPath = dbPath.replace(/\.xlsx$/i, '.json');
+    if (fs.existsSync(jsonPath)) {
+        try {
+            const jsonStat = fs.statSync(jsonPath);
+            if (jsonStat.mtimeMs >= stat.mtimeMs) {
+                console.log(`[Cache JSON] Lendo versão otimizada ${jsonPath} ...`);
+                const t0 = Date.now();
+                const jsonContent = fs.readFileSync(jsonPath, "utf-8");
+                const data = JSON.parse(jsonContent) as RawVisita[];
+                console.log(`[Cache JSON] ✓ ${data.length} registros em ${Date.now() - t0}ms`);
+                return data;
+            }
+        } catch (err) {
+            console.warn(`[Cache JSON] Erro ao ler cache JSON:`, err);
+        }
+    }
+
     console.log(`[XLSX] Carregando ${dbPath} ...`);
     const t0 = Date.now();
 
@@ -128,7 +145,18 @@ export async function loadGoogleSheetsData(): Promise<RawVisita[]> {
 
     // Mapeia colunas do xlsx (nomes gerados pelo debug_pathtracker.py)
     // para o formato RawVisita que o restante do metric-flow espera
-    return rows.map(r => mapRow(r));
+    const result = rows.map(r => mapRow(r));
+
+    try {
+        console.log(`[Cache JSON] Salvando versão otimizada em ${jsonPath} ...`);
+        const t1 = Date.now();
+        fs.writeFileSync(jsonPath, JSON.stringify(result));
+        console.log(`[Cache JSON] ✓ Cache salvo em ${Date.now() - t1}ms`);
+    } catch (err) {
+        console.warn(`[Cache JSON] Erro ao salvar cache JSON:`, err);
+    }
+
+    return result;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

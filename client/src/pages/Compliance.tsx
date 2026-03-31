@@ -4,6 +4,7 @@
  */
 
 import Sidebar from "@/components/Sidebar";
+import { useSidebarCollapse } from "@/hooks/useSidebarCollapse";
 import { trpc } from "@/lib/trpc";
 import {
     AlertCircle,
@@ -43,6 +44,7 @@ function loadFilters() {
 }
 
 export default function Compliance() {
+    const { isCollapsed } = useSidebarCollapse();
     const [activePage, setActivePage] = useState("compliance");
 
     // ── Filtros persistidos ────────────────────────────────────────────────
@@ -114,7 +116,7 @@ export default function Compliance() {
         const rotas: Record<string, string> = {
             dashboard: "/", vendedores: "/vendedores",
             compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
-            relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",
+            relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",analises: "/analises",
         };
         if (rotas[page]) { window.location.href = rotas[page]; return; }
         if (page !== "compliance") toast.info(`Módulo "${page}" em breve`);
@@ -148,7 +150,7 @@ export default function Compliance() {
         <div className="min-h-screen bg-background flex">
             <Sidebar activePage={activePage} onNavigate={handleNavigate} />
 
-            <main className="flex-1 ml-60 min-h-screen">
+            <main className={`flex-1 min-h-screen transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-60'}`}>
                 {/* Header */}
                 <header
                     className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm px-8 py-4 border-b border-slate-100 flex items-center justify-between"

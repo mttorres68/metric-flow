@@ -39,18 +39,19 @@ const STATUS_COLORS = {
 export default function VendedorDetalhes() {
   const [activePage, setActivePage] = useState("vendedores");
   const [, setLocation] = useLocation();
-  const [match, params] = useRoute("/vendedor/:vendedor");
+  const [match, params] = useRoute("/vendedor/:revenda/:vendedor");
 
+  const revendaRef = params?.revenda ? decodeURIComponent(params.revenda) : "";
   const vendedorId = params?.vendedor ? Number(params.vendedor) : null;
 
   const { data: detalhes, isLoading, error } = trpc.vendedores.detalhes.useQuery(
-    { vendedor: vendedorId || 0 },
-    { enabled: !!vendedorId }
+    { vendedor: vendedorId || 0, revenda: revendaRef },
+    { enabled: !!vendedorId && !!revendaRef }
   );
 
   const { data: clientes } = trpc.vendedores.clientes.useQuery(
-    { vendedor: vendedorId || 0 },
-    { enabled: !!vendedorId }
+    { vendedor: vendedorId || 0, revenda: revendaRef },
+    { enabled: !!vendedorId && !!revendaRef }
   );
 
   // ── Navegação ───────────────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ export default function VendedorDetalhes() {
     const rotas: Record<string, string> = {
       dashboard: "/", vendedores: "/vendedores",
       compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
-      relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",
+      relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",analises: "/analises",
     };
     if (rotas[page]) { window.location.href = rotas[page]; return; }
     if (page !== "vendedores") toast.info(`Módulo "${page}" em breve`);

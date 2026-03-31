@@ -4,6 +4,7 @@
  */
 
 import Sidebar from "@/components/Sidebar";
+import { useSidebarCollapse } from "@/hooks/useSidebarCollapse";
 import { trpc } from "@/lib/trpc";
 import {
   BarChart3,
@@ -50,6 +51,7 @@ type SortKey = "receita" | "totalVisitas" | "visitasConvertidas" | "taxaConversa
 type SortDir = "asc" | "desc";
 
 export default function VendedoresLista() {
+  const { isCollapsed } = useSidebarCollapse();
   const [activePage, setActivePage] = useState("vendedores");
   const [, setLocation] = useLocation();
 
@@ -87,7 +89,7 @@ export default function VendedoresLista() {
     const rotas: Record<string, string> = {
       dashboard: "/", vendedores: "/vendedores",
       compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
-      relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",
+      relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",analises: "/analises",
     };
     if (rotas[page]) { window.location.href = rotas[page]; return; }
     if (page !== "vendedores") toast.info(`Módulo "${page}" em breve`);
@@ -128,7 +130,7 @@ export default function VendedoresLista() {
   if (isLoading) return (
     <div className="min-h-screen bg-background flex">
       <Sidebar activePage={activePage} onNavigate={handleNavigate} />
-      <main className="flex-1 ml-60 min-h-screen flex items-center justify-center">
+      <main className={`flex-1 min-h-screen flex items-center justify-center transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-60'}`}>
         <div className="text-center">
           <div className="w-12 h-12 rounded-full border-4 border-slate-200 border-t-indigo-500 animate-spin mx-auto mb-4" />
           <p className="text-slate-500" style={{ fontWeight: 600 }}>Carregando vendedores...</p>
@@ -140,7 +142,7 @@ export default function VendedoresLista() {
   if (error) return (
     <div className="min-h-screen bg-background flex">
       <Sidebar activePage={activePage} onNavigate={handleNavigate} />
-      <main className="flex-1 ml-60 min-h-screen flex items-center justify-center">
+      <main className={`flex-1 min-h-screen flex items-center justify-center transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-60'}`}>
         <div className="text-center">
           <p className="text-red-500" style={{ fontWeight: 600 }}>Erro ao carregar vendedores</p>
           <p className="text-slate-400 text-sm mt-1">{error.message}</p>
@@ -173,7 +175,7 @@ export default function VendedoresLista() {
     <div className="min-h-screen bg-background flex">
       <Sidebar activePage={activePage} onNavigate={handleNavigate} />
 
-      <main className="flex-1 ml-60 min-h-screen">
+      <main className={`flex-1 min-h-screen transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-60'}`}>
         {/* Header */}
         <header
           className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm px-8 py-4 border-b border-slate-100 flex items-center justify-between"
@@ -309,9 +311,9 @@ export default function VendedoresLista() {
                     </tr>
                   ) : tabelaFiltrada.map((v, idx) => (
                     <tr
-                      key={v.vendedor}
+                      key={`${v.revenda}-${v.vendedor}`}
                       className="border-b border-slate-50 hover:bg-slate-50/80 transition-colors cursor-pointer"
-                      onClick={() => setLocation(`/vendedor/${v.vendedor}`)}
+                      onClick={() => setLocation(`/vendedor/${encodeURIComponent(v.revenda)}/${v.vendedor}`)}
                     >
                       <td className="px-5 py-3.5 text-sm text-slate-400 tabular-nums" style={{ fontWeight: 600 }}>#{idx + 1}</td>
                       <td className="px-5 py-3.5">
@@ -337,7 +339,7 @@ export default function VendedoresLista() {
                         </div>
                       </td>
                       <td className="px-5 py-3.5 text-sm text-right text-slate-600 tabular-nums">{v.clientesUnicos}</td>
-                      <td className="px-5 py-3.5 text-center" onClick={e => { e.stopPropagation(); setLocation(`/vendedor/${v.vendedor}`); }}>
+                      <td className="px-5 py-3.5 text-center" onClick={e => { e.stopPropagation(); setLocation(`/vendedor/${encodeURIComponent(v.revenda)}/${v.vendedor}`); }}>
                         <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-slate-100 transition-colors">
                           <ChevronRight className="w-4 h-4 text-slate-400" />
                         </div>

@@ -7,6 +7,7 @@ import ActivityTable from "@/components/ActivityTable";
 import FilterBar from "@/components/FilterBar";
 import KPICard from "@/components/KPICard";
 import Sidebar from "@/components/Sidebar";
+import { useSidebarCollapse } from "@/hooks/useSidebarCollapse";
 import { useConfigMetricas } from "@/components/ConfigPanel";
 import { useFilterState } from "@/hooks/useFilterState";
 import {
@@ -56,6 +57,7 @@ export default function Home() {
 
   // Configuração de regras de negócio — persiste no localStorage
   const { config, apply: applyConfig, reset: resetConfig, isDirty: isConfigDirty } = useConfigMetricas();
+  const { isCollapsed } = useSidebarCollapse();
 
   const { data: dashboardData, isLoading, error } = trpc.dashboard.getMetrics.useQuery({
     vendedor: filters.vendedor,
@@ -72,7 +74,7 @@ export default function Home() {
     const rotas: Record<string, string> = {
       dashboard: "/", vendedores: "/vendedores",
       compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio", 
-      relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",
+      relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",analises: "/analises",
     };
     if (rotas[page]) { window.location.href = rotas[page]; return; }
     if (page !== "/") toast.info(`Módulo "${page}" em breve`);
@@ -85,7 +87,7 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-background flex">
         <Sidebar activePage={activePage} onNavigate={handleNavigate} />
-        <main className="flex-1 ml-60 min-h-screen flex items-center justify-center">
+        <main className={`flex-1 min-h-screen flex items-center justify-center transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-60'}`}>
           <div className="text-center">
             <div className="w-12 h-12 rounded-full border-4 border-slate-200 border-t-indigo-500 animate-spin mx-auto mb-4" />
             <p className="text-slate-500" style={{ fontWeight: 600 }}>Carregando dados...</p>
@@ -99,7 +101,7 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-background flex">
         <Sidebar activePage={activePage} onNavigate={handleNavigate} />
-        <main className="flex-1 ml-60 min-h-screen flex items-center justify-center">
+        <main className={`flex-1 min-h-screen flex items-center justify-center transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-60'}`}>
           <div className="text-center">
             <p className="text-red-500" style={{ fontWeight: 600 }}>Erro ao carregar dados</p>
             <p className="text-slate-400 text-sm mt-2">{error?.message || "Tente novamente"}</p>
@@ -120,7 +122,7 @@ export default function Home() {
     <div className="min-h-screen bg-background flex">
       <Sidebar activePage={activePage} onNavigate={handleNavigate} />
 
-      <main className="flex-1 ml-60 min-h-screen">
+      <main className={`flex-1 min-h-screen transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-60'}`}>
         {/* Header */}
         <header
           className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm px-8 py-4 border-b border-slate-100 flex items-center justify-between"

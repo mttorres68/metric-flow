@@ -6,6 +6,7 @@
 
 import Sidebar from "@/components/Sidebar";
 import { trpc } from "@/lib/trpc";
+import { useSidebarCollapse } from "@/hooks/useSidebarCollapse";
 import {
     CheckCircle2,
     ChevronDown,
@@ -115,7 +116,7 @@ export default function Clientes() {
         const rotas: Record<string, string> = {
             dashboard: "/", vendedores: "/vendedores",
             compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
-            relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching",
+            relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching", analises: "/analises",
         };
         if (rotas[page]) { window.location.href = rotas[page]; return; }
         if (page !== "clientes") toast.info(`Módulo "${page}" em breve`);
@@ -426,10 +427,11 @@ function PageShell({ activePage, onNavigate, children }: {
     onNavigate: (p: string) => void;
     children: React.ReactNode;
 }) {
+    const { isCollapsed } = useSidebarCollapse();
     return (
         <div className="min-h-screen bg-background flex">
             <Sidebar activePage={activePage} onNavigate={onNavigate} />
-            <main className="flex-1 ml-60 min-h-screen flex flex-col">{children}</main>
+            <main className={`flex-1 min-h-screen flex flex-col transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-60'}`}>{children}</main>
         </div>
     );
 }

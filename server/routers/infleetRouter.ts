@@ -1,15 +1,6 @@
 /*
  * MetricFlow — Infleet Router
  * Wrapper tRPC para a API GraphQL do Infleet.
- *
- * Autenticação: Bearer token via variável de ambiente INFLEET_TOKEN
- * Endpoint:     https://api.infleet.com.br/v1/graphql
- *
- * Queries implementadas:
- *   veiculos          — lista todos os veículos ativos (nome, placa, id)
- *   resumoDiario      — km, tempo ligado, parado, ocioso por veículo/dia
- *   eventosGeocerca   — entradas/saídas em cercas por veículo/período
- *   viagens           — lista de viagens (trips) por veículo/período
  */
 
 import { z } from "zod";
@@ -40,176 +31,185 @@ async function infleetQuery<T>(query: string, variables: Record<string, any>): P
     return json.data;
 }
 
-// ── Schema de período reutilizável ────────────────────────────────────────────
 const periodoSchema = z.object({
-    inicio: z.string(), // ISO 8601 com timezone: "2026-03-18T00:00:00-03:00"
-    fim: z.string(), // ISO 8601 com timezone: "2026-03-18T23:59:59-03:00"
+    inicio: z.string(),
+    fim: z.string(),
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const infleetRouter = router({
 
-    // ── Lista veículos ──────────────────────────────────────────────────────────
-    // Retorna id, placa e nome para popular o select de veículos.
-    veiculos: publicProcedure.query(async () => {
-        const data = await infleetQuery<{
-            listVehicles: Array<{ id: string; plate: string; displayName: string | null }>
-        }>(
-            `query {
-        listVehicles {
-          id
-          plate
-          displayName
-        }
-      }`,
-            {}
+    listarCercas: publicProcedure.query(async () => {
+        const data = await infleetQuery<{ listGeofences: Array<{ id: string; name: string }> }>(
+            `query { listGeofences { id name } }`, {}
         );
-        return data.listVehicles.map(v => ({
-            id: v.id,
-            placa: v.plate,
-            nome: v.displayName || v.plate,
-        }));
+        return data.listGeofences;
+    }),
+    // ── ROTA TEMPORÁRIA DE DEBUG (Lê a documentação de dentro da API) ──
+    debugSchema: publicProcedure.query(async () => {
+        const query = `
+        query {
+            event: __type(name: "Event") {
+                fields { name }
+            }
+            trip: __type(name: "Trip") {
+                fields { name }
+            }
+            queryType: __type(name: "RootQueryType") {
+                fields(includeDeprecated: true) {
+                    name
+                    args { name type { name kind ofType { name } } }
+                }
+            }
+        }`;
+
+        const data = await infleetQuery<any>(query, {});
+
+        const listGeofenceEvents = data.queryType.fields.find((f: any) => f.name === "listGeofenceEvents");
+
+        console.log("==================================================");
+        console.log("📋 DOCUMENTAÇÃO EXTRAÍDA DA INFLEET");
+        console.log("==================================================");
+        console.log("Campos do tipo EVENT (Geocercas):");
+        console.log(data.event.fields.map((f: any) => f.name).join(", "));
+        console.log("--------------------------------------------------");
+        console.log("Campos do tipo TRIP (Viagens):");
+        console.log(data.trip.fields.map((f: any) => f.name).join(", "));
+        console.log("--------------------------------------------------");
+        console.log("Argumentos exigidos pela query listGeofenceEvents:");
+        console.log(listGeofenceEvents?.args.map((a: any) => `${a.name} (${a.type.kind})`).join(", "));
+        console.log("==================================================");
+
+        return "Olhe o terminal do Node/Backend!";
+    }),
+    veiculos: publicProcedure.query(async () => {
+        const data = await infleetQuery<{ listVehicles: Array<{ id: string; plate: string; displayName: string | null }> }>(
+            `query { listVehicles { id plate displayName } }`, {}
+        );
+        return data.listVehicles.map(v => ({ id: v.id, placa: v.plate, nome: v.displayName || v.plate }));
     }),
 
-    // ── Resumo diário por veículo ───────────────────────────────────────────────
-    // Agrega km rodado, tempo ligado, parado e ocioso.
-    // Permite cruzar com quem estava dirigindo cada carro no dia (GV/GA/TRD/motorista).
     resumoDiario: publicProcedure
         .input(z.object({
             vehicleIds: z.array(z.string()).min(1),
             periodo: periodoSchema,
+            sedeGeofenceId: z.string().optional(),
         }))
         .query(async ({ input }) => {
-            const filter = {
-                vehicleIds: input.vehicleIds,
-                occurredAt: { startAt: input.periodo.inicio, endAt: input.periodo.fim },
-            };
+            const validGeofenceId = input.sedeGeofenceId && input.sedeGeofenceId !== "undefined" ? input.sedeGeofenceId : null;
 
-            // Dispara as 4 queries de indicadores em paralelo
-            const [distData, ignData, stoppedData, idleData] = await Promise.all([
-                infleetQuery<{ totalDistance: Array<{ vehicleId: string; total: number }> }>(
-                    `query($f: IndicatorInput!) { totalDistance(filter: $f) { vehicleId total } }`,
-                    { f: filter }
-                ),
-                infleetQuery<{ totalTimeWithIgnitionOn: Array<{ vehicleId: string; total: number }> }>(
-                    `query($f: IndicatorInput!) { totalTimeWithIgnitionOn(filter: $f) { vehicleId total } }`,
-                    { f: filter }
-                ),
-                infleetQuery<{ totalTimeStopped: Array<{ vehicleId: string; total: number }> }>(
-                    `query($f: IndicatorInput!) { totalTimeStopped(filter: $f) { vehicleId total } }`,
-                    { f: filter }
-                ),
-                infleetQuery<{ totalTimeIdle: Array<{ vehicleId: string; total: number }> }>(
-                    `query($f: IndicatorInput!) { totalTimeIdle(filter: $f) { vehicleId total } }`,
-                    { f: filter }
-                ),
-            ]);
+            const promises = input.vehicleIds.map(async vId => {
 
-            // Indexa por vehicleId para merge rápido
-            const idx = <T extends { vehicleId: string; value: number }>(arr: T[]) =>
-                Object.fromEntries(arr.map(r => [r.vehicleId, r.total ?? 0]));
+                // 1. Viagens: Usando distanceTraveled e os campos exatos do schema
+                const tripsRes = await infleetQuery<{ trips: Array<{ startedAt: string, finishedAt: string, distanceTraveled: number }> }>(
+                    `query($f: ListVehicleTripsFilterInput!) { trips(filter: $f) { startedAt finishedAt distanceTraveled } }`,
+                    { f: { vehicleId: vId, fixTime: { startAt: input.periodo.inicio, endAt: input.periodo.fim } } }
+                ).catch(e => {
+                    console.error(`[Infleet] Erro ao buscar viagens do veículo ${vId}:`, e.message);
+                    return { trips: [] };
+                });
 
-            const dist = idx(distData.totalDistance);
-            const ign = idx(ignData.totalTimeWithIgnitionOn);
-            const stopped = idx(stoppedData.totalTimeStopped);
-            const idle = idx(idleData.totalTimeIdle);
 
-            return input.vehicleIds.map(id => ({
-                vehicleId: id,
-                kmRodado: parseFloat(((dist[id] ?? 0) / 1000).toFixed(1)),  // metros → km
-                tempoLigadoMin: Math.round((ign[id] ?? 0) / 60),                // segundos → min
-                tempoParadoMin: Math.round((stopped[id] ?? 0) / 60),
-                tempoOciosoMin: Math.round((idle[id] ?? 0) / 60),
-            }));
-        }),
+                // 2. Geocercas: Query exata do período selecionado (Sem peso morto)
+                const geoRes = validGeofenceId ? await infleetQuery<{ listGeofenceEvents: Array<{ slugName: string, reportedAt: string, vehicleId: string }> }>(
+                    `query($gId: ID!, $p: PeriodInput!, $limit: Int) { 
+                        listGeofenceEvents(geofenceId: $gId, period: $p, limit: $limit) { 
+                            reportedAt 
+                            slugName
+                            vehicleId
+                        } 
+                    }`,
+                    {
+                        gId: validGeofenceId,
+                        // Agora respeita estritamente o que vem do frontend (sem voltar 7 dias)
+                        p: { startAt: input.periodo.inicio, endAt: input.periodo.fim },
+                        limit: 5000
+                    }
+                ).catch(e => {
+                    console.error(`[Infleet] Erro ao buscar geocercas do veículo ${vId}:`, e.message);
+                    return { listGeofenceEvents: [] };
+                }) : { listGeofenceEvents: [] };
+                
 
-    // ── Eventos de geocerca ─────────────────────────────────────────────────────
-    // Retorna entradas e saídas por veículo em cercas específicas (ex: sede).
-    eventosGeocerca: publicProcedure
-        .input(z.object({
-            vehicleIds: z.array(z.string()).min(1),
-            geofenceIds: z.array(z.string()).optional(),
-            periodo: periodoSchema,
-        }))
-        .query(async ({ input }) => {
-            const data = await infleetQuery<{
-                listGeofenceEvents: Array<{
-                    id: string;
-                    type: string;
-                    occurredAt: string;
-                    vehicle: { id: string; displayName: string | null; plate: string };
-                    geofence: { id: string; name: string };
-                }>
-            }>(
-                `query($f: ListGeofencesFilterInput) {
-          listGeofenceEvents(filter: $f) {
-            id type occurredAt
-            vehicle { id displayName plate }
-            geofence { id name }
-          }
-        }`,
-                {
-                    f: {
-                        vehicleIds: input.vehicleIds,
-                        geofenceIds: input.geofenceIds,
-                        occurredAt: { gte: input.periodo.inicio, lte: input.periodo.fim },
-                    },
+                const trips = tripsRes.trips || [];
+                const events = (geoRes.listGeofenceEvents || []).filter(e => e.vehicleId === vId);
+
+                // ── Cálculos a partir das Viagens ────────────────────────────────────
+                trips.sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+
+                let calcKm = 0;
+                let calcLigadoMs = 0;
+
+                trips.forEach(t => {
+                    const dist = t.distanceTraveled ?? 0;
+                    calcKm += dist > 1000 ? (dist / 1000) : dist;
+                    const ms = new Date(t.finishedAt).getTime() - new Date(t.startedAt).getTime();
+                    if (ms > 0) calcLigadoMs += ms;
+                });
+
+                let maiorTempoParadoMin = 0;
+                let calcParadoMs = 0;
+                const diaInicio = new Date(input.periodo.inicio).getTime();
+                const diaFim = Math.min(new Date(input.periodo.fim).getTime(), Date.now());
+
+                if (trips.length > 0) {
+                    const preMs = new Date(trips[0].startedAt).getTime() - diaInicio;
+                    if (preMs > 0) { calcParadoMs += preMs; maiorTempoParadoMin = Math.max(maiorTempoParadoMin, preMs / 60000); }
+
+                    for (let i = 0; i < trips.length - 1; i++) {
+                        const gapMs = new Date(trips[i + 1].startedAt).getTime() - new Date(trips[i].finishedAt).getTime();
+                        if (gapMs > 0) { calcParadoMs += gapMs; maiorTempoParadoMin = Math.max(maiorTempoParadoMin, gapMs / 60000); }
+                    }
+
+                    const posMs = diaFim - new Date(trips[trips.length - 1].finishedAt).getTime();
+                    if (posMs > 0) { calcParadoMs += posMs; maiorTempoParadoMin = Math.max(maiorTempoParadoMin, posMs / 60000); }
+                } else {
+                    const totalMs = diaFim - diaInicio;
+                    if (totalMs > 0) { calcParadoMs += totalMs; maiorTempoParadoMin = totalMs / 60000; }
                 }
-            );
 
-            return data.listGeofenceEvents.map(e => ({
-                id: e.id,
-                tipo: e.type === "entry" ? "entrada" : "saída",
-                ocorridoEm: e.occurredAt,
-                vehicleId: e.vehicle.id,
-                veiculo: e.vehicle.displayName || e.vehicle.plate,
-                geocercaId: e.geofence.id,
-                geocerca: e.geofence.name,
-            }));
-        }),
+                // ── Cálculos da Geocerca (COM OS SLUGS EXATOS DA INFLEET) ────────────
+                events.sort((a, b) => new Date(a.reportedAt).getTime() - new Date(b.reportedAt).getTime());
 
-    // ── Viagens do período ──────────────────────────────────────────────────────
-    // Lista viagens (início/fim de ignição) para análise de movimentação do dia.
-    viagens: publicProcedure
-        .input(z.object({
-            vehicleIds: z.array(z.string()).min(1),
-            periodo: periodoSchema,
-        }))
-        .query(async ({ input }) => {
-            const data = await infleetQuery<{
-                trips: Array<{
-                    id: string;
-                    startedAt: string;
-                    endedAt: string;
-                    distance: number;
-                    vehicle: { id: string; displayName: string | null; plate: string };
-                    driver?: { id: string; name: string } | null;
-                }>
-            }>(
-                `query($f: ListVehicleTripsFilterInput!) {
-          trips(filter: $f) {
-            id startedAt endedAt distance
-            vehicle { id displayName plate }
-            driver  { id name }
-          }
-        }`,
-                {
-                    f: {
-                        vehicleIds: input.vehicleIds,
-                        startedAt: { gte: input.periodo.inicio, lte: input.periodo.fim },
-                    },
+                let tempoNaSedeMin = 0;
+                let lastEntryTime: number | null = null;
+
+                // Agora usamos os nomes exatos que descobrimos no log!
+                const isEntry = (ev: any) => ev.slugName === "geofenceEnter";
+                const isExit = (ev: any) => ev.slugName === "geofenceExit";
+
+                for (const ev of events) {
+                    const time = new Date(ev.reportedAt).getTime();
+                    if (isEntry(ev)) {
+                        lastEntryTime = time;
+                    } else if (isExit(ev)) {
+                        // Se houve uma saída sem entrada no período, ele já estava na sede (considera inicio do dia)
+                        const start = lastEntryTime !== null ? lastEntryTime : diaInicio;
+                        tempoNaSedeMin += Math.round((time - start) / 60000);
+                        lastEntryTime = null;
+                    }
                 }
-            );
 
-            return data.trips.map(t => ({
-                id: t.id,
-                inicio: t.startedAt,
-                fim: t.endedAt,
-                kmRodado: parseFloat(((t.distance ?? 0) / 1000).toFixed(1)),
-                vehicleId: t.vehicle.id,
-                veiculo: t.vehicle.displayName || t.vehicle.plate,
-                motorista: t.driver?.name ?? null,
-            }));
+                // Se teve entrada e ainda não saiu (está na sede até o momento limite)
+                if (lastEntryTime !== null) {
+                    const limite = Math.min(diaFim, Date.now());
+                    if (limite >= lastEntryTime) {
+                        tempoNaSedeMin += Math.round((limite - lastEntryTime) / 60000);
+                    }
+                }
+
+                return {
+                    vehicleId: vId,
+                    kmRodado: parseFloat(calcKm.toFixed(1)),
+                    tempoLigadoMin: Math.round(calcLigadoMs / 60000),
+                    tempoParadoMin: Math.round(calcParadoMs / 60000),
+                    tempoOciosoMin: 0,
+                    qtdIgnicoes: trips.length,
+                    maiorTempoParadoMin: Math.round(maiorTempoParadoMin),
+                    tempoNaSedeMin,
+                    dormiuNaSede: tempoNaSedeMin >= 720
+                };
+            });
+
+            return await Promise.all(promises);
         }),
 });

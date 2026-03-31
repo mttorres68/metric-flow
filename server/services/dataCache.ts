@@ -8,6 +8,8 @@
  * Todos os routers continuam chamando getVisitasData() sem mudança.
  */
 
+import fs from "fs";
+import path from "path";
 import { loadGoogleSheetsData, processarVisitas, ProcessedVisita, getDbStatus }
     from "../services/xlsxService";
 
@@ -15,6 +17,9 @@ const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutos
 
 let cachedVisitas: ProcessedVisita[] | null = null;
 let lastCacheTime = 0;
+
+let cachedRotaCoaching: any[] | null = null;
+let lastRotaCacheTime = 0;
 
 /**
  * Retorna visitas processadas, usando cache quando válido.
@@ -46,10 +51,43 @@ export async function getVisitasData(): Promise<ProcessedVisita[]> {
     }
 }
 
+/**
+ * Retorna os dados de Rota Coaching (rota_coaching_all.json) do disco,
+ * com cache em memória para resposta instantânea.
+ */
+export async function getRotaCoachingData(): Promise<any[]> {
+    const now = Date.now();
+
+    if (cachedRotaCoaching && now - lastRotaCacheTime < CACHE_DURATION_MS) {
+        console.log("[Cache] Usando dados Rota Coaching em cache");
+        return cachedRotaCoaching;
+    }
+
+    console.log("[Cache] Carregando rota_coaching_all.json do disco...");
+    try {
+        const filePath = path.join(process.cwd(), "client", "public", "rota_coaching_all.json");
+        const rawContent = fs.readFileSync(filePath, "utf-8");
+        const data = JSON.parse(rawContent);
+        cachedRotaCoaching = data;
+        lastRotaCacheTime = now;
+        console.log(`[Cache] ✓ ${data.length} rota coaching processadas`);
+        return data;
+    } catch (error) {
+        console.error("[Cache] Erro ao carregar rota coaching:", error);
+        if (cachedRotaCoaching) {
+             console.log("[Cache] Usando cache expirado de Rota Coaching como fallback");
+             return cachedRotaCoaching;
+        }
+        throw error;
+    }
+}
+
 /** Invalida o cache forçando nova leitura do xlsx na próxima chamada. */
 export function invalidarCache(): void {
     cachedVisitas = null;
     lastCacheTime = 0;
+    cachedRotaCoaching = null;
+    lastRotaCacheTime = 0;
     console.log("[Cache] Cache invalidado");
 }
 

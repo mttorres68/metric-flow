@@ -31,6 +31,7 @@ export const vendedoresRouter = router({
         number,
         {
           vendedor: number;
+          revenda: string;
           totalVisitas: number;
           visitasConvertidas: number;
           receita: number;
@@ -41,9 +42,11 @@ export const vendedoresRouter = router({
       > = {};
 
       for (const v of visitas) {
-        if (!vendedoresMap[v.vendedor]) {
-          vendedoresMap[v.vendedor] = {
+        const key = `${v.revenda}__${v.vendedor}`;
+        if (!vendedoresMap[key as any]) {
+          vendedoresMap[key as any] = {
             vendedor: v.vendedor,
+            revenda: v.revenda,
             totalVisitas: 0,
             visitasConvertidas: 0,
             receita: 0,
@@ -53,7 +56,7 @@ export const vendedoresRouter = router({
           };
         }
 
-        const vd = vendedoresMap[v.vendedor];
+        const vd = vendedoresMap[key as any];
         vd.totalVisitas++;
         vd.clientesUnicos.add(v.codCliente);
 
@@ -74,6 +77,7 @@ export const vendedoresRouter = router({
       return Object.values(vendedoresMap)
         .map((v) => ({
           vendedor:        v.vendedor,
+          revenda:         v.revenda,
           nomeVendedor:    `V0${v.vendedor}`,
           totalVisitas:    v.totalVisitas,
           visitasConvertidas: v.visitasConvertidas,
@@ -90,8 +94,8 @@ export const vendedoresRouter = router({
     .input(
       z.object({
         vendedor:   z.number(),
+        revenda:    z.string(),
         gerente:    z.number().optional(),
-        revenda:    z.string().optional(),
         dataInicio: z.string().optional(),
         dataFim:    z.string().optional(),
       })
@@ -99,9 +103,8 @@ export const vendedoresRouter = router({
     .query(async ({ input }) => {
       let visitas = await getVisitasData();
 
-      visitas = visitas.filter((v) => v.vendedor === input.vendedor);
+      visitas = visitas.filter((v) => v.vendedor === input.vendedor && v.revenda === input.revenda);
       if (input.gerente !== undefined) visitas = visitas.filter((v) => v.gerente === input.gerente);
-      if (input.revenda)               visitas = visitas.filter((v) => v.revenda === input.revenda);
       if (input.dataInicio)            visitas = visitas.filter((v) => v.data >= input.dataInicio!);
       if (input.dataFim)               visitas = visitas.filter((v) => v.data <= input.dataFim!);
 
@@ -132,6 +135,7 @@ export const vendedoresRouter = router({
 
       return {
         vendedor:        input.vendedor,
+        revenda:         input.revenda,
         nomeVendedor:    `V0${input.vendedor}`,
         totalVisitas,
         visitasConvertidas,
@@ -149,8 +153,8 @@ export const vendedoresRouter = router({
     .input(
       z.object({
         vendedor:   z.number(),
+        revenda:    z.string(),
         gerente:    z.number().optional(),
-        revenda:    z.string().optional(),
         dataInicio: z.string().optional(),
         dataFim:    z.string().optional(),
       })
@@ -158,9 +162,8 @@ export const vendedoresRouter = router({
     .query(async ({ input }) => {
       let visitas = await getVisitasData();
 
-      visitas = visitas.filter((v) => v.vendedor === input.vendedor);
+      visitas = visitas.filter((v) => v.vendedor === input.vendedor && v.revenda === input.revenda);
       if (input.gerente !== undefined) visitas = visitas.filter((v) => v.gerente === input.gerente);
-      if (input.revenda)               visitas = visitas.filter((v) => v.revenda === input.revenda);
       if (input.dataInicio)            visitas = visitas.filter((v) => v.data >= input.dataInicio!);
       if (input.dataFim)               visitas = visitas.filter((v) => v.data <= input.dataFim!);
 

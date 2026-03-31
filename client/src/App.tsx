@@ -12,6 +12,8 @@ import Clientes from "./pages/Clientes";
 import Relatorio from "./pages/Relatorio";
 import RotaCoaching from "./pages/RotaCoaching";
 import RelatorioSemanal from "./pages/RelatorioSemanal";
+import Analise from "./pages/Analise";
+import AnaliseVisitasDetalhes from "./pages/AnaliseVisitasDetalhes";
 // MetricFlow — Pastel Command Center — tema claro com pastéis
 
 function Router() {
@@ -20,13 +22,16 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/vendedores"} component={VendedoresLista} />
-      <Route path={"/vendedor/:vendedor"} component={VendedorDetalhes} />
+      <Route path={"/vendedor/:revenda/:vendedor"} component={VendedorDetalhes} />
       <Route path={"/404"} component={NotFound} />
       <Route path="/compliance" component={Compliance} />
       <Route path="/clientes" component={Clientes} />
       <Route path="/relatorio" component={Relatorio} />
       <Route path="/rota-coaching" component={RotaCoaching} />
       <Route path="/relatorio-semanal" component={RelatorioSemanal} />
+      <Route path="/analises" component={Analise} />
+      <Route path="/analises/vendedor/:revenda/:vendedor/:data" component={AnaliseVisitasDetalhes} />
+
 
       {/* Final fallback route */}
       <Route component={NotFound} />

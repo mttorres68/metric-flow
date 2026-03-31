@@ -157,10 +157,16 @@ export const clientesRouter = router({
         .query(async ({ input }) => {
             let visitas = await getVisitasData();
             if (input.revenda) visitas = visitas.filter(v => v.revenda === input.revenda);
-            const mapa: Record<number, string> = {};
-            for (const v of visitas) mapa[v.vendedor] = `V0${v.vendedor}`;
-            return Object.entries(mapa)
-                .map(([id, nome]) => ({ id: Number(id), nome }))
-                .sort((a, b) => a.id - b.id);
+            
+            const mapa: Record<string, { id: number, revenda: string, nome: string }> = {};
+            for (const v of visitas) {
+                const key = `${v.revenda}__${v.vendedor}`;
+                mapa[key] = {
+                    id: v.vendedor,
+                    revenda: v.revenda,
+                    nome: input.revenda ? `V0${v.vendedor}` : `${v.revenda} - V0${v.vendedor}`
+                };
+            }
+            return Object.values(mapa).sort((a, b) => a.id - b.id);
         }),
 });

@@ -1,34 +1,28 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
 
 interface ThemeContextType {
   theme: Theme;
-  toggleTheme?: () => void;
-  switchable: boolean;
+  toggleTheme: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextType>({
+  theme: "light",
+  toggleTheme: () => {},
+});
 
-interface ThemeProviderProps {
-  children: React.ReactNode;
-  defaultTheme?: Theme;
-  switchable?: boolean;
-}
-
-export function ThemeProvider({
-  children,
-  defaultTheme = "light",
-  switchable = false,
-}: ThemeProviderProps) {
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    if (switchable) {
-      const stored = localStorage.getItem("theme");
-      return (stored as Theme) || defaultTheme;
-    }
-    return defaultTheme;
+    // 1. Preferência salva
+    const saved = localStorage.getItem("metricflow:theme") as Theme | null;
+    if (saved === "dark" || saved === "light") return saved;
+    // 2. Preferência do sistema operacional
+    if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) return "dark";
+    return "light";
   });
 
+  // Aplica/remove a classe .dark no <html>
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "dark") {
@@ -36,29 +30,20 @@ export function ThemeProvider({
     } else {
       root.classList.remove("dark");
     }
+    localStorage.setItem("metricflow:theme", theme);
+  }, [theme]);
 
-    if (switchable) {
-      localStorage.setItem("theme", theme);
-    }
-  }, [theme, switchable]);
-
-  const toggleTheme = switchable
-    ? () => {
-        setTheme(prev => (prev === "light" ? "dark" : "light"));
-      }
-    : undefined;
+  const toggleTheme = useCallback(() => {
+    setTheme(t => (t === "light" ? "dark" : "light"));
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, switchable }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
 }
 
 export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error("useTheme must be used within ThemeProvider");
-  }
-  return context;
+  return useContext(ThemeContext);
 }

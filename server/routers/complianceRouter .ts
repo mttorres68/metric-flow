@@ -33,7 +33,7 @@ export const complianceRouter = router({
       const motivoMap: Record<string, {
         motivo: string;
         total: number;
-        vendedores: Record<number, { vendedor: number; count: number }>;
+        vendedores: Record<string, { vendedor: number; revenda: string; count: number }>; // Changed key type to string for composite key
         clientes: Set<number>;
       }> = {};
 
@@ -44,8 +44,9 @@ export const complianceRouter = router({
         const m = motivoMap[v.motivo];
         m.total++;
         m.clientes.add(v.codCliente);
-        if (!m.vendedores[v.vendedor]) m.vendedores[v.vendedor] = { vendedor: v.vendedor, count: 0 };
-        m.vendedores[v.vendedor].count++;
+        const vKey = `${v.revenda}__${v.vendedor}`; // Composite key for revenda and vendedor
+        if (!m.vendedores[vKey]) m.vendedores[vKey] = { vendedor: v.vendedor, revenda: v.revenda, count: 0 };
+        m.vendedores[vKey].count++; // Increment using the composite key
       }
 
       const motivos = Object.values(motivoMap)
@@ -57,7 +58,7 @@ export const complianceRouter = router({
           topVendedores:   Object.values(m.vendedores)
             .sort((a, b) => b.count - a.count)
             .slice(0, 5)
-            .map(v => ({ vendedor: `V0${v.vendedor}`, count: v.count })),
+            .map(v => ({ vendedor: `V0${v.vendedor}`, revenda: v.revenda, count: v.count })), // Added revenda to the output
         }))
         .sort((a, b) => b.total - a.total);
 
