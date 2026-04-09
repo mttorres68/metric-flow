@@ -109,4 +109,5 @@ temp/
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
 client.txt
-client\public\rota_coaching_all.json
+rota_coaching_all.json
+fluxo-analise.ini
