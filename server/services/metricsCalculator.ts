@@ -24,6 +24,7 @@
  */
 
 import { ProcessedVisita } from "./googleSheetsService";
+import { CONFIG_PADRAO_METRICAS } from "@shared/const";
 
 // ---------------------------------------------------------------------------
 // Tipos de configuração dinâmica
@@ -48,15 +49,9 @@ export interface ConfigMetricas {
   alertaTardePerc?: number;
 }
 
-// Valores padrão — espelham o config.py do Python
-const CONFIG_PADRAO: Required<ConfigMetricas> = {
-  raioPDV:            500,   // VENDEDORES_DIST_PDV
-  minutosCurta:       3,     // SHORT_VISIT_LIMIT
-  limiteInicioTardio: "08:45",
-  alertaCurtasPerc:   10,
-  alertaCoberturaPerc: 100,
-  alertaTardePerc:    25,
-};
+// Valores padrão vindos de shared/const.ts — fonte única de verdade.
+// O frontend pode sobrescrever via ConfigPanel; este é o fallback do servidor.
+const CONFIG_PADRAO: Required<ConfigMetricas> = { ...CONFIG_PADRAO_METRICAS };
 
 // Janelas de horário fixas (não configuráveis — regra de negócio invariante)
 const JANELA_ALMOCO_INICIO = 12 * 60 + 15; // 12:15

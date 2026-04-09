@@ -11,9 +11,11 @@ import { useSidebarCollapse } from "@/hooks/useSidebarCollapse";
 import { EditorAnalise } from "@/components/EditorAnalise";
 import {
     AlertTriangle, BarChart3,
-    Clock, RefreshCw, TrendingDown, TrendingUp, X, FileText, PenLine
+    Clock, RefreshCw, TrendingDown, TrendingUp, X, FileText, PenLine, Printer,
+    MessageCircle, Send, Loader2, CheckCircle2, AlertCircle, User,
+    Play, Wifi, WifiOff,
 } from "lucide-react";
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { generateWordReport } from "@/lib/wordGenerator";
@@ -90,12 +92,46 @@ function useAnalisesRevenda(dataInicio: string, dataFim: string) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [analises, dataInicio, dataFim]);
 
+    // Carrega do banco usando dataInicio como data de referência (DB tem prioridade)
+    const { data: dbAnalises } = trpc.analiseGestor.listarPorData.useQuery(
+        { data: dataInicio },
+        { staleTime: 60_000, enabled: !!dataInicio }
+    );
+    useEffect(() => {
+        if (!dbAnalises?.length) return;
+        setAnalises(prev => {
+            const merged = { ...prev };
+            dbAnalises.forEach((r: { revenda: string; tipo: string; conteudo: string }) => {
+                if (r.tipo === "vendedores") merged[pkAnalise(r.revenda)] = r.conteudo;
+            });
+            localStorage.setItem(ANALISES_REVENDA_KEY, JSON.stringify(merged));
+            return merged;
+        });
+        // Sincroniza análises de GAs (escritas no RotaCoaching) no localStorage desta página
+        const gasStored: Record<string, string> = (() => {
+            try { return JSON.parse(localStorage.getItem("metricflow:analises-ga") || "{}"); }
+            catch { return {}; }
+        })();
+        let gasAtualizado = false;
+        dbAnalises.forEach((r: { revenda: string; tipo: string; conteudo: string }) => {
+            if (r.tipo === "gas") {
+                gasStored[`${r.revenda}__${dataInicio}`] = r.conteudo;
+                gasAtualizado = true;
+            }
+        });
+        if (gasAtualizado) localStorage.setItem("metricflow:analises-ga", JSON.stringify(gasStored));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dbAnalises]);
+
+    const salvarMutation = trpc.analiseGestor.salvar.useMutation();
+
     const setAnalise = useCallback((revenda: string, html: string) => {
         setAnalises(prev => {
             const next = { ...prev, [pkAnalise(revenda)]: html };
             localStorage.setItem(ANALISES_REVENDA_KEY, JSON.stringify(next));
             return next;
         });
+        salvarMutation.mutate({ revenda, data: dataInicio, tipo: "vendedores", conteudo: html });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dataInicio, dataFim]);
 
@@ -161,7 +197,347 @@ function useFiltroPersistido() {
     return { filtros, setFiltro, setFiltrosMulti, resetFiltros, temFiltro };
 }
 
+// ─── Normalização de nomes de revenda (espelha server/db/whatsapp.ts) ────────
+
+const REVENDA_ALIASES: Record<string, string> = {
+    "duttra floriano": "Duttra FL",
+    "duttra fl": "Duttra FL",
+    "duttra ma": "Duttra MA",
+    "duttra srn": "Duttra SR",
+    "duttra sr": "Duttra SR",
+    "forte aracati": "FORTE AR",
+    "forte ar": "FORTE AR",
+    "forte quixada": "FORTE QX",
+    "forte qx": "FORTE QX",
+};
+
+function canonicalRevenda(name: string): string {
+    return REVENDA_ALIASES[name.toLowerCase().trim()] ?? name;
+}
+
+function revendasMatch(stored: string, query: string): boolean {
+    return canonicalRevenda(stored).toLowerCase() === canonicalRevenda(query).toLowerCase();
+}
+
+// ─── Modal Enviar WhatsApp (batch — todas as revendas) ───────────────────────
+
+type RevStatus = "idle" | "generating" | "sending" | "done" | "error" | "skipped"
+
+interface RevState {
+    rev: string;
+    dests: string[];        // apelidos dos destinatários associados
+    checked: boolean;
+    status: RevStatus;
+    detail: string;         // mensagem de detalhe do status
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+async function fetchPDFBase64(
+    data: string,
+    rev: string,
+    analises: Record<string, { vendedores: string; gas: string }>
+): Promise<{ base64: string; filename: string }> {
+    const resp = await fetch("/api/relatorio/gerar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data, revenda: rev, analises }),
+    });
+    if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error ?? "Erro ao gerar PDF");
+    }
+    const blob = await resp.blob();
+    const filename =
+        resp.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1]
+        ?? `${rev}_${data}.pdf`;
+    const base64 = await blobToBase64(blob);
+    return { base64, filename };
+}
+
+function EnviarWAModal({
+    revendasOrdenadas,
+    data,
+    getAnalise,
+    getAnaliseGAs,
+    onClose,
+}: {
+    revendasOrdenadas: string[];
+    data: string;
+    getAnalise: (rev: string) => string;
+    getAnaliseGAs: (rev: string) => string;
+    onClose: () => void;
+}) {
+    const destQuery = trpc.evolution.listDestinatarios.useQuery();
+    const statusQuery = trpc.evolution.getStatus.useQuery();
+    const sendPDF = trpc.evolution.sendPDF.useMutation();
+    const sendMessage = trpc.evolution.sendMessage.useMutation();
+
+    const [preMsg, setPreMsg] = React.useState("");
+
+    const connected = statusQuery.data?.state === "open";
+    const allDests = destQuery.data ?? [];
+
+    const dateLabel = data
+        ? new Date(data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+        : "";
+
+    // Monta estado inicial por revenda
+    const buildRows = React.useCallback((): RevState[] =>
+        revendasOrdenadas.map(rev => {
+            const dests = allDests
+                .filter(d => d.revendas.some(r => revendasMatch(r, rev)))
+                .map(d => d.apelido || d.nome);
+            return { rev, dests, checked: dests.length > 0, status: "idle", detail: "" };
+        }),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [revendasOrdenadas, destQuery.data]);
+
+    const [rows, setRows] = React.useState<RevState[]>([]);
+    const [sending, setSending] = React.useState(false);
+    const [done, setDone] = React.useState(false);
+
+    // Inicializa quando dados de destinatários carregam
+    React.useEffect(() => {
+        if (!destQuery.isLoading) setRows(buildRows());
+    }, [buildRows, destQuery.isLoading]);
+
+    function toggleRow(rev: string) {
+        setRows(prev => prev.map(r => r.rev === rev ? { ...r, checked: !r.checked } : r));
+    }
+
+    function setRowStatus(rev: string, status: RevStatus, detail = "") {
+        setRows(prev => prev.map(r => r.rev === rev ? { ...r, status, detail } : r));
+    }
+
+    async function handleSend() {
+        const targets = rows.filter(r => r.checked);
+        if (!targets.length || !connected) return;
+
+        setSending(true);
+
+        // Reseta status das selecionadas
+        setRows(prev => prev.map(r =>
+            r.checked ? { ...r, status: "idle", detail: "" } : r
+        ));
+
+        let totalOk = 0, totalFail = 0;
+
+        for (const row of targets) {
+            const { rev } = row;
+            const destObjs = allDests.filter(d =>
+                d.revendas.some(r => revendasMatch(r, rev))
+            );
+
+            if (destObjs.length === 0) {
+                setRowStatus(rev, "skipped", "Sem destinatários associados");
+                continue;
+            }
+
+            // 1. Gerar PDF
+            setRowStatus(rev, "generating", "Gerando PDF…");
+            let base64 = "", filename = "";
+            try {
+                ({ base64, filename } = await fetchPDFBase64(data, rev, {
+                    [rev]: { vendedores: getAnalise(rev), gas: getAnaliseGAs(rev) },
+                }));
+            } catch (e: any) {
+                setRowStatus(rev, "error", `PDF: ${e.message}`);
+                totalFail++;
+                continue;
+            }
+
+            // 2. Enviar para cada destinatário
+            setRowStatus(rev, "sending", `Enviando para ${destObjs.length} destinatário(s)…`);
+            const caption = `Relatório ${rev} — ${dateLabel}`;
+            const erros: string[] = [];
+
+            for (const dest of destObjs) {
+                try {
+                    if (preMsg.trim()) {
+                        await sendMessage.mutateAsync({ telefone: dest.telefone, texto: preMsg.trim() });
+                    }
+                    await sendPDF.mutateAsync({ telefone: dest.telefone, base64, filename, caption });
+                } catch (e: any) {
+                    erros.push(`${dest.apelido || dest.nome}: ${e.message}`);
+                }
+            }
+
+            if (erros.length === 0) {
+                setRowStatus(rev, "done", `Enviado para ${destObjs.length} destinatário(s)`);
+                totalOk++;
+            } else if (erros.length < destObjs.length) {
+                setRowStatus(rev, "done", `${destObjs.length - erros.length} ok, ${erros.length} falha`);
+                totalOk++;
+            } else {
+                setRowStatus(rev, "error", erros[0]);
+                totalFail++;
+            }
+        }
+
+        setSending(false);
+        setDone(true);
+        if (totalFail === 0) toast.success(`Relatórios enviados para ${totalOk} revenda(s)`);
+        else toast.error(`${totalFail} revenda(s) com falha`);
+    }
+
+    const checkedCount = rows.filter(r => r.checked).length;
+    const hasAnyDests = rows.some(r => r.dests.length > 0);
+
+    function StatusIcon({ status }: { status: RevStatus }) {
+        if (status === "generating" || status === "sending")
+            return <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400 shrink-0" />;
+        if (status === "done")
+            return <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />;
+        if (status === "error")
+            return <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />;
+        if (status === "skipped")
+            return <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />;
+        return null;
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+
+                {/* Header */}
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 shrink-0">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)" }}>
+                        <MessageCircle className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-sm font-bold text-slate-800">Enviar relatórios via WhatsApp</p>
+                        <p className="text-xs text-slate-500">{dateLabel} · {checkedCount} de {rows.length} revendas selecionadas</p>
+                    </div>
+                    <button onClick={onClose} disabled={sending}
+                        className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors disabled:opacity-40">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+
+                    {/* Mensagem prévia */}
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                            <MessageCircle className="w-3.5 h-3.5 text-slate-400" />
+                            Mensagem prévia <span className="text-slate-400 font-normal">(opcional — enviada antes do PDF)</span>
+                        </label>
+                        <textarea
+                            value={preMsg}
+                            onChange={e => setPreMsg(e.target.value)}
+                            disabled={sending}
+                            rows={3}
+                            placeholder="Digite aqui uma mensagem de texto que será enviada antes de cada PDF…"
+                            className="w-full text-xs rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 resize-none placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 disabled:opacity-50 transition"
+                        />
+                    </div>
+
+                    {/* Aviso WA desconectado */}
+                    {!connected && (
+                        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            WhatsApp desconectado. Conecte em <strong>Configurações → WhatsApp</strong>.
+                        </div>
+                    )}
+
+                    {/* Aviso sem associações */}
+                    {!destQuery.isLoading && !hasAnyDests && (
+                        <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            Nenhuma revenda tem destinatários associados. Configure em <strong>WhatsApp → Destinatários</strong>.
+                        </div>
+                    )}
+
+                    {/* Tabela de revendas */}
+                    {destQuery.isLoading ? (
+                        <div className="flex items-center gap-2 text-slate-400 text-xs py-4">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando destinatários…
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {rows.map(row => (
+                                <div key={row.rev}
+                                    className={`flex items-start gap-3 px-4 py-3 rounded-xl border transition-colors ${row.checked
+                                        ? "bg-indigo-50/70 border-indigo-200"
+                                        : "bg-slate-50 border-slate-200"
+                                        } ${row.dests.length === 0 ? "opacity-50" : ""}`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={row.checked}
+                                        onChange={() => toggleRow(row.rev)}
+                                        disabled={sending || row.dests.length === 0}
+                                        className="mt-0.5 w-3.5 h-3.5 accent-indigo-500 shrink-0"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold text-slate-800">{row.rev}</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            {row.dests.length > 0
+                                                ? row.dests.join(", ")
+                                                : <span className="italic">sem destinatários associados</span>}
+                                        </p>
+                                        {row.detail && (
+                                            <p className={`text-[11px] mt-1 font-medium ${row.status === "error" ? "text-red-500" :
+                                                row.status === "skipped" ? "text-amber-500" :
+                                                    row.status === "done" ? "text-green-600" : "text-indigo-500"
+                                                }`}>
+                                                {row.detail}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <StatusIcon status={row.status} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50/60 shrink-0">
+                    <button
+                        onClick={() => setRows(prev => prev.map(r => ({ ...r, checked: r.dests.length > 0 })))}
+                        disabled={sending}
+                        className="text-xs text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
+                    >
+                        Restaurar seleção
+                    </button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={onClose} disabled={sending}
+                            className="px-4 py-2 rounded-xl text-sm text-slate-500 hover:bg-slate-100 transition-colors disabled:opacity-40">
+                            {done ? "Fechar" : "Cancelar"}
+                        </button>
+                        {!done && (
+                            <button
+                                onClick={handleSend}
+                                disabled={sending || !connected || checkedCount === 0}
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-colors disabled:opacity-40"
+                                style={{ background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)" }}
+                            >
+                                {sending
+                                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando…</>
+                                    : <><Send className="w-4 h-4" /> Enviar tudo ({checkedCount})</>}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
+
+const SCROLL_TO_REVENDA_KEY = "metricflow:analise-scroll-revenda";
 
 export default function Analise() {
     const [, setLocation] = useLocation();
@@ -173,12 +549,47 @@ export default function Analise() {
         filtros.dataFim || ""
     );
 
-    const [sortBy, setSortBy] = useState<string>("ranking_critico");
+    const [sortBy, setSortBy] = useState<string>("vendedor");
     const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
     const [expandedHelp, setExpandedHelp] = useState(false);
+    const [downloadingPDF, setDownloadingPDF] = useState<string | null>(null);
+    const [downloadingUnified, setDownloadingUnified] = useState(false);
+    const [waModalOpen, setWaModalOpen] = useState(false);
+
+    // Rola até a revenda ao voltar da página de detalhes do vendedor
+    useEffect(() => {
+        const revenda = sessionStorage.getItem(SCROLL_TO_REVENDA_KEY);
+        if (!revenda) return;
+        sessionStorage.removeItem(SCROLL_TO_REVENDA_KEY);
+        const id = `revenda-${revenda}`;
+        const el = document.getElementById(id);
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else {
+            // Aguarda a tabela renderizar antes de tentar novamente
+            const timer = setTimeout(() => {
+                const el2 = document.getElementById(id);
+                if (el2) el2.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, []);
 
     const { data: vendedoresList = [] } = trpc.clientes.vendedores.useQuery({
         revenda: filtros.revenda,
+    });
+
+    // ── Automação ────────────────────────────────────────────────────────────
+    const healthQuery = trpc.automacao.health.useQuery(undefined, {
+        refetchInterval: 30_000,
+        retry: false,
+    });
+    const runMutation = trpc.automacao.run.useMutation({
+        onSuccess: () => {
+            toast.success("Pipeline executado com sucesso! Atualizando dados…");
+            refetch();
+        },
+        onError: (e) => toast.error(`Falha no pipeline: ${e.message}`),
     });
 
     const { data: result, isLoading, error, refetch } = trpc.analise.getDados.useQuery(
@@ -195,7 +606,6 @@ export default function Analise() {
     const datas = result?.datas ?? [];
     const revendas = result?.revendas ?? [];
 
-    console.log(dados);
     //console.log(datas);
     //console.log(revendas);
 
@@ -227,6 +637,130 @@ export default function Analise() {
         };
     }, [sorted]);
 
+    // Mapeamento: nome da visita (DB) → nome curto do coaching JSON (mesmo do backend)
+    const REVENDA_COACHING_MAP: Record<string, string> = {
+        "duttra floriano": "duttra fl",
+        "duttra ma": "duttra ma",
+        "duttra srn": "duttra sr",
+        "forte aracati": "forte ar",
+        "forte quixada": "forte qx",
+    };
+
+    // Helper: lê análise de GAs do localStorage (gerida pelo RotaCoaching.tsx)
+    // RotaCoaching salva com o nome curto do coaching (ex: "duttra fl"),
+    // então tentamos primeiro com o nome mapeado, depois o nome direto.
+    const getAnaliseGAs = (revenda: string): string => {
+        try {
+            const stored = JSON.parse(localStorage.getItem("metricflow:analises-ga") || "{}");
+            const nomeCoaching = REVENDA_COACHING_MAP[revenda.toLowerCase()];
+            const chaves = nomeCoaching
+                ? [`${nomeCoaching}__${filtros.dataInicio}`, `${revenda}__${filtros.dataInicio}`]
+                : [`${revenda}__${filtros.dataInicio}`];
+            for (const chave of chaves) {
+                if (stored[chave]) return stored[chave];
+            }
+            return "";
+        } catch { return ""; }
+    };
+
+    // Baixa PDF via POST enviando as análises inline (sem MySQL)
+    const downloadPDF = async (revenda?: string) => {
+        const chave = revenda ?? "__all__";
+        setDownloadingPDF(chave);
+        try {
+            const data = filtros.dataInicio;
+            if (!data) { toast.error("Selecione uma data primeiro."); return; }
+
+            const analisesPayload: Record<string, { vendedores: string; gas: string }> = {};
+            if (revenda) {
+                analisesPayload[revenda] = {
+                    vendedores: getAnalise(revenda),
+                    gas: getAnaliseGAs(revenda),
+                };
+            } else {
+                const todasAnalises = analisesDoPeríodo();
+                revendasOrdenadas.forEach(rev => {
+                    analisesPayload[rev] = {
+                        vendedores: todasAnalises[rev] ?? "",
+                        gas: getAnaliseGAs(rev),
+                    };
+                });
+            }
+
+            const body = { data, ...(revenda ? { revenda } : {}), analises: analisesPayload };
+            const resp = await fetch("/api/relatorio/gerar", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                toast.error(err.error ?? "Erro ao gerar PDF.");
+                return;
+            }
+
+            const blob = await resp.blob();
+            const filename = resp.headers.get("Content-Disposition")
+                ?.match(/filename="([^"]+)"/)?.[1]
+                ?? (revenda ? `${revenda}_${data}.pdf` : `relatorios_${data}.zip`);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
+            toast.success("PDF baixado com sucesso!");
+        } catch (e) {
+            console.error(e);
+            toast.error("Erro ao baixar PDF.");
+        } finally {
+            setDownloadingPDF(null);
+        }
+    };
+
+    const downloadPDFUnificado = async () => {
+        setDownloadingUnified(true);
+        try {
+            const data = filtros.dataInicio;
+            if (!data) { toast.error("Selecione uma data primeiro."); return; }
+
+            const todasAnalises = analisesDoPeríodo();
+            const analisesPayload: Record<string, { vendedores: string; gas: string }> = {};
+            revendasOrdenadas.forEach(rev => {
+                analisesPayload[rev] = {
+                    vendedores: todasAnalises[rev] ?? "",
+                    gas: getAnaliseGAs(rev),
+                };
+            });
+
+            const resp = await fetch("/api/relatorio/gerar-unificado", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ data, analises: analisesPayload }),
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                toast.error(err.error ?? "Erro ao gerar PDF unificado.");
+                return;
+            }
+
+            const blob = await resp.blob();
+            const filename = resp.headers.get("Content-Disposition")
+                ?.match(/filename="([^"]+)"/)?.[1]
+                ?? `relatorios_unificado_${data}.pdf`;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
+            toast.success("PDF unificado baixado com sucesso!");
+        } catch (e) {
+            console.error(e);
+            toast.error("Erro ao baixar PDF unificado.");
+        } finally {
+            setDownloadingUnified(false);
+        }
+    };
+
     function toggleSort(col: string) {
         if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc");
         else { setSortBy(col); setSortDir("asc"); }
@@ -254,6 +788,8 @@ export default function Analise() {
             dashboard: "/", vendedores: "/vendedores",
             compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
             relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching", analises: "/analises",
+            trello_atraso: "/trello-atraso",
+            whatsapp: "/whatsapp",
         };
         if (rotas[page]) { window.location.href = rotas[page]; return; }
         if (page !== "analises") toast.info(`Módulo "${page}" em breve`);
@@ -300,6 +836,57 @@ export default function Analise() {
                             className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-slate-200 text-indigo-600 hover:bg-indigo-50"
                         >
                             <FileText size={12} /> Exportar Word
+                        </button>
+                        <button
+                            onClick={() => downloadPDF()}
+                            disabled={downloadingPDF !== null || downloadingUnified}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-indigo-300 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+                            title="Baixar PDF de todas as revendas (ZIP)"
+                        >
+                            <Printer size={12} /> {downloadingPDF === "__all__" ? "Gerando..." : "Baixar todos (ZIP)"}
+                        </button>
+                        <button
+                            onClick={() => downloadPDFUnificado()}
+                            disabled={downloadingPDF !== null || downloadingUnified}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-green-300 text-green-700 hover:bg-green-50 disabled:opacity-50"
+                            title="Baixar todas as revendas em um único arquivo PDF"
+                        >
+                            <Printer size={12} /> {downloadingUnified ? "Gerando..." : "Baixar unificado (PDF)"}
+                        </button>
+                        <button
+                            onClick={() => setWaModalOpen(true)}
+                            disabled={revendasOrdenadas.length === 0}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-white border border-green-600 disabled:opacity-40"
+                            style={{ background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)" }}
+                            title="Enviar relatórios por WhatsApp para todas as revendas"
+                        >
+                            <MessageCircle size={12} /> Enviar WhatsApp
+                        </button>
+                        {/* Botão de automação */}
+                        <button
+                            onClick={() => runMutation.mutate({
+                                dataInicio: filtros.dataInicio || new Date().toISOString().slice(0, 10),
+                                dataFim: filtros.dataFim || filtros.dataInicio || new Date().toISOString().slice(0, 10),
+                            })}
+                            disabled={runMutation.isPending || !healthQuery.data?.online}
+                            title={
+                                !healthQuery.data?.online
+                                    ? "API de automação offline — execute: python api.py"
+                                    : `Executar pipeline para ${filtros.dataInicio ?? "hoje"}`
+                            }
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border disabled:opacity-40 transition-colors"
+                            style={
+                                healthQuery.data?.online
+                                    ? { background: "#f0fdf4", color: "#16a34a", borderColor: "#86efac" }
+                                    : { background: "#f8fafc", color: "#94a3b8", borderColor: "#e2e8f0" }
+                            }
+                        >
+                            {runMutation.isPending
+                                ? <><Loader2 size={12} className="animate-spin" /> Executando…</>
+                                : healthQuery.data?.online
+                                    ? <><Play size={12} /> Executar pipeline</>
+                                    : <><WifiOff size={12} /> Pipeline offline</>
+                            }
                         </button>
                         <button
                             onClick={() => refetch()}
@@ -404,7 +991,7 @@ export default function Analise() {
                                 <div className="bg-white p-12 rounded-xl text-center text-slate-400 border border-slate-100">Nenhum dado para os filtros selecionados</div>
                             )}
                             {revendasOrdenadas.map(rev => (
-                                <div key={rev} className="bg-white rounded-xl border border-slate-100 overflow-hidden" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
+                                <div key={rev} id={`revenda-${rev}`} className="bg-white rounded-xl border border-slate-100 overflow-hidden" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
                                     <div className="px-5 py-3 border-b border-indigo-100 bg-indigo-50/50 flex items-center justify-between">
                                         <h2 className="text-sm font-bold text-slate-800 tracking-wide uppercase">Revenda: <span className="text-indigo-600">{rev}</span></h2>
                                         <span className="text-xs font-semibold text-slate-500">{groupedData[rev].length} Vendedor(es)</span>
@@ -488,7 +1075,7 @@ export default function Analise() {
                                                         <tr key={`${r.vendedor}-${r.data}`} className={`hover:bg-indigo-50/80 transition-colors ${rowBg}`}>
                                                             {/* Identidade */}
                                                             <Td mono>
-                                                                <button onClick={() => setLocation(`/analises/vendedor/${encodeURIComponent(r.revenda)}/${r.vendedor}/${r.data}`)} className="font-bold text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-1 transition-all">
+                                                                <button onClick={() => { sessionStorage.setItem(SCROLL_TO_REVENDA_KEY, r.revenda); setLocation(`/analises/vendedor/${encodeURIComponent(r.revenda)}/${r.vendedor}/${r.data}`); }} className="font-bold text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-1 transition-all">
                                                                     {r.vendedor}
                                                                 </button>
                                                             </Td>
@@ -511,7 +1098,7 @@ export default function Analise() {
                                                             </Td>
                                                             <Td center>
                                                                 {r.apos14h > 0
-                                                                    ? <span className="text-amber-600 font-semibold">{pct(r.apos14h_pct, 0)} <span className="text-slate-400 font-normal">({r.apos14h}/{r.apos14h_total})</span></span>
+                                                                    ? <span className={r.apos14h_pct < 25 ? "text-red-500 font-bold" : "text-slate-600 font-bold"}>{pct(r.apos14h_pct, 0)} <span className="text-slate-400 font-normal">({r.apos14h}/{r.apos14h_total})</span></span>
                                                                     : <span className="text-slate-300">—</span>
                                                                 }
                                                             </Td>
@@ -576,14 +1163,26 @@ export default function Analise() {
 
                                     {/* ── Editor de análise por revenda ── */}
                                     <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/40">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <PenLine className="w-3.5 h-3.5 text-indigo-500" />
-                                            <span className="text-xs text-indigo-700 uppercase tracking-widest" style={{ fontWeight: 700 }}>
-                                                Análise · {rev}
-                                            </span>
-                                            <span className="text-xs text-slate-400 ml-1" style={{ fontWeight: 400 }}>
-                                                — será incluída no Word
-                                            </span>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <PenLine className="w-3.5 h-3.5 text-indigo-500" />
+                                                <span className="text-xs text-indigo-700 uppercase tracking-widest" style={{ fontWeight: 700 }}>
+                                                    Análise · {rev}
+                                                </span>
+                                                <span className="text-xs text-slate-400 ml-1" style={{ fontWeight: 400 }}>
+                                                    — será incluída no PDF
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={() => downloadPDF(rev)}
+                                                disabled={downloadingPDF !== null}
+                                                className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs text-white bg-indigo-500 hover:bg-indigo-600 transition-colors disabled:opacity-50"
+                                                style={{ fontWeight: 700 }}
+                                                title={`Baixar PDF completo — ${rev}`}
+                                            >
+                                                <Printer className="w-3 h-3" />
+                                                {downloadingPDF === rev ? "Gerando..." : "Baixar PDF"}
+                                            </button>
                                         </div>
                                         <EditorAnalise
                                             id={`editor-revenda-${rev}`}
@@ -598,6 +1197,17 @@ export default function Analise() {
                     )}
                 </div>
             </div>
+
+            {/* Modal WhatsApp batch */}
+            {waModalOpen && (
+                <EnviarWAModal
+                    revendasOrdenadas={revendasOrdenadas}
+                    data={filtros.dataInicio || ""}
+                    getAnalise={getAnalise}
+                    getAnaliseGAs={getAnaliseGAs}
+                    onClose={() => setWaModalOpen(false)}
+                />
+            )}
         </div>
     );
 }

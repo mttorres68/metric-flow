@@ -117,6 +117,8 @@ export default function Clientes() {
             dashboard: "/", vendedores: "/vendedores",
             compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
             relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching", analises: "/analises",
+            trello_atraso: "/trello-atraso",
+            whatsapp: "/whatsapp",
         };
         if (rotas[page]) { window.location.href = rotas[page]; return; }
         if (page !== "clientes") toast.info(`Módulo "${page}" em breve`);

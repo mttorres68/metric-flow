@@ -65,7 +65,8 @@ export async function getRotaCoachingData(): Promise<any[]> {
 
     console.log("[Cache] Carregando rota_coaching_all.json do disco...");
     try {
-        const filePath = path.join(process.cwd(), "client", "public", "rota_coaching_all.json");
+        const filePath = process.env.COACHING_DATA_PATH
+            ?? path.join(process.cwd(), "client", "public", "rota_coaching_all.json");
         const rawContent = fs.readFileSync(filePath, "utf-8");
         const data = JSON.parse(rawContent);
         cachedRotaCoaching = data;

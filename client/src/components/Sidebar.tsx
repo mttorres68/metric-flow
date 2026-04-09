@@ -10,15 +10,17 @@ import {
   CircleCheckBig,
   Home,
   LineChart,
-  Map,  
+  Map,
+  MessageCircle,
   ShoppingCart,
   SquareUserRound,
-  TrendingUp,  
-  UsersRound,  
+  TrendingUp,
+  UsersRound,
   ChevronLeft,
   Menu,
   Moon,
   Sun,
+  Trello,
 } from "lucide-react";
 import { useSidebarCollapse } from "@/hooks/useSidebarCollapse";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -37,6 +39,8 @@ const navItems = [
   { id: "relatorio_semanal", label: "Rel. Semanal", icon: BarChartHorizontal },
   { id: "rota_coaching", label: "Rota Coaching", icon: Map },
   { id: "analises", label: "Análises", icon: LineChart },
+  { id: "trello_atraso", label: "Trello Atraso", icon: Trello },
+  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
 
   { id: "pedidos", label: "Pedidos", icon: ShoppingCart },
   { id: "tendencias", label: "Tendências", icon: TrendingUp },
@@ -50,7 +54,11 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
   return (
     <aside
       className={`fixed left-0 top-0 h-screen flex flex-col z-30 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-60'} bg-white dark:bg-[var(--sidebar)] border-r border-slate-100 dark:border-[var(--sidebar-border)]`}
-      style={{ boxShadow: isDark ? "2px 0 12px rgba(0,0,0,0.2)" : "2px 0 12px rgba(0,0,0,0.04)" }}
+      style={{
+        boxShadow: isDark
+          ? "2px 0 20px rgba(0,0,0,0.35), inset -1px 0 0 oklch(0.265 0.018 252)"
+          : "2px 0 12px rgba(0,0,0,0.04)",
+      }}
     >
       {/* Logo and Toggle */}
       <div className={`px-4 py-5 border-b border-slate-100 dark:border-[var(--sidebar-border)] flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
@@ -89,7 +97,7 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activePage === item.id;
-            const isBlocked = item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" && item.id !== "relatorio" && item.id !== "relatorio_semanal" && item.id !== "rota_coaching" && item.id !== "analises";
+            const isBlocked = item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" && item.id !== "relatorio" && item.id !== "relatorio_semanal" && item.id !== "rota_coaching" && item.id !== "analises" && item.id !== "trello_atraso" && item.id !== "whatsapp";
 
             return (
               <li key={item.id}>
@@ -100,7 +108,7 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
                     isBlocked 
                       ? "text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-50"
                       : isActive
-                      ? "bg-indigo-50 dark:bg-[var(--sidebar-accent)] text-indigo-600 dark:text-[var(--sidebar-accent-foreground)]"
+                      ? "bg-indigo-50 dark:bg-[var(--sidebar-accent)] text-indigo-600 dark:text-[var(--sidebar-accent-foreground)] dark:[box-shadow:inset_2px_0_0_var(--sidebar-primary)]"
                       : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[var(--accent)] hover:text-slate-700 dark:hover:text-slate-200"
                   }`}
                   style={{ fontWeight: isActive ? 700 : 500 }}

@@ -12,6 +12,8 @@
 import Sidebar from "@/components/Sidebar";
 import { useSidebarCollapse } from "@/hooks/useSidebarCollapse";
 import { trpc } from "@/lib/trpc";
+import { EditorAnalise } from "@/components/EditorAnalise";
+import { exportarPDF } from "@/lib/pdfExport";
 import {
     AlertTriangle,
     BarChart3,
@@ -20,13 +22,16 @@ import {
     ChevronDown,
     ChevronUp,
     Clock,
+    FileText,
     MapPin,
+    PenLine,
+    Printer,
     RefreshCw,
     Route,
     X,
     XCircle,
 } from "lucide-react";
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
     Bar, BarChart, CartesianGrid, Cell, Legend,
     LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -115,6 +120,71 @@ function periodoIntervalo(start: string, end: string) {
 const FILTER_KEY = "metricflow:rota-coaching-filters";
 function loadFilters() {
     try { return JSON.parse(localStorage.getItem(FILTER_KEY) || "{}"); } catch { return {}; }
+}
+
+// ─── Persistência de análises GA por revenda+data ─────────────────────────────
+
+export const ANALISES_GA_KEY = "metricflow:analises-ga";
+
+function carregarAnalisesGA(): Record<string, string> {
+    try { return JSON.parse(localStorage.getItem(ANALISES_GA_KEY) || "{}"); }
+    catch { return {}; }
+}
+
+function useAnalisesGA(date: string) {
+    const [analises, setAnalises] = useState<Record<string, string>>(carregarAnalisesGA);
+
+    // pk: "${revenda}__${date}" — compatível com pdfExport
+    const pkAnalise = (revenda: string) => `${revenda}__${date}`;
+
+    const getAnalise = useCallback((revenda: string): string =>
+        analises[pkAnalise(revenda)] || "",
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [analises, date]);
+
+    // Carrega do banco e merge (DB tem prioridade sobre localStorage)
+    const { data: dbAnalises } = trpc.analiseGestor.listarPorData.useQuery(
+        { data: date },
+        { staleTime: 60_000, enabled: !!date }
+    );
+    useEffect(() => {
+        if (!dbAnalises?.length) return;
+        setAnalises(prev => {
+            const merged = { ...prev };
+            dbAnalises.forEach((r: { revenda: string; tipo: string; conteudo: string }) => {
+                if (r.tipo === "gas") merged[pkAnalise(r.revenda)] = r.conteudo;
+            });
+            localStorage.setItem(ANALISES_GA_KEY, JSON.stringify(merged));
+            return merged;
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dbAnalises]);
+
+    const salvarMutation = trpc.analiseGestor.salvar.useMutation();
+
+    const setAnalise = useCallback((revenda: string, html: string) => {
+        setAnalises(prev => {
+            const next = { ...prev, [pkAnalise(revenda)]: html };
+            localStorage.setItem(ANALISES_GA_KEY, JSON.stringify(next));
+            return next;
+        });
+        salvarMutation.mutate({ revenda, data: date, tipo: "gas", conteudo: html });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [date]);
+
+    // Retorna as análises do dia atual como { revenda: html }
+    const analisesDodia = useCallback((): Record<string, string> => {
+        const res: Record<string, string> = {};
+        Object.entries(analises).forEach(([key, html]) => {
+            if (key.endsWith(`__${date}`) && html.trim()) {
+                const rev = key.replace(`__${date}`, "");
+                res[rev] = html;
+            }
+        });
+        return res;
+    }, [analises, date]);
+
+    return { getAnalise, setAnalise, analisesDodia };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -262,6 +332,7 @@ export default function RotaCoaching() {
 
     const utils = trpc.useUtils();
 
+
     // ── Filtros ─────────────────────────────────────────────────────────────────
     const setFiltro = (k: string, v: any) => {
         setFiltros(prev => {
@@ -348,6 +419,9 @@ export default function RotaCoaching() {
         return Object.values(m).sort((a, b) => a.rev.localeCompare(b.rev));
     }, [baseFiltrado]);
 
+    // ── Análises GA por revenda (editor + PDF) ──────────────────────────────────
+    const { getAnalise, setAnalise, analisesDodia } = useAnalisesGA(dateStart);
+
     // ── Toggle linha expandida ──────────────────────────────────────────────────
     const toggleRow = (i: number) => {
         const s = new Set(expandedRows);
@@ -384,6 +458,8 @@ export default function RotaCoaching() {
         const rotas: Record<string, string> = {
             dashboard: "/", vendedores: "/vendedores",
             compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio", relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching", analises: "/analises",
+            trello_atraso: "/trello-atraso",
+            whatsapp: "/whatsapp",
         };
         if (rotas[page]) { window.location.href = rotas[page]; return; }
         if (page !== "rota_coaching") toast.info(`Módulo "${page}" em breve`);
@@ -414,6 +490,28 @@ export default function RotaCoaching() {
                             style={{ fontWeight: 600 }}>
                             <RefreshCw className="w-3.5 h-3.5" /> Atualizar
                         </button>
+                        {aba === "coaching" && (
+                            <button
+                                onClick={() => {
+                                    if (!baseFiltrado.length) {
+                                        alert("Sem dados para exportar. Selecione uma data com dados.");
+                                        return;
+                                    }
+                                    exportarPDF(
+                                        baseFiltrado as any,
+                                        dateStart,
+                                        kpis as any,
+                                        analisesDodia()
+                                    );
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
+                                style={{ fontWeight: 700 }}
+                                title={`Exportar PDF — ${dateStart}`}
+                            >
+                                <Printer className="w-3.5 h-3.5" />
+                                Exportar PDF
+                            </button>
+                        )}
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs text-emerald-600 bg-emerald-50 border border-emerald-100" style={{ fontWeight: 700 }}>
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             Ao vivo
@@ -880,6 +978,54 @@ export default function RotaCoaching() {
                                             </table>
                                         </div>
                                     </div>
+
+                                    {/* ── Análises do Gestor por Revenda ──────── */}
+                                    {revendasUnicas.length > 0 && (
+                                        <div className="space-y-4">
+                                            <div className="bg-white rounded-2xl overflow-hidden"
+                                                style={{ border: "1px solid oklch(0.93 0.006 240)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                                                <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
+                                                    <FileText className="w-4 h-4 text-emerald-600" />
+                                                    <span className="text-sm text-slate-800" style={{ fontWeight: 800 }}>
+                                                        Análise do Gestor — GAs
+                                                    </span>
+                                                    <span className="text-xs text-slate-400 ml-1">
+                                                        — será incluída no PDF · referência: {dateStart}
+                                                    </span>
+                                                </div>
+                                                <div className="divide-y divide-slate-100">
+                                                    {revendasUnicas.map(rev => (
+                                                        <div key={rev} className="px-5 py-4">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <div className="flex items-center gap-2">
+                                                                    <PenLine className="w-3.5 h-3.5 text-emerald-500" />
+                                                                    <span className="text-xs text-emerald-700 uppercase tracking-widest" style={{ fontWeight: 700 }}>
+                                                                        {rev}
+                                                                    </span>
+                                                                </div>
+                                                                <a
+                                                                    href={`/api/relatorio/gerar?revenda=${encodeURIComponent(rev)}&data=${dateStart}`}
+                                                                    download
+                                                                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs text-white bg-indigo-500 hover:bg-indigo-600 transition-colors"
+                                                                    style={{ fontWeight: 700 }}
+                                                                    title={`Baixar PDF completo — ${rev} (Vendedores + GAs)`}
+                                                                >
+                                                                    <Printer className="w-3 h-3" />
+                                                                    Baixar PDF
+                                                                </a>
+                                                            </div>
+                                                            <EditorAnalise
+                                                                id={`editor-ga-${rev}`}
+                                                                html={getAnalise(rev)}
+                                                                onChange={html => setAnalise(rev, html)}
+                                                                placeholder={`Análise da rota coaching da revenda ${rev} — destaques, pontos de atenção, planos de ação...`}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Gráficos */}
                                     {baseFiltrado.some(r => r.agendado) && (

@@ -7,6 +7,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { relatorioRouter } from "../routes/relatorio";
+import { initWATables } from "../db/whatsapp";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -28,6 +30,11 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Inicializa tabelas WhatsApp no PostgreSQL (não bloqueia se falhar)
+  initWATables().catch((e) =>
+    console.warn("[WA DB] não foi possível inicializar tabelas:", e.message)
+  );
+
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
@@ -35,6 +42,8 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // Relatórios PDF (REST — retorna ZIP/PDF com múltiplos arquivos binários)
+  app.use("/api/relatorio", relatorioRouter);
   // tRPC API
   app.use(
     "/api/trpc",

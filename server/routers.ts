@@ -9,7 +9,11 @@ import { clientesRouter } from "./routers/clientesRouter";
 import { infleetRouter } from "./routers/infleetRouter";
 import { ptRouter } from "./routers/ptRouter";
 import { analiseRouter } from "./routers/analiseRouter";
+import { analiseGestorRouter } from "./routers/analiseGestorRouter";
 import { rotaCoachingRouter } from "./routers/rotaCoachingRouter";
+import { trelloRouter } from "./routers/trelloRouter";
+import { evolutionRouter } from "./routers/evolutionRouter";
+import { automacaoRouter } from "./routers/automacaoRouter";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -19,9 +23,13 @@ export const appRouter = router({
   compliance: complianceRouter,
   clientes: clientesRouter,
   infleet: infleetRouter,
-  pt: ptRouter, 
+  pt: ptRouter,
   analise: analiseRouter,
+  analiseGestor: analiseGestorRouter,
   rotaCoaching: rotaCoachingRouter,
+  trello: trelloRouter,
+  evolution: evolutionRouter,
+  automacao: automacaoRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

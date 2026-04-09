@@ -136,7 +136,6 @@ function calcularVendedorDia(
         const t = hmsToMin(v.tempoVisita);
         return t !== null && t < CURTA;
     }).length;
-    console.log(relampago);
 
     // Atend > 35 min
     const maiores35 = unicos.filter(v => { const t = hmsToMin(v.tempoVisita); return t !== null && t > 35; });

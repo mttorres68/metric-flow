@@ -20,34 +20,35 @@ interface KPICardProps {
   delay?: number;
 }
 
+// Todas as cores via CSS variables — adaptam-se automaticamente ao dark mode
 const colorConfig = {
   green: {
-    bg: "var(--kpi-green-bg)",
-    border: "oklch(0.88 0.06 165 / 0.4)",
-    iconBg: "#D1F5E8",
-    iconColor: "#22A86B",
-    accentColor: "#34C78A",
+    cardClass: "kpi-card-green",
+    iconBg: "var(--kpi-green-icon-bg)",
+    iconColor: "var(--kpi-green-icon-color)",
+    accentColor: "var(--kpi-green-accent)",
+    textColor: "var(--kpi-green-text)",
   },
   blue: {
-    bg: "var(--kpi-blue-bg)",
-    border: "oklch(0.85 0.06 265 / 0.4)",
-    iconBg: "#DDE8FF",
-    iconColor: "#4C6EF5",
-    accentColor: "#6C8EF5",
+    cardClass: "kpi-card-blue",
+    iconBg: "var(--kpi-blue-icon-bg)",
+    iconColor: "var(--kpi-blue-icon-color)",
+    accentColor: "var(--kpi-blue-accent)",
+    textColor: "var(--kpi-blue-text)",
   },
   orange: {
-    bg: "var(--kpi-orange-bg)",
-    border: "oklch(0.88 0.07 55 / 0.4)",
-    iconBg: "#FFE8D8",
-    iconColor: "#E8722A",
-    accentColor: "#F5956C",
+    cardClass: "kpi-card-orange",
+    iconBg: "var(--kpi-orange-icon-bg)",
+    iconColor: "var(--kpi-orange-icon-color)",
+    accentColor: "var(--kpi-orange-accent)",
+    textColor: "var(--kpi-orange-text)",
   },
   purple: {
-    bg: "var(--kpi-purple-bg)",
-    border: "oklch(0.85 0.06 295 / 0.4)",
-    iconBg: "#EAE0FF",
-    iconColor: "#7C5CF5",
-    accentColor: "#A78BFA",
+    cardClass: "kpi-card-purple",
+    iconBg: "var(--kpi-purple-icon-bg)",
+    iconColor: "var(--kpi-purple-icon-color)",
+    accentColor: "var(--kpi-purple-accent)",
+    textColor: "var(--kpi-purple-text)",
   },
 };
 
@@ -92,27 +93,29 @@ export default function KPICard({
 
   return (
     <div
-      className="rounded-2xl p-5 card-enter"
+      className={`rounded-2xl p-5 card-enter ${colors.cardClass}`}
       style={{
-        background: colors.bg,
-        border: `1px solid ${colors.border}`,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03)",
         animationDelay: `${delay}ms`,
         opacity: 0,
       }}
     >
       <div className="flex items-start justify-between mb-2">
         <div>
-          <p className="text-xs font-700 text-slate-500 uppercase tracking-wider mb-1" style={{ fontWeight: 700 }}>
+          <p
+            className="text-xs uppercase tracking-wider mb-1"
+            style={{ fontWeight: 700, color: "var(--muted-foreground)" }}
+          >
             {title}
           </p>
           <p
-            className="text-2xl font-900 text-slate-800 leading-none"
-            style={{ fontWeight: 900, fontFamily: "'Nunito', sans-serif" }}
+            className="text-2xl leading-none"
+            style={{
+              fontWeight: 900,
+              fontFamily: "'Nunito', sans-serif",
+              color: "var(--foreground)",
+            }}
           >
-            {prefix}
-            {value}
-            {suffix}
+            {prefix}{value}{suffix}
           </p>
         </div>
         <div
@@ -123,14 +126,17 @@ export default function KPICard({
         </div>
       </div>
 
-
       <div className="flex items-center gap-1.5">
         {trend !== undefined && (
           <div
-            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-700"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs"
             style={{
-              background: isPositive ? "#D1FAE5" : "#FEE2E2",
-              color: isPositive ? "#059669" : "#DC2626",
+              background: isPositive
+                ? "var(--status-ok-bg)"
+                : "var(--status-nok-bg)",
+              color: isPositive
+                ? "var(--status-ok-text)"
+                : "var(--status-nok-text)",
               fontWeight: 700,
             }}
           >
@@ -143,13 +149,16 @@ export default function KPICard({
           </div>
         )}
         {trendLabel && (
-          <Badge variant="outline" >
-
-            <span className="text-xs text-slate-800">{trendLabel}</span>
+          <Badge variant="outline">
+            <span
+              className="text-xs"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              {trendLabel}
+            </span>
           </Badge>
         )}
       </div>
-
     </div>
   );
 }

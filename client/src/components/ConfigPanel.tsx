@@ -11,6 +11,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Settings2, X, RotateCcw, ChevronRight, Check } from "lucide-react";
+import { CONFIG_PADRAO_METRICAS } from "@shared/const";
 
 // ---------------------------------------------------------
 // CSS do slider — injetado uma vez no <head>
@@ -78,14 +79,8 @@ export interface ConfigMetricas {
 
 const CONFIG_STORAGE_KEY = "metricflow:config";
 
-export const CONFIG_PADRAO: ConfigMetricas = {
-    raioPDV: 500,
-    minutosCurta: 3,
-    limiteInicioTardio: "08:45",
-    alertaCurtasPerc: 10,
-    alertaCoberturaPerc: 100,
-    alertaTardePerc: 25,
-};
+// Fonte única de verdade vinda de shared/const.ts
+export const CONFIG_PADRAO: ConfigMetricas = { ...CONFIG_PADRAO_METRICAS };
 
 // ---------------------------------------------------------
 // Hook público — gerencia config aplicada + localStorage
