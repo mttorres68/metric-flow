@@ -245,6 +245,28 @@ async function enviarResposta(
 }
 
 // ---------------------------------------------------------------------------
+// POST /api/relatorio/thumbnail
+// Body: { pdf: string }  (base64 do PDF)
+// Retorna: { thumbnail: string }  (base64 JPEG da primeira página)
+// ---------------------------------------------------------------------------
+relatorioRouter.post("/thumbnail", async (req: Request, res: Response) => {
+  const { pdf: pdfBase64 } = req.body ?? {};
+  if (!pdfBase64 || typeof pdfBase64 !== "string") {
+    res.status(400).json({ error: "Campo 'pdf' (base64) obrigatório." });
+    return;
+  }
+  try {
+    const { gerarThumbnailPDF } = await import("../services/thumbnailService.js");
+    const pdfBuffer = Buffer.from(pdfBase64, "base64");
+    const thumbnailBuffer = await gerarThumbnailPDF(pdfBuffer);
+    res.json({ thumbnail: thumbnailBuffer.toString("base64") });
+  } catch (err) {
+    console.error("[relatorio] erro ao gerar thumbnail:", err);
+    res.status(500).json({ error: "Erro ao gerar thumbnail do PDF.", detalhes: String(err) });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/relatorio/datas-disponiveis
 // ---------------------------------------------------------------------------
 relatorioRouter.get("/datas-disponiveis", async (_req: Request, res: Response) => {

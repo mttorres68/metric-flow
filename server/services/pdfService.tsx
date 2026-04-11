@@ -386,6 +386,16 @@ const LEGENDA_VEND = [
   { label: "Visitas Relâmpago", desc: "% de visitas com duração < 3 min dentro do raio (vermelho se > 10%)" },
 ];
 
+function maiorHrFim(rows: VendedorRow[]): string {
+  const minutos = rows
+    .map(v => v.hrFim)
+    .filter(h => h && h !== "ND")
+    .map(h => { const [hr, mn] = h.split(":").map(Number); return hr * 60 + (mn || 0); });
+  if (!minutos.length) return "ND";
+  const max = Math.max(...minutos);
+  return `${String(Math.floor(max / 60)).padStart(2, "0")}:${String(max % 60).padStart(2, "0")}`;
+}
+
 const PaginaVendedores = ({ d }: { d: PDFReportData }) => {
   const rows = d.vendedoresRows;
 
@@ -408,7 +418,7 @@ const PaginaVendedores = ({ d }: { d: PDFReportData }) => {
       <View style={s.pageHeader}>
         <Text style={s.pageHeaderTitle}>Relatório Gerencial de Rotas e Visitas</Text>
         <Text style={s.pageHeaderMeta}>
-          Revenda: {d.revenda} · Data: {fmtDate(d.data)} - 16:45
+          Revenda: {d.revenda} · Data: {fmtDate(d.data)} - {maiorHrFim(rows)}
         </Text>
       </View>
 

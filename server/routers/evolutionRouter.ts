@@ -166,10 +166,11 @@ export const evolutionRouter = router({
 
   sendPDF: publicProcedure
     .input(z.object({
-      telefone: z.string(),
-      base64:   z.string(),
-      filename: z.string(),
-      caption:  z.string().default(""),
+      telefone:  z.string(),
+      base64:    z.string(),
+      filename:  z.string(),
+      caption:   z.string().default(""),
+      thumbnail: z.string().optional(), // base64 JPEG — exibido como prévia no WhatsApp
     }))
     .mutation(async ({ input }) => {
       const { instance } = getConfig();
@@ -180,6 +181,7 @@ export const evolutionRouter = router({
         media:     input.base64,
         fileName:  input.filename,
         caption:   input.caption,
+        ...(input.thumbnail ? { thumbnail: input.thumbnail } : {}),
       });
       return { success: true, sentAt: new Date().toISOString() };
     }),

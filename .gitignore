@@ -111,3 +111,5 @@ temp/
 client.txt
 rota_coaching_all.json
 fluxo-analise.ini
+
+docs/*

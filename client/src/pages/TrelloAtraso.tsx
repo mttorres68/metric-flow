@@ -28,6 +28,44 @@ import { toast } from "sonner";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+const EMOJI_MAP: Record<string, string> = {
+  white_check_mark: "✅", heavy_check_mark: "✔️", x: "❌", warning: "⚠️",
+  red_circle: "🔴", large_blue_circle: "🔵", green_circle: "🟢", yellow_circle: "🟡",
+  orange_circle: "🟠", purple_circle: "🟣", brown_circle: "🟤", black_circle: "⚫",
+  white_circle: "⚪", fire: "🔥", tada: "🎉", rocket: "🚀", star: "⭐",
+  thumbsup: "👍", thumbsdown: "👎", eyes: "👀", raised_hands: "🙌",
+  clap: "👏", pray: "🙏", muscle: "💪", wave: "👋", point_right: "👉",
+  point_left: "👈", point_up: "👆", point_down: "👇", ok_hand: "👌",
+  heavy_exclamation_mark: "❗", question: "❓", exclamation: "❗",
+  clock1: "🕐", hourglass: "⏳", calendar: "📅", memo: "📝", pencil: "✏️",
+  mag: "🔍", link: "🔗", paperclip: "📎", chart_with_upwards_trend: "📈",
+  chart_with_downwards_trend: "📉", bar_chart: "📊", bulb: "💡", hammer: "🔨",
+  wrench: "🔧", lock: "🔒", unlock: "🔓", bell: "🔔", no_bell: "🔕",
+  email: "📧", phone: "📞", computer: "💻", iphone: "📱", gear: "⚙️",
+  recycle: "♻️", white_large_square: "⬜", black_large_square: "⬛",
+  arrow_right: "➡️", arrow_left: "⬅️", arrow_up: "⬆️", arrow_down: "⬇️",
+};
+
+function parseEmojis(text: string): string {
+  return text.replace(/:([a-zA-Z0-9_+\-]+):/g, (match, code) => EMOJI_MAP[code] ?? match);
+}
+
+/** Converte emojis e markdown básico (**bold**, *italic*) em elementos React. */
+function renderMarkdown(text: string): React.ReactNode[] {
+  const withEmoji = parseEmojis(text);
+  // Tokeniza por **bold** e *italic*
+  const parts = withEmoji.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("*") && part.endsWith("*")) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -160,7 +198,7 @@ async function exportarPDF(data: any[], dataAtual: string) {
                               {new Date(c.data).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                             </Text>
                           </View>
-                          <Text style={styles.comentarioTexto}>{c.texto}</Text>
+                          <Text style={styles.comentarioTexto}>{parseEmojis(c.texto)}</Text>
                         </View>
                       ))}
                     </View>
@@ -266,7 +304,7 @@ function CardItem({ card }: { card: any }) {
           {/* Descrição */}
           {card.descricao && (
             <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-3 bg-white/50 dark:bg-black/10 rounded p-2">
-              {card.descricao}
+              {renderMarkdown(card.descricao)}
             </p>
           )}
 
@@ -289,7 +327,7 @@ function CardItem({ card }: { card: any }) {
                       </div>
                       <span className="text-[10px] text-slate-400 dark:text-slate-500 flex-shrink-0">{formatDateTime(c.data)}</span>
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{c.texto}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{renderMarkdown(c.texto)}</p>
                   </div>
                 ))}
               </div>
@@ -437,8 +475,8 @@ function FiltroListas({
           <button
             onClick={() => onChange([])}
             className={`w-full text-left px-3 py-1.5 rounded-lg text-sm mb-1 transition-colors ${todas
-                ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium"
-                : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+              ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium"
+              : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
               }`}
           >
             Todas as listas
@@ -451,8 +489,8 @@ function FiltroListas({
                 key={lista}
                 onClick={() => toggle(lista)}
                 className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2 ${ativa
-                    ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium"
-                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium"
+                  : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                   }`}
               >
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${ativa ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`} />

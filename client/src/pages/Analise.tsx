@@ -13,7 +13,7 @@ import {
     AlertTriangle, BarChart3,
     Clock, RefreshCw, TrendingDown, TrendingUp, X, FileText, PenLine, Printer,
     MessageCircle, Send, Loader2, CheckCircle2, AlertCircle, User,
-    Play, Wifi, WifiOff,
+    Play, Wifi, WifiOff, SlidersHorizontal,
 } from "lucide-react";
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { toast } from "sonner";
@@ -72,6 +72,127 @@ function Td({ children, center, mono, className = "" }: {
 // ─── Helpers de filtro persistido ─────────────────────────────────────────────
 
 const FILTER_KEY = "metricflow:analises-filters";
+
+// ─── Visibilidade de colunas ──────────────────────────────────────────────────
+
+const COLS_KEY = "metricflow:analise-cols";
+
+const ALL_COLS = [
+    { id: "inicio", label: "Início" },
+    { id: "fim", label: "Fim" },
+    { id: "almoco", label: "Almoço" },
+    { id: "apos14h", label: "Após 14h" },
+    { id: "visitas", label: "Visitas" },
+    { id: "pdv_sem_visita", label: "PDV S/Visita" },
+    { id: "relampago", label: "Relâmpago" },
+    { id: "sfa", label: "SFA" },
+    { id: "heishop", label: "Heishop" },
+    { id: "heishop_verif", label: "H. Verif." },
+    { id: "iv", label: "IV" },
+    { id: "iav", label: "IAV" },
+    { id: "atend_35", label: "Atend. >35" },
+    { id: "soma_35", label: "Σ >35min" },
+    { id: "t_menor", label: "T. Menor" },
+    { id: "t_maior", label: "T. Maior" },
+    { id: "t_medio", label: "T. Médio" },
+    { id: "t_total", label: "T. Total" },
+    { id: "percurso", label: "Maior Percurso" },
+    { id: "ini_percurso", label: "Ini. Percurso" },
+    { id: "fim_percurso", label: "Fim Percurso" },
+    { id: "pdvs_percurso", label: "PDVs p/ Percurso" },
+    { id: "t_nao_atend", label: "T. Ñ Atend." },
+] as const;
+
+type ColId = typeof ALL_COLS[number]["id"];
+
+function useColumnVisibility() {
+    const [visible, setVisible] = useState<Record<ColId, boolean>>(() => {
+        try {
+            const stored = JSON.parse(localStorage.getItem(COLS_KEY) || "null");
+            if (stored) return stored;
+        } catch { /* ignore */ }
+        return Object.fromEntries(ALL_COLS.map(c => [c.id, true])) as Record<ColId, boolean>;
+    });
+
+    const toggle = (id: ColId) => setVisible(prev => {
+        const next = { ...prev, [id]: !prev[id] };
+        localStorage.setItem(COLS_KEY, JSON.stringify(next));
+        return next;
+    });
+
+    const col = (id: ColId) => visible[id] ?? true;
+
+    const allOn = ALL_COLS.every(c => visible[c.id]);
+    const toggleAll = () => {
+        const next = Object.fromEntries(ALL_COLS.map(c => [c.id, !allOn])) as Record<ColId, boolean>;
+        setVisible(next);
+        localStorage.setItem(COLS_KEY, JSON.stringify(next));
+    };
+
+    const hiddenCount = ALL_COLS.filter(c => !visible[c.id]).length;
+
+    return { col, toggle, toggleAll, allOn, hiddenCount };
+}
+
+function ColumnsSelector({ col, toggle, toggleAll, allOn, hiddenCount }: {
+    col: (id: ColId) => boolean;
+    toggle: (id: ColId) => void;
+    toggleAll: () => void;
+    allOn: boolean;
+    hiddenCount: number;
+}) {
+    const [open, setOpen] = useState(false);
+    const ref = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        if (!open) return;
+        function handle(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+        }
+        document.addEventListener("mousedown", handle);
+        return () => document.removeEventListener("mousedown", handle);
+    }, [open]);
+
+    return (
+        <div ref={ref} className="relative">
+            <button
+                onClick={() => setOpen(o => !o)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+                <SlidersHorizontal size={12} />
+                Colunas
+                {hiddenCount > 0 && (
+                    <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 text-[10px] font-bold leading-none">
+                        {hiddenCount}
+                    </span>
+                )}
+            </button>
+            {open && (
+                <div className="absolute right-0 mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-lg p-3 w-52">
+                    <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-100">
+                        <span className="text-xs font-bold text-slate-700">Colunas visíveis</span>
+                        <button onClick={toggleAll} className="text-[11px] text-indigo-600 hover:underline">
+                            {allOn ? "Ocultar todas" : "Mostrar todas"}
+                        </button>
+                    </div>
+                    <div className="flex flex-col gap-0.5 max-h-64 overflow-y-auto">
+                        {ALL_COLS.map(c => (
+                            <label key={c.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-1 py-0.5 rounded">
+                                <input
+                                    type="checkbox"
+                                    checked={col(c.id)}
+                                    onChange={() => toggle(c.id)}
+                                    className="accent-indigo-500 w-3.5 h-3.5 shrink-0"
+                                />
+                                <span className="text-xs text-slate-700">{c.label}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
 
 // ─── Persistência de análises por revenda ─────────────────────────────────────
 
@@ -262,6 +383,42 @@ async function fetchPDFBase64(
     return { base64, filename };
 }
 
+async function fetchThumbnail(pdfBase64: string): Promise<string | null> {
+    try {
+        const resp = await fetch("/api/relatorio/thumbnail", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pdf: pdfBase64 }),
+        });
+        if (!resp.ok) return null;
+        const { thumbnail } = await resp.json();
+        return thumbnail ?? null;
+    } catch {
+        return null;
+    }
+}
+
+async function fetchUnifiedPDFBase64(
+    data: string,
+    analises: Record<string, { vendedores: string; gas: string }>
+): Promise<{ base64: string; filename: string }> {
+    const resp = await fetch("/api/relatorio/gerar-unificado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data, analises }),
+    });
+    if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error ?? "Erro ao gerar PDF unificado");
+    }
+    const blob = await resp.blob();
+    const filename =
+        resp.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1]
+        ?? `relatorios_unificado_${data}.pdf`;
+    const base64 = await blobToBase64(blob);
+    return { base64, filename };
+}
+
 function EnviarWAModal({
     revendasOrdenadas,
     data,
@@ -303,11 +460,66 @@ function EnviarWAModal({
     const [rows, setRows] = React.useState<RevState[]>([]);
     const [sending, setSending] = React.useState(false);
     const [done, setDone] = React.useState(false);
+    const [mode, setMode] = React.useState<"byRevenda" | "unified">("byRevenda");
+    const [unifiedSelected, setUnifiedSelected] = React.useState<Set<string>>(new Set());
+    const [unifiedStatus, setUnifiedStatus] = React.useState<{ status: RevStatus; detail: string }>({ status: "idle", detail: "" });
 
     // Inicializa quando dados de destinatários carregam
     React.useEffect(() => {
-        if (!destQuery.isLoading) setRows(buildRows());
+        if (!destQuery.isLoading) {
+            setRows(buildRows());
+            setUnifiedSelected(new Set(allDests.map(d => d.id)));
+        }
     }, [buildRows, destQuery.isLoading]);
+
+    async function handleSendUnified() {
+        if (!connected) return;
+        const targets = allDests.filter(d => unifiedSelected.has(d.id));
+        if (!targets.length) return;
+
+        setSending(true);
+        setUnifiedStatus({ status: "generating", detail: "Gerando PDF unificado…" });
+
+        const analisesPayload: Record<string, { vendedores: string; gas: string }> = {};
+        revendasOrdenadas.forEach(rev => {
+            analisesPayload[rev] = { vendedores: getAnalise(rev), gas: getAnaliseGAs(rev) };
+        });
+
+        let base64 = "", filename = "";
+        try {
+            ({ base64, filename } = await fetchUnifiedPDFBase64(data, analisesPayload));
+        } catch (e: any) {
+            setUnifiedStatus({ status: "error", detail: `PDF: ${e.message}` });
+            setSending(false);
+            return;
+        }
+
+        // Gera thumbnail da primeira página (silencia erros — é opcional)
+        const thumbnail = await fetchThumbnail(base64);
+
+        setUnifiedStatus({ status: "sending", detail: `Enviando para ${targets.length} destinatário(s)…` });
+        const caption = `Relatório Unificado — ${dateLabel}`;
+        const erros: string[] = [];
+
+        for (const dest of targets) {
+            try {
+                if (preMsg.trim()) await sendMessage.mutateAsync({ telefone: dest.telefone, texto: preMsg.trim() });
+                await sendPDF.mutateAsync({ telefone: dest.telefone, base64, filename, caption, ...(thumbnail ? { thumbnail } : {}) });
+            } catch (e: any) {
+                erros.push(`${dest.apelido || dest.nome}: ${e.message}`);
+            }
+        }
+
+        setSending(false);
+        setDone(true);
+        if (erros.length === 0) {
+            setUnifiedStatus({ status: "done", detail: `Enviado para ${targets.length} destinatário(s)` });
+            toast.success("PDF unificado enviado!");
+        } else {
+            setUnifiedStatus({ status: "error", detail: erros[0] });
+            toast.error(`${erros.length} falha(s) no envio`);
+        }
+    }
 
     function toggleRow(rev: string) {
         setRows(prev => prev.map(r => r.rev === rev ? { ...r, checked: !r.checked } : r));
@@ -354,7 +566,10 @@ function EnviarWAModal({
                 continue;
             }
 
-            // 2. Enviar para cada destinatário
+            // 2. Gerar thumbnail (silencia erros — é opcional)
+            const thumbnail = await fetchThumbnail(base64);
+
+            // 3. Enviar para cada destinatário
             setRowStatus(rev, "sending", `Enviando para ${destObjs.length} destinatário(s)…`);
             const caption = `Relatório ${rev} — ${dateLabel}`;
             const erros: string[] = [];
@@ -364,7 +579,7 @@ function EnviarWAModal({
                     if (preMsg.trim()) {
                         await sendMessage.mutateAsync({ telefone: dest.telefone, texto: preMsg.trim() });
                     }
-                    await sendPDF.mutateAsync({ telefone: dest.telefone, base64, filename, caption });
+                    await sendPDF.mutateAsync({ telefone: dest.telefone, base64, filename, caption, ...(thumbnail ? { thumbnail } : {}) });
                 } catch (e: any) {
                     erros.push(`${dest.apelido || dest.nome}: ${e.message}`);
                 }
@@ -415,12 +630,28 @@ function EnviarWAModal({
                     </div>
                     <div className="flex-1">
                         <p className="text-sm font-bold text-slate-800">Enviar relatórios via WhatsApp</p>
-                        <p className="text-xs text-slate-500">{dateLabel} · {checkedCount} de {rows.length} revendas selecionadas</p>
+                        <p className="text-xs text-slate-500">{dateLabel}</p>
                     </div>
                     <button onClick={onClose} disabled={sending}
                         className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors disabled:opacity-40">
                         <X className="w-4 h-4" />
                     </button>
+                </div>
+
+                {/* Tabs de modo */}
+                <div className="flex border-b border-slate-100 shrink-0">
+                    {(["byRevenda", "unified"] as const).map(m => (
+                        <button
+                            key={m}
+                            onClick={() => { setMode(m); setDone(false); setUnifiedStatus({ status: "idle", detail: "" }); }}
+                            disabled={sending}
+                            className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${mode === m
+                                ? "border-b-2 border-green-500 text-green-700 bg-green-50/50"
+                                : "text-slate-500 hover:bg-slate-50"}`}
+                        >
+                            {m === "byRevenda" ? "Por Revenda" : "PDF Unificado"}
+                        </button>
+                    ))}
                 </div>
 
                 {/* Body */}
@@ -450,73 +681,125 @@ function EnviarWAModal({
                         </div>
                     )}
 
-                    {/* Aviso sem associações */}
-                    {!destQuery.isLoading && !hasAnyDests && (
-                        <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs">
-                            <AlertCircle className="w-4 h-4 shrink-0" />
-                            Nenhuma revenda tem destinatários associados. Configure em <strong>WhatsApp → Destinatários</strong>.
-                        </div>
-                    )}
-
-                    {/* Tabela de revendas */}
                     {destQuery.isLoading ? (
                         <div className="flex items-center gap-2 text-slate-400 text-xs py-4">
                             <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando destinatários…
                         </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {rows.map(row => (
-                                <div key={row.rev}
-                                    className={`flex items-start gap-3 px-4 py-3 rounded-xl border transition-colors ${row.checked
-                                        ? "bg-indigo-50/70 border-indigo-200"
-                                        : "bg-slate-50 border-slate-200"
-                                        } ${row.dests.length === 0 ? "opacity-50" : ""}`}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={row.checked}
-                                        onChange={() => toggleRow(row.rev)}
-                                        disabled={sending || row.dests.length === 0}
-                                        className="mt-0.5 w-3.5 h-3.5 accent-indigo-500 shrink-0"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-bold text-slate-800">{row.rev}</p>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            {row.dests.length > 0
-                                                ? row.dests.join(", ")
-                                                : <span className="italic">sem destinatários associados</span>}
-                                        </p>
-                                        {row.detail && (
-                                            <p className={`text-[11px] mt-1 font-medium ${row.status === "error" ? "text-red-500" :
-                                                row.status === "skipped" ? "text-amber-500" :
-                                                    row.status === "done" ? "text-green-600" : "text-indigo-500"
-                                                }`}>
-                                                {row.detail}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <StatusIcon status={row.status} />
+                    ) : mode === "byRevenda" ? (
+                        <>
+                            {!hasAnyDests && (
+                                <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs">
+                                    <AlertCircle className="w-4 h-4 shrink-0" />
+                                    Nenhuma revenda tem destinatários associados. Configure em <strong>WhatsApp → Destinatários</strong>.
                                 </div>
-                            ))}
+                            )}
+                            <div className="space-y-2">
+                                {rows.map(row => (
+                                    <div key={row.rev}
+                                        className={`flex items-start gap-3 px-4 py-3 rounded-xl border transition-colors ${row.checked ? "bg-indigo-50/70 border-indigo-200" : "bg-slate-50 border-slate-200"} ${row.dests.length === 0 ? "opacity-50" : ""}`}
+                                    >
+                                        <input type="checkbox" checked={row.checked} onChange={() => toggleRow(row.rev)}
+                                            disabled={sending || row.dests.length === 0}
+                                            className="mt-0.5 w-3.5 h-3.5 accent-indigo-500 shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-bold text-slate-800">{row.rev}</p>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                {row.dests.length > 0 ? row.dests.join(", ") : <span className="italic">sem destinatários associados</span>}
+                                            </p>
+                                            {row.detail && (
+                                                <p className={`text-[11px] mt-1 font-medium ${row.status === "error" ? "text-red-500" : row.status === "skipped" ? "text-amber-500" : row.status === "done" ? "text-green-600" : "text-indigo-500"}`}>
+                                                    {row.detail}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <StatusIcon status={row.status} />
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        /* ── Modo Unificado ── */
+                        <div className="space-y-3">
+                            <p className="text-xs text-slate-500">
+                                Gera um único PDF com todas as revendas e envia para os destinatários selecionados abaixo.
+                            </p>
+                            {allDests.length === 0 ? (
+                                <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs">
+                                    <AlertCircle className="w-4 h-4 shrink-0" />
+                                    Nenhum destinatário cadastrado. Configure em <strong>WhatsApp → Destinatários</strong>.
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {allDests.map(dest => {
+                                        const checked = unifiedSelected.has(dest.id);
+                                        return (
+                                            <div key={dest.id}
+                                                className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors cursor-pointer ${checked ? "bg-green-50/70 border-green-200" : "bg-slate-50 border-slate-200"}`}
+                                                onClick={() => !sending && setUnifiedSelected(prev => {
+                                                    const next = new Set(prev);
+                                                    next.has(dest.id) ? next.delete(dest.id) : next.add(dest.id);
+                                                    return next;
+                                                })}
+                                            >
+                                                <input type="checkbox" checked={checked} readOnly disabled={sending}
+                                                    className="w-3.5 h-3.5 accent-green-500 shrink-0 pointer-events-none" />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-bold text-slate-800">{dest.apelido || dest.nome}</p>
+                                                    <p className="text-xs text-slate-400 font-mono">{dest.telefone}</p>
+                                                </div>
+                                                <User className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            {unifiedStatus.detail && (
+                                <div className={`flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-xl border ${unifiedStatus.status === "done" ? "bg-green-50 border-green-200 text-green-700" : unifiedStatus.status === "error" ? "bg-red-50 border-red-200 text-red-600" : "bg-indigo-50 border-indigo-200 text-indigo-600"}`}>
+                                    <StatusIcon status={unifiedStatus.status} />
+                                    {unifiedStatus.detail}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
 
                 {/* Footer */}
                 <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50/60 shrink-0">
-                    <button
-                        onClick={() => setRows(prev => prev.map(r => ({ ...r, checked: r.dests.length > 0 })))}
-                        disabled={sending}
-                        className="text-xs text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
-                    >
-                        Restaurar seleção
-                    </button>
+                    {mode === "byRevenda" ? (
+                        <button
+                            onClick={() => setRows(prev => prev.map(r => ({ ...r, checked: r.dests.length > 0 })))}
+                            disabled={sending}
+                            className="text-xs text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
+                        >
+                            Restaurar seleção
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => setUnifiedSelected(new Set(allDests.map(d => d.id)))}
+                            disabled={sending}
+                            className="text-xs text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
+                        >
+                            Selecionar todos
+                        </button>
+                    )}
                     <div className="flex items-center gap-2">
                         <button onClick={onClose} disabled={sending}
                             className="px-4 py-2 rounded-xl text-sm text-slate-500 hover:bg-slate-100 transition-colors disabled:opacity-40">
                             {done ? "Fechar" : "Cancelar"}
                         </button>
-                        {!done && (
+                        {!done && mode === "unified" && (
+                            <button
+                                onClick={handleSendUnified}
+                                disabled={sending || !connected || unifiedSelected.size === 0}
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-colors disabled:opacity-40"
+                                style={{ background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)" }}
+                            >
+                                {sending
+                                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando…</>
+                                    : <><Send className="w-4 h-4" /> Enviar unificado ({unifiedSelected.size})</>}
+                            </button>
+                        )}
+                        {!done && mode === "byRevenda" && (
                             <button
                                 onClick={handleSend}
                                 disabled={sending || !connected || checkedCount === 0}
@@ -549,6 +832,7 @@ export default function Analise() {
         filtros.dataFim || ""
     );
 
+    const { col, toggle, toggleAll, allOn, hiddenCount } = useColumnVisibility();
     const [sortBy, setSortBy] = useState<string>("vendedor");
     const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
     const [expandedHelp, setExpandedHelp] = useState(false);
@@ -952,6 +1236,7 @@ export default function Analise() {
                         </button>
                     )}
                     <span className="text-xs text-slate-400 ml-auto" style={{ fontWeight: 500 }}>{sorted.length} vendedor(es)</span>
+                    <ColumnsSelector col={col} toggle={toggle} toggleAll={toggleAll} allOn={allOn} hiddenCount={hiddenCount} />
                 </div>
 
                 {/* KPI Cards */}
@@ -994,13 +1279,27 @@ export default function Analise() {
                                 <div key={rev} id={`revenda-${rev}`} className="bg-white rounded-xl border border-slate-100 overflow-hidden" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
                                     <div className="px-5 py-3 border-b border-indigo-100 bg-indigo-50/50 flex items-center justify-between">
                                         <h2 className="text-sm font-bold text-slate-800 tracking-wide uppercase">Revenda: <span className="text-indigo-600">{rev}</span></h2>
-                                        <span className="text-xs font-semibold text-slate-500">{groupedData[rev].length} Vendedor(es)</span>
+                                        <div className="flex items-center gap-3">
+                                            {(() => {
+                                                const maiorFim = groupedData[rev]
+                                                    .map(r => r.fim)
+                                                    .filter((f): f is string => !!f && f !== "ND")
+                                                    .sort()
+                                                    .at(-1);
+                                                return maiorFim ? (
+                                                    <span className="text-xs font-semibold text-slate-500">
+                                                        Último fim: <span className="text-indigo-600 font-bold">{maiorFim.substring(0, 5)}</span>
+                                                    </span>
+                                                ) : null;
+                                            })()}
+                                            <span className="text-xs font-semibold text-slate-500">{groupedData[rev].length} Vendedor(es)</span>
+                                        </div>
                                     </div>
-                                    <div className="overflow-x-auto">
+                                    <div className="overflow-x-auto overflow-y-auto max-h-[480px]">
                                         <table className="w-full text-xs">
-                                            <thead className="bg-green-950 text-slate-100">
+                                            <thead className="bg-green-950 text-slate-100 sticky top-0 z-10">
                                                 <tr>
-                                                    {/* Identidade */}
+                                                    {/* Identidade — sempre visíveis */}
                                                     <Th title="Código do vendedor">
                                                         <button onClick={() => toggleSort("vendedor")} className="flex items-center gap-0.5">
                                                             Vend. <SortIcon col="vendedor" />
@@ -1008,63 +1307,60 @@ export default function Analise() {
                                                     </Th>
                                                     <Th title="Data">Data</Th>
 
-                                                    {/* Ranking 
-                                                    <Th title="Ranking Crítico: 1 = pior (mais relâmpago)" center>
-                                                        <button onClick={() => toggleSort("ranking_critico")} className="flex items-center gap-0.5 mx-auto">
-                                                            Ranking <SortIcon col="ranking_critico" />
-                                                        </button>
-                                                    </Th>
-                                                    */}
-
                                                     {/* Horários */}
-                                                    <Th title="Hora da primeira visita dentro do raio" center>Início</Th>
-                                                    <Th title="Hora da última visita dentro do raio" center>Fim</Th>
-                                                    <Th title="Visitas na janela 12:15-13:45 (almoço)" center>Almoço</Th>
-                                                    <Th title="Visitas com início após 14h" center>Após 14h</Th>
+                                                    {col("inicio") && <Th title="Hora da primeira visita dentro do raio" center>Início</Th>}
+                                                    {col("fim") && <Th title="Hora da última visita dentro do raio" center>Fim</Th>}
+                                                    {col("almoco") && <Th title="Visitas na janela 12:15-13:45 (almoço)" center>Almoço</Th>}
+                                                    {col("apos14h") && <Th title="Visitas com início após 14h" center>Após 14h</Th>}
 
                                                     {/* Cobertura */}
-                                                    <Th title="Visitas únicas dentro do raio / carteira total" center>Visitas</Th>
-                                                    {/* <Th title="PDVs com visita registrada (duração preenchida)" center>PDV Visit.</Th> */}
-                                                    <Th title="PDVs na carteira sem visita no dia" center>PDV S/Visita</Th>
+                                                    {col("visitas") && <Th title="Visitas únicas dentro do raio / carteira total" center>Visitas</Th>}
+                                                    {col("pdv_sem_visita") && <Th title="PDVs na carteira sem visita no dia" center>PDV S/Visita</Th>}
 
                                                     {/* Relâmpago */}
-                                                    <Th title="Visitas únicas dentro do raio com duração < 3min" center>
-                                                        <button onClick={() => toggleSort("relampago_pct")} className="flex items-center gap-0.5 mx-auto">
-                                                            Relâmpago <SortIcon col="relampago_pct" />
-                                                        </button>
-                                                    </Th>
+                                                    {col("relampago") && (
+                                                        <Th title="Visitas únicas dentro do raio com duração < 3min" center>
+                                                            <button onClick={() => toggleSort("relampago_pct")} className="flex items-center gap-0.5 mx-auto">
+                                                                Relâmpago <SortIcon col="relampago_pct" />
+                                                            </button>
+                                                        </Th>
+                                                    )}
 
                                                     {/* Pedidos */}
-                                                    <Th title="Pedidos realizados via sistema SFA" center>SFA</Th>
-                                                    <Th title="Pedidos realizados via Heishop" center>Heishop</Th>
-                                                    <Th title="Pedidos Heishop verificados (Tipo Cobr. preenchida)" center>H. Verif.</Th>
+                                                    {col("sfa") && <Th title="Pedidos realizados via sistema SFA" center>SFA</Th>}
+                                                    {col("heishop") && <Th title="Pedidos realizados via Heishop" center>Heishop</Th>}
+                                                    {col("heishop_verif") && <Th title="Pedidos Heishop verificados (Tipo Cobr. preenchida)" center>H. Verif.</Th>}
 
                                                     {/* Índices */}
-                                                    <Th title="IV = visitados dentro do raio / carteira total" center>
-                                                        <button onClick={() => toggleSort("iv")} className="flex items-center gap-0.5 mx-auto">
-                                                            IV <SortIcon col="iv" />
-                                                        </button>
-                                                    </Th>
-                                                    <Th title="IAV = Heishop verificado / Heishop total" center>IAV</Th>
+                                                    {col("iv") && (
+                                                        <Th title="IV = visitados dentro do raio / carteira total" center>
+                                                            <button onClick={() => toggleSort("iv")} className="flex items-center gap-0.5 mx-auto">
+                                                                IV <SortIcon col="iv" />
+                                                            </button>
+                                                        </Th>
+                                                    )}
+                                                    {col("iav") && <Th title="IAV = Heishop verificado / Heishop total" center>IAV</Th>}
 
                                                     {/* Atendimento */}
-                                                    <Th title="Visitas com duração > 35 minutos dentro do raio" center>Atend. &gt;35</Th>
-                                                    <Th title="Soma do tempo de todos os atendimentos > 35 min" center>Σ &gt;35min</Th>
-                                                    <Th title="Menor tempo de visita dentro do PDV" center>T. Menor</Th>
-                                                    <Th title="Maior tempo de visita dentro do PDV" center>T. Maior</Th>
-                                                    <Th title="Média do tempo de visita dentro do PDV" center>T. Médio</Th>
-                                                    <Th title="Soma de todos os tempos de visita dentro do PDV" center>T. Total</Th>
+                                                    {col("atend_35") && <Th title="Visitas com duração > 35 minutos dentro do raio" center>Atend. &gt;35</Th>}
+                                                    {col("soma_35") && <Th title="Soma do tempo de todos os atendimentos > 35 min" center>Σ &gt;35min</Th>}
+                                                    {col("t_menor") && <Th title="Menor tempo de visita dentro do PDV" center>T. Menor</Th>}
+                                                    {col("t_maior") && <Th title="Maior tempo de visita dentro do PDV" center>T. Maior</Th>}
+                                                    {col("t_medio") && <Th title="Média do tempo de visita dentro do PDV" center>T. Médio</Th>}
+                                                    {col("t_total") && <Th title="Soma de todos os tempos de visita dentro do PDV" center>T. Total</Th>}
 
                                                     {/* Percurso */}
-                                                    <Th title="Maior intervalo entre visitas consecutivas (≤ 60min)" center>Maior Percurso</Th>
-                                                    <Th title="Início do maior intervalo entre visitas" center>Ini. Percurso</Th>
-                                                    <Th title="Fim do maior intervalo entre visitas" center>Fim Percurso</Th>
-                                                    <Th title="PDVs atendidos dentro do raio após o maior percurso" center>PDVs p/ Percurso</Th>
-                                                    <Th title="Tempo fora de atendimento (trava às 17:00). Jornada − tempo em visita" center>
-                                                        <button onClick={() => toggleSort("tempo_nao_atend")} className="flex items-center gap-0.5 mx-auto">
-                                                            T. Ñ Atend. <SortIcon col="tempo_nao_atend" />
-                                                        </button>
-                                                    </Th>
+                                                    {col("percurso") && <Th title="Maior intervalo entre visitas consecutivas (≤ 60min)" center>Maior Percurso</Th>}
+                                                    {col("ini_percurso") && <Th title="Início do maior intervalo entre visitas" center>Ini. Percurso</Th>}
+                                                    {col("fim_percurso") && <Th title="Fim do maior intervalo entre visitas" center>Fim Percurso</Th>}
+                                                    {col("pdvs_percurso") && <Th title="PDVs atendidos dentro do raio após o maior percurso" center>PDVs p/ Percurso</Th>}
+                                                    {col("t_nao_atend") && (
+                                                        <Th title="Tempo fora de atendimento (trava às 17:00). Jornada − tempo em visita" center>
+                                                            <button onClick={() => toggleSort("tempo_nao_atend")} className="flex items-center gap-0.5 mx-auto">
+                                                                T. Ñ Atend. <SortIcon col="tempo_nao_atend" />
+                                                            </button>
+                                                        </Th>
+                                                    )}
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -1073,7 +1369,7 @@ export default function Analise() {
                                                     const isRuim = r.ranking_critico <= 3;
                                                     return (
                                                         <tr key={`${r.vendedor}-${r.data}`} className={`hover:bg-indigo-50/80 transition-colors ${rowBg}`}>
-                                                            {/* Identidade */}
+                                                            {/* Identidade — sempre visíveis */}
                                                             <Td mono>
                                                                 <button onClick={() => { sessionStorage.setItem(SCROLL_TO_REVENDA_KEY, r.revenda); setLocation(`/analises/vendedor/${encodeURIComponent(r.revenda)}/${r.vendedor}/${r.data}`); }} className="font-bold text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-1 transition-all">
                                                                     {r.vendedor}
@@ -1081,79 +1377,87 @@ export default function Analise() {
                                                             </Td>
                                                             <Td mono className="text-slate-500">{r.data}</Td>
 
-                                                            {/* Ranking 
-                                                            <Td center>
-                                                                <span className={`inline-flex w-7 h-7 items-center justify-center rounded-full text-xs font-bold ${r.ranking_critico === 1 ? "bg-red-100 text-red-700" :
-                                                                    r.ranking_critico === 2 ? "bg-orange-100 text-orange-700" :
-                                                                        r.ranking_critico === 3 ? "bg-amber-100 text-amber-700" :
-                                                                            "bg-slate-100 text-slate-500"
-                                                                    }`}>{r.ranking_critico}</span>
-                                                            </Td>
-                                                            */}
                                                             {/* Horários */}
-                                                            <Td center mono className={r.inicio && (r.inicio < "07:30" || r.inicio > "08:45") ? "text-amber-700 font-bold" : "text-slate-600"}>{r.inicio ?? "—"}</Td>
-                                                            <Td center mono className="text-slate-600">{r.fim ?? "—"}</Td>
-                                                            <Td center>
-                                                                {r.almoco > 0 ? <Badge color="amber">{r.almoco}</Badge> : <span className="text-slate-300">—</span>}
-                                                            </Td>
-                                                            <Td center>
-                                                                {r.apos14h > 0
-                                                                    ? <span className={r.apos14h_pct < 25 ? "text-red-500 font-bold" : "text-slate-600 font-bold"}>{pct(r.apos14h_pct, 0)} <span className="text-slate-400 font-normal">({r.apos14h}/{r.apos14h_total})</span></span>
-                                                                    : <span className="text-slate-300">—</span>
-                                                                }
-                                                            </Td>
+                                                            {col("inicio") && <Td center mono className={r.inicio && (r.inicio < "07:30" || r.inicio > "08:45") ? "text-amber-700 font-bold" : "text-slate-600"}>{r.inicio ?? "—"}</Td>}
+                                                            {col("fim") && <Td center mono className="text-slate-600">{r.fim ?? "—"}</Td>}
+                                                            {col("almoco") && (
+                                                                <Td center>
+                                                                    {r.almoco > 0 ? <Badge color="amber">{r.almoco}</Badge> : <span className="text-slate-300">—</span>}
+                                                                </Td>
+                                                            )}
+                                                            {col("apos14h") && (
+                                                                <Td center>
+                                                                    {r.apos14h > 0
+                                                                        ? <span className={r.apos14h_pct < 25 ? "text-red-500 font-bold" : "text-slate-600 font-bold"}>{pct(r.apos14h_pct, 0)} <span className="text-slate-400 font-normal">({r.apos14h}/{r.apos14h_total})</span></span>
+                                                                        : <span className="text-slate-300">—</span>
+                                                                    }
+                                                                </Td>
+                                                            )}
 
                                                             {/* Cobertura */}
-                                                            <Td center>
-                                                                <span className={r.visitas_pct == 100 ? "text-green-600 font-extrabold" : r.visitas_pct >= 90 ? "text-amber-600 font-extrabold" : "text-red-500 font-extrabold"}>
-                                                                    {pct(r.visitas_pct, 0)} <span className="text-slate-400 font-normal">({r.visitas}/{r.visitas_total})</span>
-                                                                </span>
-                                                            </Td>
-                                                            {/* <Td center mono className="text-slate-700">{r.pdvs_visitados}</Td> */}
-                                                            <Td center>
-                                                                {r.pdvs_sem_visita > 0 ? <Badge color="red">{r.pdvs_sem_visita}</Badge> : <span className="text-slate-300">0</span>}
-                                                            </Td>
+                                                            {col("visitas") && (
+                                                                <Td center>
+                                                                    <span className={r.visitas_pct == 100 ? "text-green-600 font-extrabold" : r.visitas_pct >= 90 ? "text-amber-600 font-extrabold" : "text-red-500 font-extrabold"}>
+                                                                        {pct(r.visitas_pct, 0)} <span className="text-slate-400 font-normal">({r.visitas}/{r.visitas_total})</span>
+                                                                    </span>
+                                                                </Td>
+                                                            )}
+                                                            {col("pdv_sem_visita") && (
+                                                                <Td center>
+                                                                    {r.pdvs_sem_visita > 0 ? <Badge color="red">{r.pdvs_sem_visita}</Badge> : <span className="text-slate-300">0</span>}
+                                                                </Td>
+                                                            )}
 
                                                             {/* Relâmpago */}
-                                                            <Td center>
-                                                                <span className={r.relampago_pct >= 30 ? "text-red-600 font-bold" : r.relampago_pct >= 15 ? "text-amber-600 font-semibold" : "text-green-600"}>
-                                                                    {pct(r.relampago_pct, 0)} <span className="text-slate-400 font-normal">({r.relampago}/{r.visitas_total_dentro_raio})</span>
-                                                                </span>
-                                                            </Td>
+                                                            {col("relampago") && (
+                                                                <Td center>
+                                                                    <span className={r.relampago_pct >= 30 ? "text-red-600 font-bold" : r.relampago_pct >= 15 ? "text-amber-600 font-semibold" : "text-green-600"}>
+                                                                        {pct(r.relampago_pct, 0)} <span className="text-slate-400 font-normal">({r.relampago}/{r.visitas_total_dentro_raio})</span>
+                                                                    </span>
+                                                                </Td>
+                                                            )}
 
                                                             {/* Pedidos */}
-                                                            <Td center mono>{r.pedido_sfa > 0 ? <span className="text-blue-600 font-semibold">{r.pedido_sfa}</span> : <span className="text-slate-300">0</span>}</Td>
-                                                            <Td center mono>{r.pedido_heishop > 0 ? <span className="text-amber-600 font-semibold">{r.pedido_heishop}</span> : <span className="text-slate-300">0</span>}</Td>
-                                                            <Td center mono>{r.heishop_verif > 0 ? <Badge color="green">{r.heishop_verif}</Badge> : <span className="text-slate-300">0</span>}</Td>
+                                                            {col("sfa") && <Td center mono>{r.pedido_sfa > 0 ? <span className="text-blue-600 font-semibold">{r.pedido_sfa}</span> : <span className="text-slate-300">0</span>}</Td>}
+                                                            {col("heishop") && <Td center mono>{r.pedido_heishop > 0 ? <span className="text-amber-600 font-semibold">{r.pedido_heishop}</span> : <span className="text-slate-300">0</span>}</Td>}
+                                                            {col("heishop_verif") && <Td center mono>{r.heishop_verif > 0 ? <Badge color="green">{r.heishop_verif}</Badge> : <span className="text-slate-300">0</span>}</Td>}
 
                                                             {/* Índices */}
-                                                            <Td center>
-                                                                <span className={r.iv >= 80 ? "text-green-600 font-semibold" : r.iv >= 60 ? "text-amber-600" : "text-red-500"}>
-                                                                    {pct(r.iv)}
-                                                                </span>
-                                                            </Td>
-                                                            <Td center>
-                                                                {r.iav > 0 ? <span className="text-indigo-600 font-semibold">{pct(r.iav)}</span> : <span className="text-slate-300">—</span>}
-                                                            </Td>
+                                                            {col("iv") && (
+                                                                <Td center>
+                                                                    <span className={r.iv >= 80 ? "text-green-600 font-semibold" : r.iv >= 60 ? "text-amber-600" : "text-red-500"}>
+                                                                        {pct(r.iv)}
+                                                                    </span>
+                                                                </Td>
+                                                            )}
+                                                            {col("iav") && (
+                                                                <Td center>
+                                                                    {r.iav > 0 ? <span className="text-indigo-600 font-semibold">{pct(r.iav)}</span> : <span className="text-slate-300">—</span>}
+                                                                </Td>
+                                                            )}
 
                                                             {/* Atendimento */}
-                                                            <Td center>{r.atend_maior35 > 0 ? <Badge color="amber">{r.atend_maior35}</Badge> : <span className="text-slate-300">0</span>}</Td>
-                                                            <Td center mono className="text-slate-600">{r.soma_maior35_fmt}</Td>
-                                                            <Td center mono className="text-green-700">{r.tempo_menor_fmt}</Td>
-                                                            <Td center mono className={r.tempo_maior !== null && r.tempo_maior > 35 ? "text-red-500" : "text-slate-600"}>{r.tempo_maior_fmt}</Td>
-                                                            <Td center mono className="text-slate-600">{r.tempo_medio_fmt}</Td>
-                                                            <Td center mono className="text-indigo-600 font-semibold">{r.tempo_total_fmt}</Td>
+                                                            {col("atend_35") && <Td center>{r.atend_maior35 > 0 ? <Badge color="amber">{r.atend_maior35}</Badge> : <span className="text-slate-300">0</span>}</Td>}
+                                                            {col("soma_35") && <Td center mono className="text-slate-600">{r.soma_maior35_fmt}</Td>}
+                                                            {col("t_menor") && <Td center mono className={r.tempo_menor !== null && r.tempo_menor < 3 ? "text-red-700" : "text-slate-600"}>{r.tempo_menor_fmt}</Td>}
+                                                            {col("t_maior") && <Td center mono className={r.tempo_maior !== null && r.tempo_maior > 35 ? "text-red-500" : "text-slate-600"}>{r.tempo_maior_fmt}</Td>}
+                                                            {col("t_medio") && <Td center mono className="text-slate-600">{r.tempo_medio_fmt}</Td>}
+                                                            {col("t_total") && <Td center mono className="text-indigo-600 font-semibold">{r.tempo_total_fmt}</Td>}
 
                                                             {/* Percurso */}
-                                                            <Td center mono className={r.maior_percurso !== null && r.maior_percurso > 30 ? "text-amber-600 font-semibold" : "text-slate-600"}>
-                                                                {r.maior_percurso !== null ? minToHM_display(r.maior_percurso) : "—"}
-                                                            </Td>
-                                                            <Td center mono className="text-slate-500">{r.percurso_ini ?? "—"}</Td>
-                                                            <Td center mono className="text-slate-500">{r.percurso_fim ?? "—"}</Td>
-                                                            <Td center mono>{r.pdvs_apos_gap > 0 ? <span className="text-slate-700 font-semibold">{r.pdvs_apos_gap}</span> : <span className="text-slate-300">—</span>}</Td>
-                                                            <Td center mono className={r.tempo_nao_atend !== null && r.tempo_nao_atend > 120 ? "text-red-500 font-bold" : r.tempo_nao_atend !== null && r.tempo_nao_atend > 60 ? "text-amber-600 font-semibold" : "text-slate-600"}>
-                                                                {r.tempo_nao_atend_fmt}
-                                                            </Td>
+                                                            {col("percurso") && (
+                                                                <Td center mono className={r.maior_percurso !== null && r.maior_percurso > 30 ? "text-amber-600 font-semibold" : "text-slate-600"}>
+                                                                    {r.maior_percurso !== null ? minToHM_display(r.maior_percurso) : "—"}
+                                                                </Td>
+                                                            )}
+                                                            {col("ini_percurso") && <Td center mono className="text-slate-500">{r.percurso_ini ?? "—"}</Td>}
+                                                            {col("fim_percurso") && <Td center mono className="text-slate-500">{r.percurso_fim ?? "—"}</Td>}
+                                                            {col("pdvs_percurso") && <Td center mono>{r.pdvs_apos_gap > 0 ? <span className="text-slate-700 font-semibold">{r.pdvs_apos_gap}</span> : <span className="text-slate-300">—</span>}</Td>}
+                                                            {col("t_nao_atend") && (
+                                                                <Td center mono className={r.tempo_nao_atend !== null && r.tempo_nao_atend > 120 ? "text-red-500 font-bold" : r.tempo_nao_atend !== null && r.tempo_nao_atend > 60 ? "text-amber-600 font-semibold" : "text-slate-600"}>
+                                                                    {r.tempo_nao_atend_fmt}
+                                                                </Td>
+                                                            )}
                                                         </tr>
                                                     );
                                                 })}

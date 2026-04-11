@@ -1,4 +1,5 @@
 import { fmtMin } from "./types";
+import React from "react";
 
 interface Veiculo {
     id: string;
@@ -8,13 +9,35 @@ interface Veiculo {
 
 interface ResumoVeiculo {
     vehicleId: string;
+    // Métricas de rota (routeVehicleDetails)
     kmRodado: number;
-    qtdIgnicoes: number;
     tempoLigadoMin: number;
-    maiorTempoParadoMin: number;
-    tempoNaSedeMin: number;
+    tempoParadoMin: number;
     tempoOciosoMin: number;
+    velMediaKmh: number;
+    velMaxKmh: number;
+    // Contadores de paradas (dailyVehicleEventSummary)
+    qtdParadas: number;          // deviceStopped — transições → parado
+    qtdOciosas: number;          // deviceIdle — parado c/ motor ligado
+    qtdIgnicoes: number;         // ignitionOn — partidas
+    qtdIgnicoesOff: number;      // ignitionOff — desligamentos
+    qtdParadasForaCerca: number; // stoppedOutsideGeofence
+    // Geocerca
+    tempoNaSedeMin: number;
     dormiuNaSede?: boolean;
+    // Legado
+    maiorTempoParadoMin: number;
+}
+
+interface Viagem {
+    ignitionOn: { time: string; city: string };
+    ignitionOff: { time: string; city: string } | null;
+    duracaoMin: number | null;
+}
+
+interface ViagemVeiculo {
+    vehicleId: string;
+    viagens: Viagem[];
 }
 
 interface Props {
@@ -23,12 +46,29 @@ interface Props {
     setVehiclesSel: React.Dispatch<React.SetStateAction<string[]>>;
     resumoInfleet: ResumoVeiculo[];
     loadingInfleet: boolean;
+    viagensInfleet: ViagemVeiculo[];
+    loadingViagens: boolean;
     dateStart: string;
     dateEnd: string;
     geocercaId: string | undefined;
 }
 
-export function FrotaInfleet({ veiculosInfleet, vehiclesSel, setVehiclesSel, resumoInfleet, loadingInfleet, dateStart, dateEnd, geocercaId }: Props) {
+const TH = ({ children }: { children: React.ReactNode }) => (
+    <th className="px-4 py-3 text-xs text-slate-500 uppercase tracking-widest text-left whitespace-nowrap"
+        style={{ fontWeight: 700 }}>
+        {children}
+    </th>
+);
+
+function fmtHora(iso: string): string {
+    return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function fmtData(iso: string): string {
+    return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+export function FrotaInfleet({ veiculosInfleet, vehiclesSel, setVehiclesSel, resumoInfleet, loadingInfleet, viagensInfleet, loadingViagens, dateStart, dateEnd, geocercaId }: Props) {
     return (
         <div className="space-y-4">
             {/* Seleção de veículos */}
@@ -65,7 +105,7 @@ export function FrotaInfleet({ veiculosInfleet, vehiclesSel, setVehiclesSel, res
                 </div>
             </div>
 
-            {/* Tabela de resumo diário */}
+            {/* Tabela de resumo */}
             {vehiclesSel.length > 0 && (
                 <div className="bg-white rounded-2xl overflow-hidden"
                     style={{ border: "1px solid oklch(0.93 0.006 240)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
@@ -73,8 +113,11 @@ export function FrotaInfleet({ veiculosInfleet, vehiclesSel, setVehiclesSel, res
                         <h3 className="text-slate-800 text-base" style={{ fontWeight: 800 }}>
                             Resumo do Período — {dateStart} a {dateEnd}
                         </h3>
-                        <p className="text-xs text-slate-400 mt-0.5">KM rodado, tempo ligado, parado e ocioso por veículo</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                            Paradas · Tempos · KM · Velocidade · Geocerca — via dailyVehicleEventSummary + routeVehicleDetails
+                        </p>
                     </div>
+
                     <div className="overflow-x-auto">
                         {loadingInfleet ? (
                             <div className="flex items-center justify-center py-12">
@@ -84,9 +127,20 @@ export function FrotaInfleet({ veiculosInfleet, vehiclesSel, setVehiclesSel, res
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-100">
-                                        {["Veículo", "KM Rodado", "Ignições", "Tempo Ligado", "Maior Parada", "Tempo na Cerca", "Tempo Ocioso"].map(h => (
-                                            <th key={h} className="px-5 py-3 text-xs text-slate-500 uppercase tracking-widest text-left" style={{ fontWeight: 700 }}>{h}</th>
-                                        ))}
+                                        <TH>Veículo</TH>
+                                        <TH>KM Rodado</TH>
+                                        {/* dailyVehicleEventSummary */}
+                                        <TH>Qtd Paradas</TH>
+                                        <TH>Ignições</TH>
+                                        <TH>Fora da Cerca</TH>
+                                        {/* routeVehicleDetails */}
+                                        <TH>T. Ligado</TH>
+                                        <TH>T. Parado</TH>
+                                        <TH>T. Ocioso</TH>
+                                        <TH>Vel. Média</TH>
+                                        <TH>Vel. Máx</TH>
+                                        {/* geocerca */}
+                                        <TH>Tempo na Cerca</TH>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -94,19 +148,68 @@ export function FrotaInfleet({ veiculosInfleet, vehiclesSel, setVehiclesSel, res
                                         const veiculo = veiculosInfleet.find(v => v.id === r.vehicleId);
                                         return (
                                             <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/80 transition-colors">
-                                                <td className="px-5 py-3.5 text-sm text-slate-700" style={{ fontWeight: 600 }}>
+                                                <td className="px-4 py-3.5 text-sm text-slate-700 whitespace-nowrap" style={{ fontWeight: 600 }}>
                                                     {veiculo?.nome ?? r.vehicleId}
                                                     <span className="ml-2 text-xs text-slate-400">{veiculo?.placa}</span>
                                                 </td>
-                                                <td className="px-5 py-3.5 text-sm tabular-nums text-slate-700" style={{ fontWeight: 700 }}>
+
+                                                <td className="px-4 py-3.5 text-sm tabular-nums text-slate-700" style={{ fontWeight: 700 }}>
                                                     {r.kmRodado} km
                                                 </td>
-                                                <td className="px-5 py-3.5 text-sm tabular-nums text-indigo-600" style={{ fontWeight: 700 }}>
-                                                    {r.qtdIgnicoes}x
+
+                                                {/* Qtd Paradas — deviceStopped (transições para parado) */}
+                                                <td className="px-4 py-3.5 text-sm tabular-nums" style={{ fontWeight: 700 }}>
+                                                    <span className="text-red-500">{r.qtdParadas}</span>
+                                                    {r.qtdOciosas > 0 && (
+                                                        <span className="ml-1.5 text-xs text-amber-400" title="Paradas com motor ligado (ocioso)">
+                                                            +{r.qtdOciosas} oc
+                                                        </span>
+                                                    )}
                                                 </td>
-                                                <td className="px-5 py-3.5 text-sm tabular-nums text-slate-600">{fmtMin(r.tempoLigadoMin)}</td>
-                                                <td className="px-5 py-3.5 text-sm tabular-nums text-amber-600">{fmtMin(r.maiorTempoParadoMin)}</td>
-                                                <td className="px-5 py-3.5 text-sm tabular-nums text-slate-700">
+
+                                                {/* Ignições — ignitionOn */}
+                                                <td className="px-4 py-3.5 text-sm tabular-nums text-indigo-600" style={{ fontWeight: 700 }}>
+                                                    {r.qtdIgnicoes}x
+                                                    {r.qtdIgnicoesOff !== r.qtdIgnicoes && (
+                                                        <span className="ml-1 text-xs text-slate-400" title="Desligamentos">
+                                                            /{r.qtdIgnicoesOff}
+                                                        </span>
+                                                    )}
+                                                </td>
+
+                                                {/* Paradas fora de geocerca — stoppedOutsideGeofence */}
+                                                <td className="px-4 py-3.5 text-sm tabular-nums">
+                                                    {r.qtdParadasForaCerca > 0
+                                                        ? <span className="text-orange-500" style={{ fontWeight: 700 }}>{r.qtdParadasForaCerca}</span>
+                                                        : <span className="text-slate-300">—</span>
+                                                    }
+                                                </td>
+
+                                                {/* Tempo ligado — totalTimeWithIgnitionOn */}
+                                                <td className="px-4 py-3.5 text-sm tabular-nums text-slate-600">
+                                                    {fmtMin(r.tempoLigadoMin)}
+                                                </td>
+
+                                                {/* Tempo parado total — totalTimeStopped */}
+                                                <td className="px-4 py-3.5 text-sm tabular-nums text-amber-600" style={{ fontWeight: 700 }}>
+                                                    {fmtMin(r.tempoParadoMin)}
+                                                </td>
+
+                                                {/* Tempo ocioso — totalTimeStoppedWithIgnitionOn */}
+                                                <td className="px-4 py-3.5 text-sm tabular-nums text-slate-500">
+                                                    {r.tempoOciosoMin > 0 ? fmtMin(r.tempoOciosoMin) : <span className="text-slate-300">—</span>}
+                                                </td>
+
+                                                <td className="px-4 py-3.5 text-sm tabular-nums text-slate-500">
+                                                    {r.velMediaKmh > 0 ? `${r.velMediaKmh} km/h` : <span className="text-slate-300">—</span>}
+                                                </td>
+
+                                                <td className="px-4 py-3.5 text-sm tabular-nums text-slate-500">
+                                                    {r.velMaxKmh > 0 ? `${r.velMaxKmh} km/h` : <span className="text-slate-300">—</span>}
+                                                </td>
+
+                                                {/* Geocerca (sede) */}
+                                                <td className="px-4 py-3.5 text-sm tabular-nums text-slate-700">
                                                     {!geocercaId ? (
                                                         <span className="text-slate-300">—</span>
                                                     ) : (
@@ -120,7 +223,6 @@ export function FrotaInfleet({ veiculosInfleet, vehiclesSel, setVehiclesSel, res
                                                         </div>
                                                     )}
                                                 </td>
-                                                <td className="px-5 py-3.5 text-sm tabular-nums text-slate-500">{fmtMin(r.tempoOciosoMin)}</td>
                                             </tr>
                                         );
                                     })}
@@ -128,6 +230,123 @@ export function FrotaInfleet({ veiculosInfleet, vehiclesSel, setVehiclesSel, res
                             </table>
                         )}
                     </div>
+                </div>
+            )}
+
+            {/* Telemetria: Timeline de Viagens (ignitionOn → ignitionOff) */}
+            {vehiclesSel.length > 0 && (
+                <div className="bg-white rounded-2xl overflow-hidden"
+                    style={{ border: "1px solid oklch(0.93 0.006 240)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                    <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                        <h3 className="text-slate-800 text-sm" style={{ fontWeight: 800 }}>Viagens do Período</h3>
+                        <p className="text-xs text-slate-400">ignitionOn → ignitionOff · cidade · duração · intervalo</p>
+                    </div>
+
+                    {loadingViagens ? (
+                        <div className="flex items-center justify-center py-8">
+                            <div className="w-6 h-6 rounded-full border-4 border-slate-200 border-t-indigo-500 animate-spin" />
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-slate-50">
+                            {viagensInfleet.length === 0 && (
+                                <p className="px-5 py-5 text-xs text-slate-400">Nenhuma viagem encontrada no período.</p>
+                            )}
+                            {viagensInfleet.map(({ vehicleId, viagens }) => {
+                                const veiculo = veiculosInfleet.find(v => v.id === vehicleId);
+                                return (
+                                    <div key={vehicleId} className="px-4 py-3">
+                                        {/* cabeçalho do veículo */}
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-xs text-slate-700" style={{ fontWeight: 700 }}>
+                                                {veiculo?.nome ?? vehicleId}
+                                            </span>
+                                            {veiculo?.placa && (
+                                                <span className="text-[10px] text-slate-400 font-mono bg-slate-100 px-1.5 py-0.5 rounded">
+                                                    {veiculo.placa}
+                                                </span>
+                                            )}
+                                            <span className="ml-auto text-[10px] text-slate-400">
+                                                {viagens.length} {viagens.length === 1 ? "viagem" : "viagens"}
+                                            </span>
+                                        </div>
+
+                                        {viagens.length === 0 ? (
+                                            <p className="text-[11px] text-slate-400">Sem viagens registradas.</p>
+                                        ) : (
+                                            <div className="inline-flex flex-col gap-0">
+                                                {viagens.map((v, i) => {
+                                                    const prev = viagens[i - 1];
+                                                    const intervaloMin = prev?.ignitionOff
+                                                        ? Math.round(
+                                                            (new Date(v.ignitionOn.time).getTime() -
+                                                             new Date(prev.ignitionOff.time).getTime()) / 60_000
+                                                          )
+                                                        : null;
+
+                                                    return (
+                                                        <React.Fragment key={i}>
+                                                            {/* Conector: tempo parado entre viagens */}
+                                                            {intervaloMin !== null && intervaloMin >= 0 && (
+                                                                <div className="flex items-center gap-1 py-0.5 pl-6">
+                                                                    <div className="w-px h-3 bg-slate-200" />
+                                                                    <span className="text-[10px] text-slate-400 tabular-nums">
+                                                                        ⏸ {fmtMin(intervaloMin)} parado
+                                                                    </span>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Linha de viagem — sem flex-1, tudo compacto */}
+                                                            <div className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-slate-50 transition-colors text-[11px] whitespace-nowrap">
+                                                                {/* Índice */}
+                                                                <span className="w-4 text-center text-[10px] text-slate-300 tabular-nums" style={{ fontWeight: 700 }}>
+                                                                    {i + 1}
+                                                                </span>
+
+                                                                {/* Partida: hora · data · cidade */}
+                                                                <span className="tabular-nums text-indigo-600" style={{ fontWeight: 700 }}>
+                                                                    {fmtHora(v.ignitionOn.time)}
+                                                                </span>
+                                                                <span className="text-[10px] text-slate-400">{fmtData(v.ignitionOn.time)}</span>
+                                                                <span className="text-slate-600" style={{ fontWeight: 600 }}>
+                                                                    {v.ignitionOn.city}
+                                                                </span>
+
+                                                                <span className="text-slate-300 px-0.5">→</span>
+
+                                                                {/* Chegada: cidade · data · hora */}
+                                                                {v.ignitionOff ? (
+                                                                    <>
+                                                                        <span className="text-slate-600" style={{ fontWeight: 600 }}>
+                                                                            {v.ignitionOff.city}
+                                                                        </span>
+                                                                        <span className="text-[10px] text-slate-400">{fmtData(v.ignitionOff.time)}</span>
+                                                                        <span className="tabular-nums text-emerald-600" style={{ fontWeight: 700 }}>
+                                                                            {fmtHora(v.ignitionOff.time)}
+                                                                        </span>
+                                                                    </>
+                                                                ) : (
+                                                                    <span className="text-amber-500 text-[10px]" style={{ fontWeight: 600 }}>
+                                                                        em andamento
+                                                                    </span>
+                                                                )}
+
+                                                                {/* Duração */}
+                                                                {v.duracaoMin !== null && (
+                                                                    <span className="ml-0.5 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 tabular-nums text-[10px]" style={{ fontWeight: 700 }}>
+                                                                        {fmtMin(v.duracaoMin)}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
 

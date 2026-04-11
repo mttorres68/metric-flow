@@ -238,9 +238,9 @@ export default function VendedorDetalhes() {
               <h3 className="text-slate-800 text-base" style={{ fontWeight: 800 }}>Clientes do Vendedor</h3>
               <p className="text-xs text-slate-400 mt-0.5">{clientes?.length ?? 0} clientes no total</p>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-auto max-h-[480px]">
               <table className="w-full text-sm">
-                <thead>
+                <thead className="sticky top-0 z-10">
                   <tr className="border-b border-slate-100 bg-slate-50">
                     {["Cliente", "Código", "Receita", "Visitas", "Status"].map((h, i) => (
                       <th key={h} className={`py-3 px-4 text-xs uppercase tracking-widest text-slate-500 ${i >= 2 ? "text-right" : "text-left"} ${h === "Status" ? "text-center" : ""}`} style={{ fontWeight: 700 }}>{h}</th>

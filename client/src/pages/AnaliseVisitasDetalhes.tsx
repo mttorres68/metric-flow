@@ -2,9 +2,13 @@ import { trpc } from "@/lib/trpc";
 import { useRoute, useLocation } from "wouter";
 import Sidebar from "@/components/Sidebar";
 import { ArrowLeft, MapPin, Clock, FileText, CheckCircle2, XCircle } from "lucide-react";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useSidebarCollapse } from "@/hooks/useSidebarCollapse";
+import {
+    Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, ResponsiveContainer,
+    Tooltip, XAxis, YAxis,
+} from "recharts";
 
 export default function AnaliseVisitasDetalhes() {
     const [match, params] = useRoute("/analises/vendedor/:revenda/:vendedor/:data");
@@ -19,6 +23,14 @@ export default function AnaliseVisitasDetalhes() {
     const { data: visitas, isLoading, error } = trpc.analise.getVisitasDoDia.useQuery(
         { vendedor: vendedorId || 0, revenda: revendaRef, data: dataRef },
         { enabled: !!vendedorId && !!dataRef && !!revendaRef }
+    );
+
+    const [rangeInicio, setRangeInicio] = useState(dataRef);
+    const [rangeFim, setRangeFim] = useState(dataRef);
+
+    const { data: dadosRange, isLoading: loadingRange } = trpc.analise.getDados.useQuery(
+        { vendedor: vendedorId || 0, revenda: revendaRef, dataInicio: rangeInicio, dataFim: rangeFim },
+        { enabled: !!vendedorId && !!revendaRef && !!rangeInicio && !!rangeFim }
     );
 
     const handleNavigate = (page: string) => {
@@ -58,6 +70,25 @@ export default function AnaliseVisitasDetalhes() {
         return `${d.toFixed(0)} m`;
     };
 
+    const dadosGrafico = useMemo(() => {
+        if (!dadosRange?.dados?.length) return [];
+        const byDate: Record<string, { validas: number; total: number; semVisita: number }> = {};
+        for (const row of dadosRange.dados) {
+            if (!byDate[row.data]) byDate[row.data] = { validas: 0, total: 0, semVisita: 0 };
+            byDate[row.data].validas += row.pdvs_visitados;
+            byDate[row.data].total += row.pdvs_total;
+            byDate[row.data].semVisita += row.pdvs_sem_visita;
+        }
+        return Object.entries(byDate)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([data, v]) => ({
+                name: formatDataBR(data),
+                "Visitas Válidas": v.validas,
+                "Total Carteira": v.total,
+                "Sem Visita": v.semVisita,
+            }));
+    }, [dadosRange]);
+
     return (
         <div className="flex h-screen bg-slate-50 overflow-hidden">
             <Sidebar activePage={activePage} onNavigate={handleNavigate} />
@@ -84,7 +115,7 @@ export default function AnaliseVisitasDetalhes() {
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-auto px-6 py-6 space-y-4">
+                <div className="flex-1 overflow-hidden flex flex-col px-6 py-6 gap-4">
                     {isLoading && (
                         <div className="flex items-center justify-center h-40">
                             <div className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-indigo-500 animate-spin" />
@@ -98,10 +129,11 @@ export default function AnaliseVisitasDetalhes() {
                     )}
 
                     {!isLoading && !error && visitas && visitas.length > 0 && (
-                        <div className="bg-white rounded-xl border border-slate-100 overflow-hidden" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
-                            <div className="overflow-x-auto">
+                        <>
+                        <div className="flex-1 flex flex-col bg-white rounded-xl border border-slate-100 overflow-hidden" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
+                            <div className="flex-1 overflow-x-auto overflow-y-auto">
                                 <table className="w-full text-xs">
-                                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
+                                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-100 sticky top-0 z-10">
                                         <tr>
                                             <th className="px-4 py-3 text-left font-bold uppercase tracking-wider w-10">#</th>
                                             <th className="px-4 py-3 text-left font-bold uppercase tracking-wider">Cliente</th>
@@ -234,6 +266,62 @@ export default function AnaliseVisitasDetalhes() {
                                 </table>
                             </div>
                         </div>
+
+                        {/* Gráfico de visitas — comparativo por intervalo */}
+                        <div className="bg-white rounded-xl border border-slate-100 px-5 py-4" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
+                            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                                <h3 className="text-sm font-bold text-slate-700">Resumo de Visitas</h3>
+                                <div className="flex items-center gap-2 text-xs">
+                                    <label className="text-slate-500 font-semibold">De</label>
+                                    <input
+                                        type="date"
+                                        value={rangeInicio}
+                                        onChange={e => setRangeInicio(e.target.value)}
+                                        className="border border-slate-200 rounded-lg px-2 py-1 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                    />
+                                    <label className="text-slate-500 font-semibold">Até</label>
+                                    <input
+                                        type="date"
+                                        value={rangeFim}
+                                        onChange={e => setRangeFim(e.target.value)}
+                                        className="border border-slate-200 rounded-lg px-2 py-1 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                    />
+                                </div>
+                            </div>
+
+                            {loadingRange ? (
+                                <div className="flex items-center justify-center h-32">
+                                    <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-indigo-500 animate-spin" />
+                                </div>
+                            ) : dadosGrafico.length === 0 ? (
+                                <div className="flex items-center justify-center h-32 text-slate-400 text-sm font-medium">
+                                    Sem dados para o período selecionado
+                                </div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height={160}>
+                                    <BarChart data={dadosGrafico} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#94A3B8", fontWeight: 600 }} axisLine={false} tickLine={false} />
+                                        <YAxis tick={{ fontSize: 10, fill: "#94A3B8" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                                        <Tooltip
+                                            contentStyle={{ background: "white", border: "1px solid #E2E8F0", borderRadius: "10px", fontSize: 12 }}
+                                            cursor={{ fill: "rgba(99,102,241,0.04)" }}
+                                        />
+                                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                                        <Bar dataKey="Visitas Válidas" fill="#34C78A" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                                            <LabelList dataKey="Visitas Válidas" position="top" style={{ fontSize: 10, fontWeight: 700, fill: "#34C78A" }} />
+                                        </Bar>
+                                        <Bar dataKey="Total Carteira" fill="#6366F1" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                                            <LabelList dataKey="Total Carteira" position="top" style={{ fontSize: 10, fontWeight: 700, fill: "#6366F1" }} />
+                                        </Bar>
+                                        <Bar dataKey="Sem Visita" fill="#94A3B8" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                                            <LabelList dataKey="Sem Visita" position="top" style={{ fontSize: 10, fontWeight: 700, fill: "#94A3B8" }} />
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
+                        </div>
+                        </>
                     )}
 
                     {!isLoading && !error && visitas && visitas.length === 0 && (

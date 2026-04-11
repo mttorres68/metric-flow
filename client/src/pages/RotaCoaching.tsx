@@ -149,6 +149,14 @@ export default function RotaCoaching() {
         { enabled: aba === "frota" && vehiclesSel.length > 0, retry: false }
     );
 
+    const { data: viagensInfleet = [], isLoading: loadingViagens } = trpc.infleet.viagens.useQuery(
+        {
+            vehicleIds: vehiclesSel,
+            periodo: periodoIntervalo(dateStart, dateEnd),
+        },
+        { enabled: aba === "frota" && vehiclesSel.length > 0, retry: false }
+    );
+
     // ── Navegação ────────────────────────────────────────────────────────────────
     const handleNavigate = (page: string) => {
         const rotas: Record<string, string> = {
@@ -303,6 +311,8 @@ export default function RotaCoaching() {
                             setVehiclesSel={setVehiclesSel}
                             resumoInfleet={resumoInfleet}
                             loadingInfleet={loadingInfleet}
+                            viagensInfleet={viagensInfleet}
+                            loadingViagens={loadingViagens}
                             dateStart={dateStart}
                             dateEnd={dateEnd}
                             geocercaId={sedeGeofenceId}
