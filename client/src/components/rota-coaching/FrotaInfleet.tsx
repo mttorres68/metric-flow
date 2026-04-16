@@ -247,14 +247,14 @@ export function FrotaInfleet({ veiculosInfleet, vehiclesSel, setVehiclesSel, res
                             <div className="w-6 h-6 rounded-full border-4 border-slate-200 border-t-indigo-500 animate-spin" />
                         </div>
                     ) : (
-                        <div className="divide-y divide-slate-50">
+                        <div className="flex gap-0 divide-x divide-slate-100 overflow-x-auto">
                             {viagensInfleet.length === 0 && (
                                 <p className="px-5 py-5 text-xs text-slate-400">Nenhuma viagem encontrada no período.</p>
                             )}
                             {viagensInfleet.map(({ vehicleId, viagens }) => {
                                 const veiculo = veiculosInfleet.find(v => v.id === vehicleId);
                                 return (
-                                    <div key={vehicleId} className="px-4 py-3">
+                                    <div key={vehicleId} className="px-4 py-3 flex-1 min-w-[260px]">
                                         {/* cabeçalho do veículo */}
                                         <div className="flex items-center gap-2 mb-2">
                                             <span className="text-xs text-slate-700" style={{ fontWeight: 700 }}>

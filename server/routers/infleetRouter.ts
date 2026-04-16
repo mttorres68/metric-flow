@@ -317,27 +317,9 @@ export const infleetRouter = router({
                         reportedAt
                         slugName
                         address
-                        vehicle { id }
                     }
                 }
             `;
-
-            const data = await infleetQuery<{
-                listEvents: Array<{
-                    id: string;
-                    reportedAt: string;
-                    slugName: string;
-                    address: string | null;
-                    vehicle: { id: string } | null;
-                }>
-            }>(QUERY, {
-                filter: {
-                    vehicleIds: input.vehicleIds,
-                    slugNames: ["ignitionOn", "ignitionOff"],
-                    reportedAt: { startAt: input.periodo.inicio, endAt: input.periodo.fim },
-                },
-                limit: 5000,
-            });
 
             // Extrai cidade do endereço brasileiro: "Rua X, Cidade, Estado, Brasil"
             const extractCity = (address: string | null): string => {
@@ -346,25 +328,36 @@ export const infleetRouter = router({
                 return parts[1]?.trim() ?? parts[0]?.trim() ?? "—";
             };
 
-            // Agrupa eventos por veículo
-            const byVehicle = new Map<string, Array<{ reportedAt: string; slugName: string; address: string | null }>>();
-            for (const ev of data.listEvents ?? []) {
-                const vId = ev.vehicle?.id;
-                if (!vId) continue;
-                if (!byVehicle.has(vId)) byVehicle.set(vId, []);
-                byVehicle.get(vId)!.push(ev);
-            }
-
             type Viagem = {
                 ignitionOn: { time: string; city: string };
                 ignitionOff: { time: string; city: string } | null;
                 duracaoMin: number | null;
             };
 
-            const result: Array<{ vehicleId: string; viagens: Viagem[] }> = [];
+            // Uma query por veículo para garantir separação correta dos eventos
+            const promises = input.vehicleIds.map(async (vId) => {
+                const data = await infleetQuery<{
+                    listEvents: Array<{
+                        id: string;
+                        reportedAt: string;
+                        slugName: string;
+                        address: string | null;
+                    }>
+                }>(QUERY, {
+                    filter: {
+                        vehicleIds: [vId],
+                        slugNames: ["ignitionOn", "ignitionOff"],
+                        reportedAt: { startAt: input.periodo.inicio, endAt: input.periodo.fim },
+                    },
+                    limit: 5000,
+                }).catch(e => {
+                    console.error(`[Infleet] listEvents viagens ${vId}:`, e.message);
+                    return { listEvents: [] };
+                });
 
-            for (const [vId, events] of byVehicle) {
-                events.sort((a, b) => new Date(a.reportedAt).getTime() - new Date(b.reportedAt).getTime());
+                const events = (data.listEvents ?? []).sort(
+                    (a, b) => new Date(a.reportedAt).getTime() - new Date(b.reportedAt).getTime()
+                );
 
                 const viagens: Viagem[] = [];
                 let pendingOn: { reportedAt: string; address: string | null } | null = null;
@@ -393,10 +386,10 @@ export const infleetRouter = router({
                     });
                 }
 
-                result.push({ vehicleId: vId, viagens });
-            }
+                return { vehicleId: vId, viagens };
+            });
 
-            return result;
+            return await Promise.all(promises);
         }),
 
     // ── Debug: introspecção do schema da API ──────────────────────────────────

@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 import React from "react";
+import { Badge } from "@/components/ui/badge";
 import { RotaRow, STATUS_COLORS } from "./types";
 import { RowDetalhe } from "./RowDetalhe";
 
@@ -24,7 +25,7 @@ export function ConformidadeTabela({ tabelaFiltrada, expandedRows, toggleRow, ma
                     <thead>
                         <tr className="bg-slate-50 border-b border-slate-100">
                             <th className="w-10 px-4 py-3" />
-                            {["Status", "Revenda", "GA", "Vendedor", "Prog / Vis / GA", "Conformidade"].map(h => (
+                            {["Revenda", "GA", "Vendedor", "Prog / Vis / GA", "Conformidade", "Status"].map(h => (
                                 <th key={h} className="px-4 py-3 text-xs text-slate-500 uppercase tracking-widest text-left" style={{ fontWeight: 700 }}>{h}</th>
                             ))}
                         </tr>
@@ -46,9 +47,8 @@ export function ConformidadeTabela({ tabelaFiltrada, expandedRows, toggleRow, ma
                                             {isExp ? <ChevronUp className="w-4 h-4 inline" /> : <ChevronDown className="w-4 h-4 inline" />}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full border ${sc.bg}`} style={{ fontWeight: 700 }}>{sc.label}</span>
+                                            <Badge variant="outline" className={sc.bg}>{row.rev || "—"}</Badge>
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-slate-700" style={{ fontWeight: 600 }}>{row.rev || "—"}</td>
                                         <td className="px-4 py-3 text-xs text-slate-600 font-mono">{row.gaId}</td>
                                         <td className="px-4 py-3 text-xs text-slate-600 font-mono">{row.vendId}</td>
                                         <td className="px-4 py-3 text-xs text-center font-mono">
@@ -60,6 +60,9 @@ export function ConformidadeTabela({ tabelaFiltrada, expandedRows, toggleRow, ma
                                             <span className={`text-xl tabular-nums ${row.agendado ? pc : "text-slate-300"}`} style={{ fontWeight: 800 }}>
                                                 {row.agendado ? `${row.pctGA}%` : "—"}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`text-xs font-semibold ${sc.bg.split(' ').find(c => c.startsWith('text-'))}`}>{sc.label}</span>
                                         </td>
                                     </tr>
 

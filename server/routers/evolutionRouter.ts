@@ -164,6 +164,39 @@ export const evolutionRouter = router({
       return { success: true, sentAt: new Date().toISOString() };
     }),
 
+  // ── Template de mensagem WhatsApp ───────────────────────────────────────────
+
+  getWaTemplate: publicProcedure.query(async () => {
+    try {
+      return await waDb.getConfigValue<Record<string, string>>("wa_template");
+    } catch {
+      return null;
+    }
+  }),
+
+  setWaTemplate: publicProcedure
+    .input(z.object({
+      cabecalho:    z.string(),
+      tituloHoje:   z.string(),
+      tituloAmanha: z.string(),
+      linhaCard:    z.string(),
+      rodape:       z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      await waDb.setConfigValue("wa_template", input);
+      return { success: true };
+    }),
+
+  // ── Grupos ───────────────────────────────────────────────────────────────────
+
+  listGrupos: publicProcedure.query(async () => {
+    const { instance } = getConfig();
+    const data = await evoFetch<Array<{ id: string; subject: string; size?: number }>>(
+      "GET", `/group/fetchAllGroups/${instance}?getParticipants=false`
+    );
+    return (data ?? []).map(g => ({ id: g.id, nome: g.subject, participantes: g.size ?? 0 }));
+  }),
+
   sendPDF: publicProcedure
     .input(z.object({
       telefone:  z.string(),

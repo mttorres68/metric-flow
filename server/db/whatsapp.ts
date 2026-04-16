@@ -82,8 +82,35 @@ export async function initWATables(): Promise<void> {
       revenda         VARCHAR(255) NOT NULL,
       PRIMARY KEY (destinatario_id, revenda)
     );
+
+    CREATE TABLE IF NOT EXISTS mf_config (
+      key        VARCHAR(255) PRIMARY KEY,
+      value      JSONB        NOT NULL,
+      updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    );
   `);
   console.log("[WA DB] tabelas prontas");
+}
+
+// ─── Config genérica (key-value) ─────────────────────────────────────────────
+
+export async function getConfigValue<T>(key: string): Promise<T | null> {
+  const pool = getPool();
+  const { rows } = await pool.query<{ value: T }>(
+    `SELECT value FROM mf_config WHERE key = $1`,
+    [key]
+  );
+  return rows[0]?.value ?? null;
+}
+
+export async function setConfigValue<T>(key: string, value: T): Promise<void> {
+  const pool = getPool();
+  await pool.query(
+    `INSERT INTO mf_config (key, value, updated_at)
+     VALUES ($1, $2::jsonb, NOW())
+     ON CONFLICT (key) DO UPDATE SET value = $2::jsonb, updated_at = NOW()`,
+    [key, JSON.stringify(value)]
+  );
 }
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────

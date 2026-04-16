@@ -83,6 +83,8 @@ export interface AnaliseVendedor {
     percurso_ini: string | null;   // HH:MM — início do maior gap
     percurso_fim: string | null;   // HH:MM — fim do maior gap
     pdvs_apos_gap: number;          // PDVs atendidos após o maior percurso
+    total_percurso: number | null;   // Soma de todos os gaps entre visitas (min)
+    total_percurso_fmt: string;
     tempo_nao_atend: number | null;   // Tempo não-atendimento (min)
     tempo_nao_atend_fmt: string;
     ranking_critico: number;          // 1 = pior (mais relâmpagos)
@@ -189,10 +191,12 @@ function calcularVendedorDia(
     let maior_percurso: number | null = null;
     let percurso_ini_min: number | null = null;
     let percurso_fim_min: number | null = null;
+    let total_percurso = 0;
 
     for (let i = 0; i < visitasOrd.length - 1; i++) {
         const gap = visitasOrd[i + 1].ini! - visitasOrd[i].fim!;
-        if (gap > 0 && gap <= 60) {
+        if (gap > 0) {
+            total_percurso += gap;
             if (maior_percurso === null || gap > maior_percurso) {
                 maior_percurso = gap;
                 percurso_ini_min = visitasOrd[i].fim!;
@@ -255,6 +259,8 @@ function calcularVendedorDia(
         percurso_ini: percurso_ini_min !== null ? minToHM(percurso_ini_min) : null,
         percurso_fim: percurso_fim_min !== null ? minToHM(percurso_fim_min) : null,
         pdvs_apos_gap,
+        total_percurso: visitasOrd.length > 1 ? parseFloat(total_percurso.toFixed(1)) : null,
+        total_percurso_fmt: visitasOrd.length > 1 && total_percurso > 0 ? minToHms(total_percurso) : "—",
         tempo_nao_atend: tempo_nao_atend !== null ? parseFloat(tempo_nao_atend.toFixed(1)) : null,
         tempo_nao_atend_fmt: tempo_nao_atend !== null ? minToHms(tempo_nao_atend) : "—",
         ranking_critico: rankPos + 1,  // 1 = pior

@@ -85,8 +85,7 @@ export function exportarPDF(
 
   let tablesHtml = "";
   for (const [revenda, rows] of Object.entries(groupedData)) {
-    const pk = `${revenda}__${date}`;
-    const analiseTexto = (analises[pk] || "").trim();
+    const analiseTexto = (analises[revenda] || "").trim();
 
     const trs = rows
       .map((r) => {

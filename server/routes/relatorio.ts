@@ -152,9 +152,22 @@ async function gerarPDFsParaData(
         }
       }
 
-      // Horários com segundos por vendedor
+      // Horários com segundos por vendedor — apenas visitas dentro do raio de 300m (ou AC),
+      // espelhando a lógica do analiseRouter para garantir consistência com a tela de Análise.
+      const RAIO_PDF = 300;
+      function parseDistPVLocal(s: string): number | string {
+        if (!s || s === "ND") return 9999;
+        if (s === "AC") return "AC";
+        const clean = s.replace(/\./g, "").replace(",", ".").replace(/[^0-9.\-]/g, "");
+        return parseFloat(clean) || 9999;
+      }
+      const visitasDentroRaio = visitasRevenda.filter((v) => {
+        const dist = parseDistPVLocal(v.distPV ?? "");
+        return dist === "AC" || (typeof dist === "number" && dist <= RAIO_PDF);
+      });
+
       const horariosPorVendedor = new Map<number, { ini: string; fim: string }>();
-      for (const v of visitasRevenda) {
+      for (const v of visitasDentroRaio) {
         const validIni = isValidTime(v.horaInicio);
         const validFim = isValidTime(v.horaFim);
         if (!validIni && !validFim) continue;
