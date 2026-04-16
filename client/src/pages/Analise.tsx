@@ -8,14 +8,14 @@
 import Sidebar from "@/components/Sidebar";
 import { trpc } from "@/lib/trpc";
 import { useSidebarCollapse } from "@/hooks/useSidebarCollapse";
-import { EditorAnalise } from "@/components/EditorAnalise";
+import { EditorAnalise, EditorAnaliseHandle } from "@/components/EditorAnalise";
 import {
     AlertTriangle, BarChart3,
     Clock, RefreshCw, TrendingDown, TrendingUp, X, FileText, PenLine, Printer,
     MessageCircle, Send, Loader2, CheckCircle2, AlertCircle, User,
-    Play, Wifi, WifiOff, SlidersHorizontal,
+    Play, Wifi, WifiOff, SlidersHorizontal, ChevronDown, ChevronUp,
 } from "lucide-react";
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { generateWordReport } from "@/lib/wordGenerator";
@@ -78,6 +78,7 @@ const FILTER_KEY = "metricflow:analises-filters";
 const COLS_KEY = "metricflow:analise-cols";
 
 const ALL_COLS = [
+    { id: "data", label: "Data" },
     { id: "inicio", label: "Início" },
     { id: "fim", label: "Fim" },
     { id: "almoco", label: "Almoço" },
@@ -338,6 +339,39 @@ function canonicalRevenda(name: string): string {
 
 function revendasMatch(stored: string, query: string): boolean {
     return canonicalRevenda(stored).toLowerCase() === canonicalRevenda(query).toLowerCase();
+}
+
+// ─── Geração de mensagens a partir dos checkboxes de ações ────────────────────
+
+type AcaoTipo = "deslocamento" | "problema";
+type AcaoVendState = { deslocamento: boolean; problema: boolean };
+
+function listSetores(codigos: string[]): string {
+    if (codigos.length === 1) return codigos[0];
+    return codigos.slice(0, -1).join(", ") + " e " + codigos[codigos.length - 1];
+}
+
+function buildMensagensHTML(vendState: Record<string, AcaoVendState>): string {
+    const problemas = Object.entries(vendState)
+        .filter(([, v]) => v.problema).map(([k]) => k)
+        .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
+    const deslocamentos = Object.entries(vendState)
+        .filter(([, v]) => v.deslocamento).map(([k]) => k)
+        .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
+
+    const msgs: string[] = [];
+
+    if (problemas.length === 1)
+        msgs.push(`<p>O setor ${problemas[0]} apresentou problema no PathTracker.</p>`);
+    else if (problemas.length > 1)
+        msgs.push(`<p>Os setores ${listSetores(problemas)} apresentaram problema no PathTracker.</p>`);
+
+    if (deslocamentos.length === 1)
+        msgs.push(`<p>O setor ${deslocamentos[0]} realizou deslocamento extenso até o primeiro PDV.</p>`);
+    else if (deslocamentos.length > 1)
+        msgs.push(`<p>Os setores ${listSetores(deslocamentos)} realizaram deslocamento extenso até o primeiro PDV.</p>`);
+
+    return msgs.join("");
 }
 
 // ─── Modal Enviar WhatsApp (batch — todas as revendas) ───────────────────────
@@ -839,6 +873,21 @@ export default function Analise() {
     const [downloadingPDF, setDownloadingPDF] = useState<string | null>(null);
     const [downloadingUnified, setDownloadingUnified] = useState(false);
     const [waModalOpen, setWaModalOpen] = useState(false);
+    const [headerExpanded, setHeaderExpanded] = useState(true);
+    const [checkboxState, setCheckboxState] = useState<Record<string, Record<string, AcaoVendState>>>({});
+    const editorRefs = useRef<Map<string, EditorAnaliseHandle>>(new Map());
+
+    const toggleCheck = useCallback((rev: string, vendedor: string | number, tipo: AcaoTipo) => {
+        const prevRevState = checkboxState[rev] ?? {};
+        const prevVend = prevRevState[String(vendedor)] ?? { deslocamento: false, problema: false };
+        const newRevState = {
+            ...prevRevState,
+            [String(vendedor)]: { ...prevVend, [tipo]: !prevVend[tipo] },
+        };
+        setCheckboxState(prev => ({ ...prev, [rev]: newRevState }));
+        const mensagens = buildMensagensHTML(newRevState);
+        editorRefs.current.get(rev)?.setGeneratedContent(mensagens);
+    }, [checkboxState]);
 
     // Rola até a revenda ao voltar da página de detalhes do vendedor
     useEffect(() => {
@@ -931,17 +980,20 @@ export default function Analise() {
     };
 
     // Helper: lê análise de GAs do localStorage (gerida pelo RotaCoaching.tsx)
-    // RotaCoaching salva com o nome curto do coaching (ex: "duttra fl"),
-    // então tentamos primeiro com o nome mapeado, depois o nome direto.
+    // Lookup case-insensitive: RotaCoaching salva com capitalização original
+    // (ex: "Duttra FL__2026-04-13"), mas o mapa retorna lowercase.
     const getAnaliseGAs = (revenda: string): string => {
         try {
-            const stored = JSON.parse(localStorage.getItem("metricflow:analises-ga") || "{}");
+            const stored: Record<string, string> = JSON.parse(localStorage.getItem("metricflow:analises-ga") || "{}");
+            // Índice normalizado para busca case-insensitive
+            const storedLower: Record<string, string> = Object.fromEntries(
+                Object.entries(stored).map(([k, v]) => [k.toLowerCase(), v])
+            );
             const nomeCoaching = REVENDA_COACHING_MAP[revenda.toLowerCase()];
-            const chaves = nomeCoaching
-                ? [`${nomeCoaching}__${filtros.dataInicio}`, `${revenda}__${filtros.dataInicio}`]
-                : [`${revenda}__${filtros.dataInicio}`];
-            for (const chave of chaves) {
-                if (stored[chave]) return stored[chave];
+            const candidatos = nomeCoaching ? [nomeCoaching, revenda] : [revenda];
+            for (const nome of candidatos) {
+                const chave = `${nome.toLowerCase()}__${filtros.dataInicio}`;
+                if (storedLower[chave]) return storedLower[chave];
             }
             return "";
         } catch { return ""; }
@@ -1178,85 +1230,94 @@ export default function Analise() {
                         >
                             <RefreshCw size={12} /> Atualizar
                         </button>
+                        <button
+                            onClick={() => setHeaderExpanded(e => !e)}
+                            title={headerExpanded ? "Recolher filtros e KPIs" : "Expandir filtros e KPIs"}
+                            className="flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
+                        >
+                            {headerExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
                     </div>
                 </div>
 
-                {/* Glossário colapsável */}
-                {expandedHelp && (
-                    <div className="bg-amber-50 border-b border-amber-100 px-6 py-3">
-                        <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-slate-600 max-w-5xl">
+                {/* ── Seção colapsável: Glossário + Filtros + KPIs ── */}
+                {headerExpanded && (
+                    <>
+                        {/* Glossário */}
+                        {expandedHelp && (
+                            <div className="bg-amber-50 border-b border-amber-100 px-6 py-3">
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-slate-600 max-w-5xl">
+                                    {[
+                                        ["Pedido SFA", "Pedidos realizados pelo vendedor via sistema SFA"],
+                                        ["Pedido Heishop", "Pedidos realizados via plataforma Heishop"],
+                                        ["Heishop Verificado", "Pedidos Heishop confirmados (com Tipo Cobr. preenchida)"],
+                                        ["IV", "Índice de Visita = visitados dentro do raio / carteira total"],
+                                        ["IAV", "Índice de Atendimento = Heishop verificado / Heishop total"],
+                                        ["Ranking Crítico", "1 = pior desempenho (maior % relâmpago)"],
+                                        ["Atend. > 35min", "Visitas com duração > 35min dentro do raio"],
+                                        ["Maior Percurso", "Maior gap entre visitas consecutivas (≤ 60min)"],
+                                        ["PDVs após gap", "Atendimentos realizados após o maior intervalo"],
+                                        ["Tempo Ñ Atend.", "Jornada − tempo em visita. Trava às 17:00"],
+                                    ].map(([k, v]) => (
+                                        <div key={k} className="flex gap-2">
+                                            <span className="font-semibold text-slate-700 min-w-[140px]">{k}:</span>
+                                            <span>{v}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Filtros */}
+                        <div className="bg-white rounded-2xl px-5 py-4 flex flex-wrap items-center gap-4 mx-6 mt-4"
+                            style={{ border: "1px solid oklch(0.93 0.006 240)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                            <FilterSelect
+                                label="Revenda"
+                                value={filtros.revenda ?? ""}
+                                onChange={v => setFiltrosMulti({ revenda: v || undefined, vendedor: undefined })}
+                                placeholder="Todas"
+                                options={revendas.map(r => ({ value: r, label: r }))}
+                            />
+                            <FilterSelect
+                                label="Vendedor"
+                                value={filtros.vendedor ?? ""}
+                                onChange={v => setFiltro("vendedor", v || undefined)}
+                                placeholder="Todos"
+                                options={vendedoresList.map(v => ({ value: String(v.id), label: v.nome }))}
+                            />
+                            <FilterDate label="Data Início" value={filtros.dataInicio ?? ""} onChange={v => setFiltro("dataInicio", v || undefined)} />
+                            <FilterDate label="Data Fim" value={filtros.dataFim ?? ""} onChange={v => setFiltro("dataFim", v || undefined)} />
+                            {temFiltro && (
+                                <button onClick={resetFiltros}
+                                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-all"
+                                    style={{ fontWeight: 600 }}>
+                                    <X className="w-3.5 h-3.5" /> Limpar
+                                </button>
+                            )}
+                            <span className="text-xs text-slate-400 ml-auto" style={{ fontWeight: 500 }}>{sorted.length} vendedor(es)</span>
+                            <ColumnsSelector col={col} toggle={toggle} toggleAll={toggleAll} allOn={allOn} hiddenCount={hiddenCount} />
+                        </div>
+
+                        {/* KPI Cards */}
+                        <div className="px-6 pt-4 pb-2 grid grid-cols-5 gap-3">
                             {[
-                                ["Pedido SFA", "Pedidos realizados pelo vendedor via sistema SFA"],
-                                ["Pedido Heishop", "Pedidos realizados via plataforma Heishop"],
-                                ["Heishop Verificado", "Pedidos Heishop confirmados (com Tipo Cobr. preenchida)"],
-                                ["IV", "Índice de Visita = visitados dentro do raio / carteira total"],
-                                ["IAV", "Índice de Atendimento = Heishop verificado / Heishop total"],
-                                ["Ranking Crítico", "1 = pior desempenho (maior % relâmpago)"],
-                                ["Atend. > 35min", "Visitas com duração > 35min dentro do raio"],
-                                ["Maior Percurso", "Maior gap entre visitas consecutivas (≤ 60min)"],
-                                ["PDVs após gap", "Atendimentos realizados após o maior intervalo"],
-                                ["Tempo Ñ Atend.", "Jornada − tempo em visita. Trava às 17:00"],
-                            ].map(([k, v]) => (
-                                <div key={k} className="flex gap-2">
-                                    <span className="font-semibold text-slate-700 min-w-[140px]">{k}:</span>
-                                    <span>{v}</span>
+                                { label: "Vendedores", value: totais.vendedores, color: "text-slate-700", icon: <BarChart3 size={16} className="text-indigo-400" /> },
+                                { label: "PDVs Visitados", value: totais.pdvs, sub: totais.pdvs_total, color: "text-slate-700", icon: <TrendingUp size={16} className="text-green-400" /> },
+                                { label: "Pedidos Heishop", value: totais.heishop, color: "text-amber-600", icon: <AlertTriangle size={16} className="text-amber-400" /> },
+                                { label: "Relâmpago médio", value: pct(totais.relampago_avg), color: totais.relampago_avg > 20 ? "text-red-600" : "text-green-600", icon: <TrendingDown size={16} className="text-red-400" /> },
+                                { label: "IV médio", value: pct(totais.iv_avg), color: "text-indigo-600", icon: <Clock size={16} className="text-indigo-400" /> },
+                            ].map(k => (
+                                <div key={k.label} className="bg-white rounded-xl border border-slate-100 px-4 py-3 flex items-center gap-3" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                                    {k.icon}
+                                    <div>
+                                        <div className={`text-lg font-bold ${k.color}`}>{k.value}{k.sub ? <span className="text-xs text-slate-400">/{k.sub}</span> : ""}</div>
+                                        <div className="text-xs text-slate-400">{k.label}</div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </>
                 )}
-
-                {/* ── Filtros ─────────────────────────────────────────────────────── */}
-                <div className="bg-white rounded-2xl px-5 py-4 flex flex-wrap items-center gap-4 mx-6 mt-4"
-                    style={{ border: "1px solid oklch(0.93 0.006 240)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                    <FilterSelect
-                        label="Revenda"
-                        value={filtros.revenda ?? ""}
-                        onChange={v => setFiltrosMulti({ revenda: v || undefined, vendedor: undefined })}
-                        placeholder="Todas"
-                        options={revendas.map(r => ({ value: r, label: r }))}
-                    />
-
-                    <FilterSelect
-                        label="Vendedor"
-                        value={filtros.vendedor ?? ""}
-                        onChange={v => setFiltro("vendedor", v || undefined)}
-                        placeholder="Todos"
-                        options={vendedoresList.map(v => ({ value: String(v.id), label: v.nome }))}
-                    />
-
-                    <FilterDate label="Data Início" value={filtros.dataInicio ?? ""} onChange={v => setFiltro("dataInicio", v || undefined)} />
-                    <FilterDate label="Data Fim" value={filtros.dataFim ?? ""} onChange={v => setFiltro("dataFim", v || undefined)} />
-
-                    {temFiltro && (
-                        <button onClick={resetFiltros}
-                            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-all"
-                            style={{ fontWeight: 600 }}>
-                            <X className="w-3.5 h-3.5" /> Limpar
-                        </button>
-                    )}
-                    <span className="text-xs text-slate-400 ml-auto" style={{ fontWeight: 500 }}>{sorted.length} vendedor(es)</span>
-                    <ColumnsSelector col={col} toggle={toggle} toggleAll={toggleAll} allOn={allOn} hiddenCount={hiddenCount} />
-                </div>
-
-                {/* KPI Cards */}
-                <div className="px-6 pt-4 pb-2 grid grid-cols-5 gap-3">
-                    {[
-                        { label: "Vendedores", value: totais.vendedores, color: "text-slate-700", icon: <BarChart3 size={16} className="text-indigo-400" /> },
-                        { label: "PDVs Visitados", value: totais.pdvs, sub: totais.pdvs_total, color: "text-slate-700", icon: <TrendingUp size={16} className="text-green-400" /> },
-                        { label: "Pedidos Heishop", value: totais.heishop, color: "text-amber-600", icon: <AlertTriangle size={16} className="text-amber-400" /> },
-                        { label: "Relâmpago médio", value: pct(totais.relampago_avg), color: totais.relampago_avg > 20 ? "text-red-600" : "text-green-600", icon: <TrendingDown size={16} className="text-red-400" /> },
-                        { label: "IV médio", value: pct(totais.iv_avg), color: "text-indigo-600", icon: <Clock size={16} className="text-indigo-400" /> },
-                    ].map(k => (
-                        <div key={k.label} className="bg-white rounded-xl border border-slate-100 px-4 py-3 flex items-center gap-3" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                            {k.icon}
-                            <div>
-                                <div className={`text-lg font-bold ${k.color}`}>{k.value}{k.sub ? <span className="text-xs text-slate-400">/{k.sub}</span> : ""}</div>
-                                <div className="text-xs text-slate-400">{k.label}</div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
 
                 {/* Tabela */}
                 <div className="flex-1 overflow-auto px-6 pb-6">
@@ -1305,7 +1366,8 @@ export default function Analise() {
                                                             Vend. <SortIcon col="vendedor" />
                                                         </button>
                                                     </Th>
-                                                    <Th title="Data">Data</Th>
+                                                    <Th title="Marcar ocorrências para gerar texto automático na análise abaixo" center>Ações</Th>
+                                                    {col("data") && <Th title="Data">Data</Th>}
 
                                                     {/* Horários */}
                                                     {col("inicio") && <Th title="Hora da primeira visita dentro do raio" center>Início</Th>}
@@ -1375,7 +1437,29 @@ export default function Analise() {
                                                                     {r.vendedor}
                                                                 </button>
                                                             </Td>
-                                                            <Td mono className="text-slate-500">{r.data}</Td>
+                                                            <Td center>
+                                                                <div className="flex flex-col gap-0.5 items-start">
+                                                                    <label className="flex items-center gap-1 cursor-pointer select-none whitespace-nowrap">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            className="accent-amber-500 w-3 h-3 shrink-0"
+                                                                            checked={!!(checkboxState[rev]?.[String(r.vendedor)]?.deslocamento)}
+                                                                            onChange={() => toggleCheck(rev, r.vendedor, "deslocamento")}
+                                                                        />
+                                                                        <span className="text-[10px] text-amber-700">Desl.</span>
+                                                                    </label>
+                                                                    <label className="flex items-center gap-1 cursor-pointer select-none whitespace-nowrap">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            className="accent-red-500 w-3 h-3 shrink-0"
+                                                                            checked={!!(checkboxState[rev]?.[String(r.vendedor)]?.problema)}
+                                                                            onChange={() => toggleCheck(rev, r.vendedor, "problema")}
+                                                                        />
+                                                                        <span className="text-[10px] text-red-700">Prob.</span>
+                                                                    </label>
+                                                                </div>
+                                                            </Td>
+                                                            {col("data") && <Td mono className="text-slate-500">{r.data}</Td>}
 
                                                             {/* Horários */}
                                                             {col("inicio") && <Td center mono className={r.inicio && (r.inicio < "07:30" || r.inicio > "08:45") ? "text-amber-700 font-bold" : "text-slate-600"}>{r.inicio ?? "—"}</Td>}
@@ -1489,6 +1573,7 @@ export default function Analise() {
                                             </button>
                                         </div>
                                         <EditorAnalise
+                                            ref={(el) => { if (el) editorRefs.current.set(rev, el); else editorRefs.current.delete(rev); }}
                                             id={`editor-revenda-${rev}`}
                                             html={getAnalise(rev)}
                                             onChange={html => setAnalise(rev, html)}

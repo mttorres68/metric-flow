@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Toolbar buttons
@@ -19,6 +19,11 @@ const TOOLBAR_BTNS = [
 // Props
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface EditorAnaliseHandle {
+    /** Injeta (ou substitui) o bloco de texto gerado automaticamente no topo do editor. Passar "" remove o bloco. */
+    setGeneratedContent: (html: string) => void;
+}
+
 export interface EditorAnaliseProps {
     /** Identificador único para o placeholder e acessibilidade */
     id: string;
@@ -34,7 +39,7 @@ export interface EditorAnaliseProps {
 // Componente
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function EditorAnalise({ id, html, onChange, placeholder }: EditorAnaliseProps) {
+export const EditorAnalise = forwardRef<EditorAnaliseHandle, EditorAnaliseProps>(function EditorAnalise({ id, html, onChange, placeholder }, handle) {
     const ref = useRef<HTMLDivElement>(null);
     const debRef = useRef<any>(null);
     const mountedRef = useRef(false);
@@ -50,6 +55,22 @@ export function EditorAnalise({ id, html, onChange, placeholder }: EditorAnalise
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useImperativeHandle(handle, () => ({
+        setGeneratedContent(genHtml: string) {
+            if (!ref.current) return;
+            const current = ref.current.innerHTML;
+            const genSection = genHtml
+                ? `<div data-mflow-gen="1" style="border-left:3px solid #6366f1;padding:4px 10px;margin-bottom:8px;background:#eef2ff;border-radius:4px;color:#3730a3">${genHtml}</div>`
+                : "";
+            const hasExisting = current.includes('data-mflow-gen="1"');
+            const newHtml = hasExisting
+                ? current.replace(/<div data-mflow-gen="1"[^>]*>[\s\S]*?<\/div>/, genSection)
+                : genSection + current;
+            ref.current.innerHTML = newHtml;
+            onChange(newHtml);
+        },
+    }), [onChange]);
 
     const salvar = useCallback(() => {
         clearTimeout(debRef.current);
@@ -124,6 +145,6 @@ export function EditorAnalise({ id, html, onChange, placeholder }: EditorAnalise
       `}</style>
         </div>
     );
-}
+});
 
 export default EditorAnalise;
