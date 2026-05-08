@@ -1,0 +1,6153 @@
+{
+  "meta": {
+    "totalIndicadores": 92,
+    "totalClusters": 68,
+    "distThreshold": 0.78,
+    "edgeThreshold": 0.28,
+    "pairThreshold": 0.3
+  },
+  "familias": [
+    {
+      "nome": "RH / Pessoas",
+      "qtdIndicadores": 70,
+      "pontosTotais": 404,
+      "qtdMicroAreas": 10,
+      "microAreas": [
+        "ADMINISTRATIVO",
+        "ARMAZÉM",
+        "COMERCIAL",
+        "COMODATO",
+        "DISTRIBUIÇÃO",
+        "FROTA",
+        "RH",
+        "SHE",
+        "SISTEMA OPERACIONAL",
+        "TRADE"
+      ],
+      "indicadores": [
+        "ADM03",
+        "ADM05",
+        "ADM06",
+        "ADM07",
+        "ADM08",
+        "ADM09",
+        "ARM01",
+        "ARM02",
+        "ARM03",
+        "ARM04",
+        "ARM05",
+        "ARM06",
+        "ARM07",
+        "ARM10",
+        "CMDT01",
+        "CMDT02",
+        "CMDT03",
+        "COM01",
+        "COM02",
+        "COM03",
+        "COM04",
+        "COM05",
+        "COM06",
+        "COM07",
+        "COM08",
+        "COM09",
+        "COM10",
+        "COM11",
+        "COM15",
+        "COM17",
+        "COM24",
+        "COM25",
+        "COM26",
+        "COM27",
+        "COM29",
+        "COM31",
+        "DISTRI01",
+        "DISTRI02- Revendas 2026",
+        "DISTRI03- Revendas 2026",
+        "DISTRI05- Revendas 2026",
+        "DISTRI06- Revendas 2026",
+        "FROT01",
+        "FROT02",
+        "FROT03",
+        "FROT04",
+        "FROT05",
+        "RH01",
+        "RH02",
+        "RH03",
+        "RH04",
+        "RH05",
+        "RH06",
+        "RH07",
+        "RH08",
+        "SHE01",
+        "SHE02",
+        "SHE03",
+        "SHE04",
+        "SHE05",
+        "SHE06",
+        "SHE07",
+        "SHE08",
+        "SHE09",
+        "STO01",
+        "STO02",
+        "TRD01",
+        "TRD03",
+        "TRD04",
+        "TRD06- Revendas 2026",
+        "TRD07- Revendas 2026"
+      ]
+    },
+    {
+      "nome": "BI / Painel / Sistema",
+      "qtdIndicadores": 65,
+      "pontosTotais": 413,
+      "qtdMicroAreas": 10,
+      "microAreas": [
+        "ADMINISTRATIVO",
+        "ARMAZÉM",
+        "COMERCIAL",
+        "COMODATO",
+        "DISTRIBUIÇÃO",
+        "FROTA",
+        "RH",
+        "SHE",
+        "SISTEMA OPERACIONAL",
+        "TRADE"
+      ],
+      "indicadores": [
+        "ADM01",
+        "ADM02",
+        "ADM03",
+        "ADM06",
+        "ADM07",
+        "ADM08",
+        "ADM10",
+        "ADM11",
+        "ARM01",
+        "ARM02",
+        "ARM03",
+        "ARM05",
+        "ARM07",
+        "ARM08",
+        "ARM09",
+        "ARM10",
+        "CMDT01",
+        "CMDT02",
+        "CMDT03",
+        "COM01",
+        "COM03",
+        "COM04",
+        "COM07",
+        "COM08",
+        "COM09",
+        "COM10",
+        "COM11",
+        "COM12",
+        "COM14",
+        "COM15",
+        "COM16",
+        "COM17",
+        "COM18",
+        "COM19",
+        "COM20",
+        "COM21",
+        "COM22- Revendas 2026",
+        "COM23",
+        "COM27",
+        "COM28",
+        "COM30",
+        "COM31",
+        "DISTRI02- Revendas 2026",
+        "DISTRI03- Revendas 2026",
+        "FROT01",
+        "FROT05",
+        "RH01",
+        "RH02",
+        "RH03",
+        "RH04",
+        "RH05",
+        "RH06",
+        "RH07",
+        "SHE01",
+        "SHE02",
+        "SHE04",
+        "SHE07",
+        "SHE08",
+        "STO01",
+        "STO02",
+        "TRD01",
+        "TRD02- Revendas 2026",
+        "TRD03",
+        "TRD04",
+        "TRD05- Revendas 2026"
+      ]
+    },
+    {
+      "nome": "Rota / Visita de Mercado",
+      "qtdIndicadores": 56,
+      "pontosTotais": 415,
+      "qtdMicroAreas": 10,
+      "microAreas": [
+        "ADMINISTRATIVO",
+        "ARMAZÉM",
+        "COMERCIAL",
+        "COMODATO",
+        "DISTRIBUIÇÃO",
+        "FROTA",
+        "RH",
+        "SHE",
+        "SISTEMA OPERACIONAL",
+        "TRADE"
+      ],
+      "indicadores": [
+        "ADM06",
+        "ADM07",
+        "ADM08",
+        "ADM10",
+        "ARM06",
+        "CMDT01",
+        "CMDT02",
+        "COM01",
+        "COM02",
+        "COM03",
+        "COM04",
+        "COM05",
+        "COM06",
+        "COM07",
+        "COM08",
+        "COM10",
+        "COM11",
+        "COM12",
+        "COM14",
+        "COM15",
+        "COM16",
+        "COM17",
+        "COM18",
+        "COM19",
+        "COM20",
+        "COM21",
+        "COM22- Revendas 2026",
+        "COM23",
+        "COM24",
+        "COM25",
+        "COM26",
+        "COM27",
+        "COM28",
+        "COM29",
+        "COM30",
+        "COM31",
+        "DISTRI02- Revendas 2026",
+        "DISTRI03- Revendas 2026",
+        "DISTRI05- Revendas 2026",
+        "DISTRI06- Revendas 2026",
+        "FROT01",
+        "FROT02",
+        "FROT03",
+        "FROT04",
+        "FROT05",
+        "RH02",
+        "RH03",
+        "RH07",
+        "SHE09",
+        "STO01",
+        "STO02",
+        "TRD03",
+        "TRD04",
+        "TRD05- Revendas 2026",
+        "TRD06- Revendas 2026",
+        "TRD07- Revendas 2026"
+      ]
+    },
+    {
+      "nome": "Documentos / Política / Carta",
+      "qtdIndicadores": 52,
+      "pontosTotais": 284,
+      "qtdMicroAreas": 10,
+      "microAreas": [
+        "ADMINISTRATIVO",
+        "ARMAZÉM",
+        "COMERCIAL",
+        "COMODATO",
+        "DISTRIBUIÇÃO",
+        "FROTA",
+        "RH",
+        "SHE",
+        "SISTEMA OPERACIONAL",
+        "TRADE"
+      ],
+      "indicadores": [
+        "ADM01",
+        "ADM02",
+        "ADM03",
+        "ADM06",
+        "ADM09",
+        "ADM10",
+        "ARM01",
+        "ARM02",
+        "ARM03",
+        "ARM04",
+        "ARM10",
+        "CMDT01",
+        "CMDT02",
+        "CMDT03",
+        "COM01",
+        "COM02",
+        "COM07",
+        "COM08",
+        "COM09",
+        "COM12",
+        "COM13",
+        "COM14",
+        "COM24",
+        "COM25",
+        "COM26",
+        "COM27",
+        "COM28",
+        "COM29",
+        "COM31",
+        "DISTRI02- Revendas 2026",
+        "DISTRI05- Revendas 2026",
+        "DISTRI06- Revendas 2026",
+        "FROT01",
+        "FROT02",
+        "FROT03",
+        "FROT04",
+        "FROT05",
+        "RH01",
+        "RH04",
+        "RH07",
+        "RH08",
+        "SHE01",
+        "SHE02",
+        "SHE07",
+        "SHE08",
+        "STO02",
+        "TRD01",
+        "TRD02- Revendas 2026",
+        "TRD04",
+        "TRD05- Revendas 2026",
+        "TRD06- Revendas 2026",
+        "TRD07- Revendas 2026"
+      ]
+    },
+    {
+      "nome": "Estoque / Armazém / Logística",
+      "qtdIndicadores": 50,
+      "pontosTotais": 296,
+      "qtdMicroAreas": 10,
+      "microAreas": [
+        "ADMINISTRATIVO",
+        "ARMAZÉM",
+        "COMERCIAL",
+        "COMODATO",
+        "DISTRIBUIÇÃO",
+        "FROTA",
+        "RH",
+        "SHE",
+        "SISTEMA OPERACIONAL",
+        "TRADE"
+      ],
+      "indicadores": [
+        "ADM04",
+        "ADM06",
+        "ADM07",
+        "ADM08",
+        "ADM10",
+        "ARM01",
+        "ARM02",
+        "ARM03",
+        "ARM04",
+        "ARM05",
+        "ARM06",
+        "ARM07",
+        "ARM08",
+        "ARM09",
+        "ARM10",
+        "CMDT01",
+        "CMDT03",
+        "COM01",
+        "COM02",
+        "COM03",
+        "COM04",
+        "COM06",
+        "COM10",
+        "COM11",
+        "COM17",
+        "COM24",
+        "COM25",
+        "COM26",
+        "COM27",
+        "COM28",
+        "COM31",
+        "DISTRI02- Revendas 2026",
+        "DISTRI03- Revendas 2026",
+        "DISTRI04- Revendas 2026",
+        "DISTRI05- Revendas 2026",
+        "DISTRI06- Revendas 2026",
+        "FROT01",
+        "FROT02",
+        "FROT03",
+        "FROT04",
+        "FROT05",
+        "RH02",
+        "SHE02",
+        "SHE04",
+        "SHE09",
+        "STO01",
+        "STO02",
+        "TRD04",
+        "TRD05- Revendas 2026",
+        "TRD06- Revendas 2026"
+      ]
+    },
+    {
+      "nome": "Reunião / Governança / Ata",
+      "qtdIndicadores": 49,
+      "pontosTotais": 329,
+      "qtdMicroAreas": 10,
+      "microAreas": [
+        "ADMINISTRATIVO",
+        "ARMAZÉM",
+        "COMERCIAL",
+        "COMODATO",
+        "DISTRIBUIÇÃO",
+        "FROTA",
+        "RH",
+        "SHE",
+        "SISTEMA OPERACIONAL",
+        "TRADE"
+      ],
+      "indicadores": [
+        "ADM01",
+        "ADM03",
+        "ADM06",
+        "ADM07",
+        "ADM08",
+        "ADM09",
+        "ADM10",
+        "ADM11",
+        "ARM03",
+        "ARM04",
+        "ARM08",
+        "CMDT01",
+        "CMDT02",
+        "CMDT03",
+        "COM01",
+        "COM03",
+        "COM04",
+        "COM05",
+        "COM06",
+        "COM08",
+        "COM09",
+        "COM10",
+        "COM11",
+        "COM12",
+        "COM13",
+        "COM14",
+        "COM17",
+        "COM18",
+        "COM19",
+        "COM20",
+        "COM21",
+        "COM22- Revendas 2026",
+        "COM28",
+        "COM29",
+        "COM31",
+        "DISTRI02- Revendas 2026",
+        "FROT01",
+        "RH01",
+        "RH02",
+        "RH05",
+        "RH07",
+        "RH08",
+        "SHE02",
+        "SHE04",
+        "SHE06",
+        "STO01",
+        "TRD03",
+        "TRD04",
+        "TRD06- Revendas 2026"
+      ]
+    },
+    {
+      "nome": "Cobertura de Marca / Comercial",
+      "qtdIndicadores": 32,
+      "pontosTotais": 277,
+      "qtdMicroAreas": 7,
+      "microAreas": [
+        "ADMINISTRATIVO",
+        "ARMAZÉM",
+        "COMERCIAL",
+        "COMODATO",
+        "RH",
+        "SISTEMA OPERACIONAL",
+        "TRADE"
+      ],
+      "indicadores": [
+        "ADM04",
+        "ADM07",
+        "ARM08",
+        "CMDT02",
+        "CMDT03",
+        "COM03",
+        "COM04",
+        "COM06",
+        "COM07",
+        "COM10",
+        "COM12",
+        "COM15",
+        "COM16",
+        "COM17",
+        "COM18",
+        "COM19",
+        "COM20",
+        "COM21",
+        "COM22- Revendas 2026",
+        "COM23",
+        "COM24",
+        "COM25",
+        "COM26",
+        "COM27",
+        "COM28",
+        "COM29",
+        "COM30",
+        "COM31",
+        "RH03",
+        "STO02",
+        "TRD04",
+        "TRD06- Revendas 2026"
+      ]
+    },
+    {
+      "nome": "Trade / Ativos / MPDV",
+      "qtdIndicadores": 31,
+      "pontosTotais": 221,
+      "qtdMicroAreas": 8,
+      "microAreas": [
+        "ADMINISTRATIVO",
+        "ARMAZÉM",
+        "COMERCIAL",
+        "COMODATO",
+        "DISTRIBUIÇÃO",
+        "RH",
+        "SISTEMA OPERACIONAL",
+        "TRADE"
+      ],
+      "indicadores": [
+        "ADM01",
+        "ADM07",
+        "ADM10",
+        "ADM11",
+        "ARM07",
+        "CMDT01",
+        "CMDT02",
+        "CMDT03",
+        "COM01",
+        "COM03",
+        "COM04",
+        "COM05",
+        "COM06",
+        "COM07",
+        "COM08",
+        "COM10",
+        "COM11",
+        "COM14",
+        "COM17",
+        "COM31",
+        "DISTRI03- Revendas 2026",
+        "RH02",
+        "RH04",
+        "STO02",
+        "TRD01",
+        "TRD02- Revendas 2026",
+        "TRD03",
+        "TRD04",
+        "TRD05- Revendas 2026",
+        "TRD06- Revendas 2026",
+        "TRD07- Revendas 2026"
+      ]
+    },
+    {
+      "nome": "Frota / Veículos",
+      "qtdIndicadores": 29,
+      "pontosTotais": 132,
+      "qtdMicroAreas": 8,
+      "microAreas": [
+        "ADMINISTRATIVO",
+        "ARMAZÉM",
+        "COMERCIAL",
+        "DISTRIBUIÇÃO",
+        "FROTA",
+        "RH",
+        "SHE",
+        "TRADE"
+      ],
+      "indicadores": [
+        "ADM01",
+        "ADM05",
+        "ADM06",
+        "ADM08",
+        "ARM01",
+        "ARM02",
+        "ARM06",
+        "COM02",
+        "COM09",
+        "COM11",
+        "DISTRI01",
+        "DISTRI02- Revendas 2026",
+        "DISTRI03- Revendas 2026",
+        "DISTRI04- Revendas 2026",
+        "DISTRI05- Revendas 2026",
+        "FROT01",
+        "FROT02",
+        "FROT03",
+        "FROT04",
+        "FROT05",
+        "RH02",
+        "RH04",
+        "RH07",
+        "RH08",
+        "SHE02",
+        "SHE03",
+        "SHE06",
+        "SHE08",
+        "TRD07- Revendas 2026"
+      ]
+    },
+    {
+      "nome": "Fotos / Identidade Visual",
+      "qtdIndicadores": 27,
+      "pontosTotais": 105,
+      "qtdMicroAreas": 10,
+      "microAreas": [
+        "ADMINISTRATIVO",
+        "ARMAZÉM",
+        "COMERCIAL",
+        "COMODATO",
+        "DISTRIBUIÇÃO",
+        "FROTA",
+        "RH",
+        "SHE",
+        "SISTEMA OPERACIONAL",
+        "TRADE"
+      ],
+      "indicadores": [
+        "ADM05",
+        "ADM06",
+        "ARM01",
+        "ARM02",
+        "ARM03",
+        "ARM04",
+        "ARM05",
+        "ARM06",
+        "ARM07",
+        "ARM10",
+        "CMDT01",
+        "COM02",
+        "COM04",
+        "COM13",
+        "DISTRI01",
+        "DISTRI05- Revendas 2026",
+        "FROT01",
+        "FROT02",
+        "FROT03",
+        "FROT04",
+        "RH07",
+        "SHE03",
+        "SHE06",
+        "SHE07",
+        "SHE08",
+        "STO02",
+        "TRD05- Revendas 2026"
+      ]
+    },
+    {
+      "nome": "SHE / Segurança",
+      "qtdIndicadores": 21,
+      "pontosTotais": 89,
+      "qtdMicroAreas": 6,
+      "microAreas": [
+        "ADMINISTRATIVO",
+        "ARMAZÉM",
+        "COMERCIAL",
+        "DISTRIBUIÇÃO",
+        "FROTA",
+        "SHE"
+      ],
+      "indicadores": [
+        "ADM03",
+        "ADM06",
+        "ARM01",
+        "ARM10",
+        "COM02",
+        "COM03",
+        "COM04",
+        "COM08",
+        "COM09",
+        "DISTRI02- Revendas 2026",
+        "FROT01",
+        "FROT05",
+        "SHE01",
+        "SHE02",
+        "SHE03",
+        "SHE04",
+        "SHE05",
+        "SHE06",
+        "SHE07",
+        "SHE08",
+        "SHE09"
+      ]
+    },
+    {
+      "nome": "Lista de Presença / Treinamento",
+      "qtdIndicadores": 18,
+      "pontosTotais": 90,
+      "qtdMicroAreas": 7,
+      "microAreas": [
+        "ADMINISTRATIVO",
+        "COMERCIAL",
+        "DISTRIBUIÇÃO",
+        "RH",
+        "SHE",
+        "SISTEMA OPERACIONAL",
+        "TRADE"
+      ],
+      "indicadores": [
+        "ADM03",
+        "ADM06",
+        "ADM10",
+        "COM02",
+        "COM08",
+        "COM09",
+        "COM29",
+        "DISTRI02- Revendas 2026",
+        "RH02",
+        "RH05",
+        "RH06",
+        "SHE01",
+        "SHE04",
+        "SHE05",
+        "SHE06",
+        "SHE07",
+        "STO02",
+        "TRD04"
+      ]
+    }
+  ],
+  "clusters": [
+    {
+      "id": 0,
+      "tamanho": 6,
+      "pontosTotais": 48,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "EXECUÇÃO",
+      "familiaDom": "Documentos / Política / Carta",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "COM24",
+        "COM25",
+        "COM26",
+        "COM27",
+        "DISTRI06- Revendas 2026",
+        "TRD06- Revendas 2026"
+      ],
+      "descricoes": [
+        {
+          "id": "COM24",
+          "descricao": "Rota - GC"
+        },
+        {
+          "id": "COM25",
+          "descricao": "Rota - GV"
+        },
+        {
+          "id": "COM26",
+          "descricao": "Rota - SV"
+        },
+        {
+          "id": "COM27",
+          "descricao": "Rota - Proprietário / Diretor / Representante legal"
+        },
+        {
+          "id": "DISTRI06- Revendas 2026",
+          "descricao": "Rota - Execução Logística"
+        },
+        {
+          "id": "TRD06- Revendas 2026",
+          "descricao": "Rota - Trade"
+        }
+      ],
+      "breakdownFamilias": {
+        "Documentos / Política / Carta": 6,
+        "Estoque / Armazém / Logística": 6,
+        "Rota / Visita de Mercado": 6,
+        "Cobertura de Marca / Comercial": 5,
+        "RH / Pessoas": 6,
+        "BI / Painel / Sistema": 1,
+        "Reunião / Governança / Ata": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "EXECUÇÃO": 6
+      }
+    },
+    {
+      "id": 1,
+      "tamanho": 5,
+      "pontosTotais": 21,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "COM08",
+        "COM09",
+        "DISTRI02- Revendas 2026",
+        "SHE04",
+        "SHE06"
+      ],
+      "descricoes": [
+        {
+          "id": "COM08",
+          "descricao": "Capacitação e desenvolvimento - Vendedor"
+        },
+        {
+          "id": "COM09",
+          "descricao": "Capacitação e desenvolvimento - Promotor"
+        },
+        {
+          "id": "DISTRI02- Revendas 2026",
+          "descricao": "Capacitação e desenvolvimento - Motoristas e ajudantes"
+        },
+        {
+          "id": "SHE04",
+          "descricao": "Comportamento seguro e EPIs"
+        },
+        {
+          "id": "SHE06",
+          "descricao": "Treinamento - Direção defensiva + EPIs"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 5,
+        "Reunião / Governança / Ata": 5,
+        "Documentos / Política / Carta": 3,
+        "BI / Painel / Sistema": 4,
+        "SHE / Segurança": 5,
+        "Rota / Visita de Mercado": 2,
+        "RH / Pessoas": 5,
+        "Trade / Ativos / MPDV": 1,
+        "Frota / Veículos": 3,
+        "Estoque / Armazém / Logística": 2,
+        "Fotos / Identidade Visual": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 3,
+        "COND. BÁSICA": 2
+      }
+    },
+    {
+      "id": 2,
+      "tamanho": 5,
+      "pontosTotais": 50,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "EXECUÇÃO",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "COM18",
+        "COM19",
+        "COM20",
+        "COM21",
+        "COM22- Revendas 2026"
+      ],
+      "descricoes": [
+        {
+          "id": "COM18",
+          "descricao": "Cobertura Total"
+        },
+        {
+          "id": "COM19",
+          "descricao": "Cobertura RGB + CHOPP"
+        },
+        {
+          "id": "COM20",
+          "descricao": "Cobertura Craft"
+        },
+        {
+          "id": "COM21",
+          "descricao": "Cobertura Premium"
+        },
+        {
+          "id": "COM22- Revendas 2026",
+          "descricao": "Cobertura Mainstream"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 5,
+        "BI / Painel / Sistema": 5,
+        "Rota / Visita de Mercado": 5,
+        "Cobertura de Marca / Comercial": 5
+      },
+      "breakdownPiramide": {
+        "EXECUÇÃO": 5
+      }
+    },
+    {
+      "id": 3,
+      "tamanho": 4,
+      "pontosTotais": 12,
+      "microAreaDom": "FROTA",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Fotos / Identidade Visual",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "DISTRI01",
+        "FROT02",
+        "FROT03",
+        "FROT04"
+      ],
+      "descricoes": [
+        {
+          "id": "DISTRI01",
+          "descricao": "Identidade Visual - Uniforme distribuição"
+        },
+        {
+          "id": "FROT02",
+          "descricao": "Identidade Visual - Carros"
+        },
+        {
+          "id": "FROT03",
+          "descricao": "Identidade Visual - Caminhões"
+        },
+        {
+          "id": "FROT04",
+          "descricao": "Identidade Visual - Motos"
+        }
+      ],
+      "breakdownFamilias": {
+        "Fotos / Identidade Visual": 4,
+        "Frota / Veículos": 4,
+        "RH / Pessoas": 4,
+        "Documentos / Política / Carta": 3,
+        "Estoque / Armazém / Logística": 3,
+        "Rota / Visita de Mercado": 3
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 4
+      }
+    },
+    {
+      "id": 4,
+      "tamanho": 3,
+      "pontosTotais": 28,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "BI / Painel / Sistema",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "ADM07",
+        "COM10",
+        "COM30"
+      ],
+      "descricoes": [
+        {
+          "id": "ADM07",
+          "descricao": "Governança dos resultados comerciais - Proprietário e liderança"
+        },
+        {
+          "id": "COM10",
+          "descricao": "RPS estratégico de vendas -  Liderança"
+        },
+        {
+          "id": "COM30",
+          "descricao": "Heishop"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 2,
+        "BI / Painel / Sistema": 3,
+        "Estoque / Armazém / Logística": 2,
+        "Rota / Visita de Mercado": 3,
+        "Cobertura de Marca / Comercial": 3,
+        "RH / Pessoas": 2,
+        "Trade / Ativos / MPDV": 2
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 2,
+        "EXECUÇÃO": 1
+      }
+    },
+    {
+      "id": 5,
+      "tamanho": 2,
+      "pontosTotais": 20,
+      "microAreaDom": "ADMINISTRATIVO",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "ADM06",
+        "ADM09"
+      ],
+      "descricoes": [
+        {
+          "id": "ADM06",
+          "descricao": "Governança de SHE"
+        },
+        {
+          "id": "ADM09",
+          "descricao": "Governança do Programa de Excelência"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "Reunião / Governança / Ata": 2,
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 2,
+        "BI / Painel / Sistema": 1,
+        "SHE / Segurança": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 2
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 2
+      }
+    },
+    {
+      "id": 6,
+      "tamanho": 2,
+      "pontosTotais": 11,
+      "microAreaDom": "FROTA",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Documentos / Política / Carta",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "FROT01",
+        "FROT05"
+      ],
+      "descricoes": [
+        {
+          "id": "FROT01",
+          "descricao": "Cadastro dos veículos e colaboradores"
+        },
+        {
+          "id": "FROT05",
+          "descricao": "Check list de segurança da frota"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 2,
+        "BI / Painel / Sistema": 2,
+        "SHE / Segurança": 2,
+        "Estoque / Armazém / Logística": 2,
+        "Rota / Visita de Mercado": 2,
+        "Frota / Veículos": 2,
+        "RH / Pessoas": 2
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 2
+      }
+    },
+    {
+      "id": 7,
+      "tamanho": 2,
+      "pontosTotais": 4,
+      "microAreaDom": "ARMAZÉM",
+      "piramideDom": "COMPLIANCE",
+      "familiaDom": "Fotos / Identidade Visual",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "ARM01",
+        "ARM07"
+      ],
+      "descricoes": [
+        {
+          "id": "ARM01",
+          "descricao": "Sinalização do armazém"
+        },
+        {
+          "id": "ARM07",
+          "descricao": "Estoque de ativos - Material pesado"
+        }
+      ],
+      "breakdownFamilias": {
+        "Fotos / Identidade Visual": 2,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 2,
+        "SHE / Segurança": 1,
+        "Estoque / Armazém / Logística": 2,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 2,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "COMPLIANCE": 1,
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 8,
+      "tamanho": 2,
+      "pontosTotais": 16,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "EXECUÇÃO",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "COM03",
+        "COM04"
+      ],
+      "descricoes": [
+        {
+          "id": "COM03",
+          "descricao": "Matinal - Supervisor"
+        },
+        {
+          "id": "COM04",
+          "descricao": "Matinal - GV"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 2,
+        "BI / Painel / Sistema": 2,
+        "SHE / Segurança": 2,
+        "Estoque / Armazém / Logística": 2,
+        "Rota / Visita de Mercado": 2,
+        "Cobertura de Marca / Comercial": 2,
+        "RH / Pessoas": 2,
+        "Trade / Ativos / MPDV": 2,
+        "Fotos / Identidade Visual": 1
+      },
+      "breakdownPiramide": {
+        "EXECUÇÃO": 2
+      }
+    },
+    {
+      "id": 9,
+      "tamanho": 2,
+      "pontosTotais": 16,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "EXECUÇÃO",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "COM05",
+        "COM06"
+      ],
+      "descricoes": [
+        {
+          "id": "COM05",
+          "descricao": "Vespertina - Supervisor de vendas"
+        },
+        {
+          "id": "COM06",
+          "descricao": "Vespertina - GV"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 2,
+        "Rota / Visita de Mercado": 2,
+        "RH / Pessoas": 2,
+        "Trade / Ativos / MPDV": 2,
+        "Estoque / Armazém / Logística": 1,
+        "Cobertura de Marca / Comercial": 1
+      },
+      "breakdownPiramide": {
+        "EXECUÇÃO": 2
+      }
+    },
+    {
+      "id": 10,
+      "tamanho": 2,
+      "pontosTotais": 18,
+      "microAreaDom": "ADMINISTRATIVO",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "BI / Painel / Sistema",
+      "periodicidadeDom": "NÃO INFORMADO",
+      "indicadores": [
+        "ADM08",
+        "DISTRI03- Revendas 2026"
+      ],
+      "descricoes": [
+        {
+          "id": "ADM08",
+          "descricao": "Governança dos resultados logísticos - Proprietário e liderança"
+        },
+        {
+          "id": "DISTRI03- Revendas 2026",
+          "descricao": "Gestão dos Indicadores logísticos"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "BI / Painel / Sistema": 2,
+        "Estoque / Armazém / Logística": 2,
+        "Rota / Visita de Mercado": 2,
+        "Frota / Veículos": 2,
+        "RH / Pessoas": 2,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 2
+      }
+    },
+    {
+      "id": 11,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "TRADE",
+      "piramideDom": "EXECUÇÃO",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "TRD04"
+      ],
+      "descricoes": [
+        {
+          "id": "TRD04",
+          "descricao": "Execução de FDS e Ações de Trade Marketing"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "EXECUÇÃO": 1
+      }
+    },
+    {
+      "id": 12,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "TRADE",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Documentos / Política / Carta",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "TRD07- Revendas 2026"
+      ],
+      "descricoes": [
+        {
+          "id": "TRD07- Revendas 2026",
+          "descricao": "Promotores"
+        }
+      ],
+      "breakdownFamilias": {
+        "Documentos / Política / Carta": 1,
+        "Rota / Visita de Mercado": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 13,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "SHE",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Fotos / Identidade Visual",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "SHE08"
+      ],
+      "descricoes": [
+        {
+          "id": "SHE08",
+          "descricao": "Sistema de ancoragem"
+        }
+      ],
+      "breakdownFamilias": {
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "SHE / Segurança": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 14,
+      "tamanho": 1,
+      "pontosTotais": 1,
+      "microAreaDom": "SHE",
+      "piramideDom": "COMPLIANCE",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "SHE02"
+      ],
+      "descricoes": [
+        {
+          "id": "SHE02",
+          "descricao": "Gestão dos EPIs"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "SHE / Segurança": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COMPLIANCE": 1
+      }
+    },
+    {
+      "id": 15,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "SISTEMA OPERACIONAL",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "STO02"
+      ],
+      "descricoes": [
+        {
+          "id": "STO02",
+          "descricao": "Televendas"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 16,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "RH",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "RH06"
+      ],
+      "descricoes": [
+        {
+          "id": "RH06",
+          "descricao": "Promover a diversidade"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "BI / Painel / Sistema": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 17,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "SHE",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "SHE / Segurança",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "SHE09"
+      ],
+      "descricoes": [
+        {
+          "id": "SHE09",
+          "descricao": "Inspeção de SHE"
+        }
+      ],
+      "breakdownFamilias": {
+        "SHE / Segurança": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 18,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "RH",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "RH01"
+      ],
+      "descricoes": [
+        {
+          "id": "RH01",
+          "descricao": "Cadastro dos funcionários"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 19,
+      "tamanho": 1,
+      "pontosTotais": 1,
+      "microAreaDom": "SHE",
+      "piramideDom": "COMPLIANCE",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "SHE05"
+      ],
+      "descricoes": [
+        {
+          "id": "SHE05",
+          "descricao": "Certificados dos treinamentos de atividades de risco"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "SHE / Segurança": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COMPLIANCE": 1
+      }
+    },
+    {
+      "id": 20,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "TRADE",
+      "piramideDom": "EXECUÇÃO",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "TRD03"
+      ],
+      "descricoes": [
+        {
+          "id": "TRD03",
+          "descricao": "Gestão de ativos comerciais"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "BI / Painel / Sistema": 1,
+        "Rota / Visita de Mercado": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "EXECUÇÃO": 1
+      }
+    },
+    {
+      "id": 21,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "SHE",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Fotos / Identidade Visual",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "SHE03"
+      ],
+      "descricoes": [
+        {
+          "id": "SHE03",
+          "descricao": "Sinalização dos EPIs"
+        }
+      ],
+      "breakdownFamilias": {
+        "Fotos / Identidade Visual": 1,
+        "SHE / Segurança": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 22,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "DISTRIBUIÇÃO",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Fotos / Identidade Visual",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "DISTRI05- Revendas 2026"
+      ],
+      "descricoes": [
+        {
+          "id": "DISTRI05- Revendas 2026",
+          "descricao": "Modelo de transporte assegura a qualidade dos produtos?"
+        }
+      ],
+      "breakdownFamilias": {
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 23,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "TRADE",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Documentos / Política / Carta",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "TRD02- Revendas 2026"
+      ],
+      "descricoes": [
+        {
+          "id": "TRD02- Revendas 2026",
+          "descricao": "ABP - BTL e CAPEX"
+        }
+      ],
+      "breakdownFamilias": {
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 24,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "SHE",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "SHE01"
+      ],
+      "descricoes": [
+        {
+          "id": "SHE01",
+          "descricao": "Pirâmide de SHE"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "SHE / Segurança": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 25,
+      "tamanho": 1,
+      "pontosTotais": 8,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "BI / Painel / Sistema",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "COM23"
+      ],
+      "descricoes": [
+        {
+          "id": "COM23",
+          "descricao": "Mapa térmico"
+        }
+      ],
+      "breakdownFamilias": {
+        "BI / Painel / Sistema": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 26,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "RH",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "BI / Painel / Sistema",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "RH03"
+      ],
+      "descricoes": [
+        {
+          "id": "RH03",
+          "descricao": "Remuneração Variável"
+        }
+      ],
+      "breakdownFamilias": {
+        "BI / Painel / Sistema": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 27,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "TRADE",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Fotos / Identidade Visual",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "TRD05- Revendas 2026"
+      ],
+      "descricoes": [
+        {
+          "id": "TRD05- Revendas 2026",
+          "descricao": "Visibilidade e ativação"
+        }
+      ],
+      "breakdownFamilias": {
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 28,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "TRADE",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Documentos / Política / Carta",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "TRD01"
+      ],
+      "descricoes": [
+        {
+          "id": "TRD01",
+          "descricao": "Estrutura funcional Trade Execução"
+        }
+      ],
+      "breakdownFamilias": {
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 29,
+      "tamanho": 1,
+      "pontosTotais": 8,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "COM12"
+      ],
+      "descricoes": [
+        {
+          "id": "COM12",
+          "descricao": "Planejamento estratégico (Base COMPASS)"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 30,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "SHE",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "ANUAL",
+      "indicadores": [
+        "SHE07"
+      ],
+      "descricoes": [
+        {
+          "id": "SHE07",
+          "descricao": "Semana de segurança"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "SHE / Segurança": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 31,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "RH",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "RH08"
+      ],
+      "descricoes": [
+        {
+          "id": "RH08",
+          "descricao": "Prevenção de Multas"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 32,
+      "tamanho": 1,
+      "pontosTotais": 8,
+      "microAreaDom": "SISTEMA OPERACIONAL",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "STO01"
+      ],
+      "descricoes": [
+        {
+          "id": "STO01",
+          "descricao": "Ferramentas gerenciais"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 33,
+      "tamanho": 1,
+      "pontosTotais": 8,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "BI / Painel / Sistema",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "COM15"
+      ],
+      "descricoes": [
+        {
+          "id": "COM15",
+          "descricao": "Tabela de preço"
+        }
+      ],
+      "breakdownFamilias": {
+        "BI / Painel / Sistema": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 34,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "ANUAL",
+      "indicadores": [
+        "COM17"
+      ],
+      "descricoes": [
+        {
+          "id": "COM17",
+          "descricao": "Nível de serviço (Planner)"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 35,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "COM13"
+      ],
+      "descricoes": [
+        {
+          "id": "COM13",
+          "descricao": "Boas práticas"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 36,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "ARMAZÉM",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Fotos / Identidade Visual",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "ARM06"
+      ],
+      "descricoes": [
+        {
+          "id": "ARM06",
+          "descricao": "Instalações prediais - Salas"
+        }
+      ],
+      "breakdownFamilias": {
+        "Fotos / Identidade Visual": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 37,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "COMODATO",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "CMDT02"
+      ],
+      "descricoes": [
+        {
+          "id": "CMDT02",
+          "descricao": "Assepsia - Chopeiras"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 38,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "COMODATO",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "CMDT03"
+      ],
+      "descricoes": [
+        {
+          "id": "CMDT03",
+          "descricao": "Parque de vasilhames"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Cobertura de Marca / Comercial": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 39,
+      "tamanho": 1,
+      "pontosTotais": 1,
+      "microAreaDom": "ARMAZÉM",
+      "piramideDom": "COMPLIANCE",
+      "familiaDom": "Fotos / Identidade Visual",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "ARM02"
+      ],
+      "descricoes": [
+        {
+          "id": "ARM02",
+          "descricao": "Banheiros, vestiários e armários"
+        }
+      ],
+      "breakdownFamilias": {
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COMPLIANCE": 1
+      }
+    },
+    {
+      "id": 40,
+      "tamanho": 1,
+      "pontosTotais": 8,
+      "microAreaDom": "RH",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "Documentos / Política / Carta",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "RH04"
+      ],
+      "descricoes": [
+        {
+          "id": "RH04",
+          "descricao": "Plano de Carreira e retenção de talentos"
+        }
+      ],
+      "breakdownFamilias": {
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 41,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "ARMAZÉM",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Fotos / Identidade Visual",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "ARM05"
+      ],
+      "descricoes": [
+        {
+          "id": "ARM05",
+          "descricao": "Organização e ordenação do estoque"
+        }
+      ],
+      "breakdownFamilias": {
+        "Fotos / Identidade Visual": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 42,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "Documentos / Política / Carta",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "COM07"
+      ],
+      "descricoes": [
+        {
+          "id": "COM07",
+          "descricao": "Plano Market Share"
+        }
+      ],
+      "breakdownFamilias": {
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 43,
+      "tamanho": 1,
+      "pontosTotais": 1,
+      "microAreaDom": "ARMAZÉM",
+      "piramideDom": "COMPLIANCE",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "ARM04"
+      ],
+      "descricoes": [
+        {
+          "id": "ARM04",
+          "descricao": "Controle de pragas"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1,
+        "Estoque / Armazém / Logística": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COMPLIANCE": 1
+      }
+    },
+    {
+      "id": 44,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "COM14"
+      ],
+      "descricoes": [
+        {
+          "id": "COM14",
+          "descricao": "Dados cadastrais - Base PDVs"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Rota / Visita de Mercado": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 45,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "ARMAZÉM",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "ARM08"
+      ],
+      "descricoes": [
+        {
+          "id": "ARM08",
+          "descricao": "FEFO (First Expire, First Out)"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Cobertura de Marca / Comercial": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 46,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "COM28"
+      ],
+      "descricoes": [
+        {
+          "id": "COM28",
+          "descricao": "Fora de rota"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 47,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "ADMINISTRATIVO",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "ADM11"
+      ],
+      "descricoes": [
+        {
+          "id": "ADM11",
+          "descricao": "Autoavaliação"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "BI / Painel / Sistema": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 48,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "ADMINISTRATIVO",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "ADM10"
+      ],
+      "descricoes": [
+        {
+          "id": "ADM10",
+          "descricao": "Limite de crédito (scoring) aos clientes"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 49,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "RH",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "RH07"
+      ],
+      "descricoes": [
+        {
+          "id": "RH07",
+          "descricao": "Sustentabilidade"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Rota / Visita de Mercado": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 50,
+      "tamanho": 1,
+      "pontosTotais": 8,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "BI / Painel / Sistema",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "COM16"
+      ],
+      "descricoes": [
+        {
+          "id": "COM16",
+          "descricao": "Ação de mercado"
+        }
+      ],
+      "breakdownFamilias": {
+        "BI / Painel / Sistema": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 51,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "COM02"
+      ],
+      "descricoes": [
+        {
+          "id": "COM02",
+          "descricao": "Identidade Visual - Comercial"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1,
+        "SHE / Segurança": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 52,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "COMODATO",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "CMDT01"
+      ],
+      "descricoes": [
+        {
+          "id": "CMDT01",
+          "descricao": "Manutenção dos equipamentos"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 53,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "ARMAZÉM",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Fotos / Identidade Visual",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "ARM10"
+      ],
+      "descricoes": [
+        {
+          "id": "ARM10",
+          "descricao": "Manutenção do sistema de combate a incêndio"
+        }
+      ],
+      "breakdownFamilias": {
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "SHE / Segurança": 1,
+        "Estoque / Armazém / Logística": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 54,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "COM31"
+      ],
+      "descricoes": [
+        {
+          "id": "COM31",
+          "descricao": "Gestão de relacionamento com o cliente (CRM)"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 55,
+      "tamanho": 1,
+      "pontosTotais": 1,
+      "microAreaDom": "ADMINISTRATIVO",
+      "piramideDom": "COMPLIANCE",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "ADM01"
+      ],
+      "descricoes": [
+        {
+          "id": "ADM01",
+          "descricao": "Dados Cadastrais e documentos normativos."
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Frota / Veículos": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "COMPLIANCE": 1
+      }
+    },
+    {
+      "id": 56,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "ANUAL",
+      "indicadores": [
+        "COM29"
+      ],
+      "descricoes": [
+        {
+          "id": "COM29",
+          "descricao": "Pesquisa censitária"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "Rota / Visita de Mercado": 1,
+        "Cobertura de Marca / Comercial": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 57,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "DISTRIBUIÇÃO",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Estoque / Armazém / Logística",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "DISTRI04- Revendas 2026"
+      ],
+      "descricoes": [
+        {
+          "id": "DISTRI04- Revendas 2026",
+          "descricao": "Nível de serviço ao cliente - Devolução"
+        }
+      ],
+      "breakdownFamilias": {
+        "Estoque / Armazém / Logística": 1,
+        "Frota / Veículos": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 58,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "RH",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "RH02"
+      ],
+      "descricoes": [
+        {
+          "id": "RH02",
+          "descricao": "Integração funcional vendas - Academia Heineken"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "Reunião / Governança / Ata": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 59,
+      "tamanho": 1,
+      "pontosTotais": 5,
+      "microAreaDom": "ARMAZÉM",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "BI / Painel / Sistema",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "ARM09"
+      ],
+      "descricoes": [
+        {
+          "id": "ARM09",
+          "descricao": "Inventário"
+        }
+      ],
+      "breakdownFamilias": {
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 60,
+      "tamanho": 1,
+      "pontosTotais": 8,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "MENSAL",
+      "indicadores": [
+        "COM11"
+      ],
+      "descricoes": [
+        {
+          "id": "COM11",
+          "descricao": "RPS execução - Supervisor e Promotor"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 61,
+      "tamanho": 1,
+      "pontosTotais": 10,
+      "microAreaDom": "ADMINISTRATIVO",
+      "piramideDom": "ESTRATÉGIA",
+      "familiaDom": "Estoque / Armazém / Logística",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "ADM04"
+      ],
+      "descricoes": [
+        {
+          "id": "ADM04",
+          "descricao": "Estoque mínimo dos produtos"
+        }
+      ],
+      "breakdownFamilias": {
+        "Estoque / Armazém / Logística": 1,
+        "Cobertura de Marca / Comercial": 1
+      },
+      "breakdownPiramide": {
+        "ESTRATÉGIA": 1
+      }
+    },
+    {
+      "id": 62,
+      "tamanho": 1,
+      "pontosTotais": 8,
+      "microAreaDom": "COMERCIAL",
+      "piramideDom": "EFICIÊNCIA",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "TRIMESTRAL",
+      "indicadores": [
+        "COM01"
+      ],
+      "descricoes": [
+        {
+          "id": "COM01",
+          "descricao": "Estrutura comercial"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "Rota / Visita de Mercado": 1,
+        "RH / Pessoas": 1,
+        "Trade / Ativos / MPDV": 1
+      },
+      "breakdownPiramide": {
+        "EFICIÊNCIA": 1
+      }
+    },
+    {
+      "id": 63,
+      "tamanho": 1,
+      "pontosTotais": 1,
+      "microAreaDom": "ADMINISTRATIVO",
+      "piramideDom": "COMPLIANCE",
+      "familiaDom": "Documentos / Política / Carta",
+      "periodicidadeDom": "ANUAL",
+      "indicadores": [
+        "ADM02"
+      ],
+      "descricoes": [
+        {
+          "id": "ADM02",
+          "descricao": "Notificação extrajudicial da HNK"
+        }
+      ],
+      "breakdownFamilias": {
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1
+      },
+      "breakdownPiramide": {
+        "COMPLIANCE": 1
+      }
+    },
+    {
+      "id": 64,
+      "tamanho": 1,
+      "pontosTotais": 1,
+      "microAreaDom": "ADMINISTRATIVO",
+      "piramideDom": "COMPLIANCE",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "ANUAL",
+      "indicadores": [
+        "ADM03"
+      ],
+      "descricoes": [
+        {
+          "id": "ADM03",
+          "descricao": "Combate ao assédio e outras formas de violência (Lei 14.457/22)"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "Reunião / Governança / Ata": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "SHE / Segurança": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COMPLIANCE": 1
+      }
+    },
+    {
+      "id": 65,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "RH",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Lista de Presença / Treinamento",
+      "periodicidadeDom": "ANUAL",
+      "indicadores": [
+        "RH05"
+      ],
+      "descricoes": [
+        {
+          "id": "RH05",
+          "descricao": "Gestão de Clima"
+        }
+      ],
+      "breakdownFamilias": {
+        "Lista de Presença / Treinamento": 1,
+        "Reunião / Governança / Ata": 1,
+        "BI / Painel / Sistema": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 66,
+      "tamanho": 1,
+      "pontosTotais": 3,
+      "microAreaDom": "ADMINISTRATIVO",
+      "piramideDom": "COND. BÁSICA",
+      "familiaDom": "Fotos / Identidade Visual",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "ADM05"
+      ],
+      "descricoes": [
+        {
+          "id": "ADM05",
+          "descricao": "Identidade Visual - Fachada e áreas perimetrais da revenda"
+        }
+      ],
+      "breakdownFamilias": {
+        "Fotos / Identidade Visual": 1,
+        "Frota / Veículos": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COND. BÁSICA": 1
+      }
+    },
+    {
+      "id": 67,
+      "tamanho": 1,
+      "pontosTotais": 1,
+      "microAreaDom": "ARMAZÉM",
+      "piramideDom": "COMPLIANCE",
+      "familiaDom": "Reunião / Governança / Ata",
+      "periodicidadeDom": "SEMESTRAL",
+      "indicadores": [
+        "ARM03"
+      ],
+      "descricoes": [
+        {
+          "id": "ARM03",
+          "descricao": "Produtos impróprios"
+        }
+      ],
+      "breakdownFamilias": {
+        "Reunião / Governança / Ata": 1,
+        "Fotos / Identidade Visual": 1,
+        "Documentos / Política / Carta": 1,
+        "BI / Painel / Sistema": 1,
+        "Estoque / Armazém / Logística": 1,
+        "RH / Pessoas": 1
+      },
+      "breakdownPiramide": {
+        "COMPLIANCE": 1
+      }
+    }
+  ],
+  "ondasColeta": [
+    {
+      "periodicidade": "MENSAL",
+      "familia": "Rota / Visita de Mercado",
+      "indicadores": [
+        "ADM06",
+        "ADM07",
+        "CMDT01",
+        "CMDT02",
+        "COM03",
+        "COM04",
+        "COM05",
+        "COM06",
+        "COM08",
+        "COM10",
+        "COM11",
+        "COM12",
+        "COM14",
+        "COM15",
+        "COM16",
+        "COM18",
+        "COM19",
+        "COM20",
+        "COM21",
+        "COM22- Revendas 2026",
+        "COM23",
+        "COM24",
+        "COM25",
+        "COM26",
+        "COM27",
+        "COM31",
+        "DISTRI02- Revendas 2026",
+        "DISTRI03- Revendas 2026",
+        "DISTRI06- Revendas 2026",
+        "FROT02",
+        "FROT05",
+        "RH02",
+        "RH03",
+        "SHE09",
+        "STO02",
+        "TRD03",
+        "TRD04",
+        "TRD05- Revendas 2026",
+        "TRD06- Revendas 2026"
+      ],
+      "qtd": 39
+    },
+    {
+      "periodicidade": "MENSAL",
+      "familia": "BI / Painel / Sistema",
+      "indicadores": [
+        "ADM06",
+        "ADM07",
+        "ADM11",
+        "ARM08",
+        "ARM09",
+        "CMDT01",
+        "CMDT02",
+        "COM03",
+        "COM04",
+        "COM08",
+        "COM09",
+        "COM10",
+        "COM11",
+        "COM12",
+        "COM14",
+        "COM15",
+        "COM16",
+        "COM18",
+        "COM19",
+        "COM20",
+        "COM21",
+        "COM22- Revendas 2026",
+        "COM23",
+        "COM27",
+        "COM31",
+        "DISTRI02- Revendas 2026",
+        "DISTRI03- Revendas 2026",
+        "FROT05",
+        "RH01",
+        "RH02",
+        "RH03",
+        "STO02",
+        "TRD03",
+        "TRD04",
+        "TRD05- Revendas 2026"
+      ],
+      "qtd": 35
+    },
+    {
+      "periodicidade": "MENSAL",
+      "familia": "RH / Pessoas",
+      "indicadores": [
+        "ADM06",
+        "ADM07",
+        "ADM09",
+        "CMDT01",
+        "CMDT02",
+        "COM03",
+        "COM04",
+        "COM05",
+        "COM06",
+        "COM08",
+        "COM09",
+        "COM10",
+        "COM11",
+        "COM15",
+        "COM24",
+        "COM25",
+        "COM26",
+        "COM27",
+        "COM31",
+        "DISTRI02- Revendas 2026",
+        "DISTRI03- Revendas 2026",
+        "DISTRI06- Revendas 2026",
+        "FROT02",
+        "FROT05",
+        "RH01",
+        "RH02",
+        "RH03",
+        "SHE09",
+        "STO02",
+        "TRD03",
+        "TRD04",
+        "TRD06- Revendas 2026"
+      ],
+      "qtd": 32
+    },
+    {
+      "periodicidade": "MENSAL",
+      "familia": "Reunião / Governança / Ata",
+      "indicadores": [
+        "ADM06",
+        "ADM07",
+        "ADM09",
+        "ADM11",
+        "ARM08",
+        "CMDT01",
+        "CMDT02",
+        "COM03",
+        "COM04",
+        "COM05",
+        "COM06",
+        "COM08",
+        "COM09",
+        "COM10",
+        "COM11",
+        "COM12",
+        "COM14",
+        "COM18",
+        "COM19",
+        "COM20",
+        "COM21",
+        "COM22- Revendas 2026",
+        "COM31",
+        "DISTRI02- Revendas 2026",
+        "RH01",
+        "RH02",
+        "TRD03",
+        "TRD04",
+        "TRD06- Revendas 2026"
+      ],
+      "qtd": 29
+    },
+    {
+      "periodicidade": "MENSAL",
+      "familia": "Estoque / Armazém / Logística",
+      "indicadores": [
+        "ADM06",
+        "ADM07",
+        "ARM08",
+        "ARM09",
+        "CMDT01",
+        "COM03",
+        "COM04",
+        "COM06",
+        "COM10",
+        "COM11",
+        "COM24",
+        "COM25",
+        "COM26",
+        "COM27",
+        "COM31",
+        "DISTRI02- Revendas 2026",
+        "DISTRI03- Revendas 2026",
+        "DISTRI06- Revendas 2026",
+        "FROT02",
+        "FROT05",
+        "RH02",
+        "SHE09",
+        "STO02",
+        "TRD04",
+        "TRD05- Revendas 2026",
+        "TRD06- Revendas 2026"
+      ],
+      "qtd": 26
+    },
+    {
+      "periodicidade": "MENSAL",
+      "familia": "Cobertura de Marca / Comercial",
+      "indicadores": [
+        "ADM07",
+        "ARM08",
+        "CMDT02",
+        "COM03",
+        "COM04",
+        "COM06",
+        "COM10",
+        "COM12",
+        "COM15",
+        "COM16",
+        "COM18",
+        "COM19",
+        "COM20",
+        "COM21",
+        "COM22- Revendas 2026",
+        "COM23",
+        "COM24",
+        "COM25",
+        "COM26",
+        "COM27",
+        "COM31",
+        "RH03",
+        "STO02",
+        "TRD04",
+        "TRD06- Revendas 2026"
+      ],
+      "qtd": 25
+    },
+    {
+      "periodicidade": "MENSAL",
+      "familia": "Documentos / Política / Carta",
+      "indicadores": [
+        "ADM06",
+        "ADM09",
+        "CMDT01",
+        "CMDT02",
+        "COM08",
+        "COM09",
+        "COM12",
+        "COM14",
+        "COM24",
+        "COM25",
+        "COM26",
+        "COM27",
+        "COM31",
+        "DISTRI02- Revendas 2026",
+        "DISTRI06- Revendas 2026",
+        "FROT02",
+        "FROT05",
+        "RH01",
+        "STO02",
+        "TRD04",
+        "TRD05- Revendas 2026",
+        "TRD06- Revendas 2026"
+      ],
+      "qtd": 22
+    },
+    {
+      "periodicidade": "MENSAL",
+      "familia": "Trade / Ativos / MPDV",
+      "indicadores": [
+        "ADM07",
+        "ADM11",
+        "CMDT01",
+        "CMDT02",
+        "COM03",
+        "COM04",
+        "COM05",
+        "COM06",
+        "COM08",
+        "COM10",
+        "COM11",
+        "COM14",
+        "COM31",
+        "DISTRI03- Revendas 2026",
+        "RH02",
+        "STO02",
+        "TRD03",
+        "TRD04",
+        "TRD05- Revendas 2026",
+        "TRD06- Revendas 2026"
+      ],
+      "qtd": 20
+    },
+    {
+      "periodicidade": "SEMESTRAL",
+      "familia": "RH / Pessoas",
+      "indicadores": [
+        "ADM05",
+        "ARM01",
+        "ARM02",
+        "ARM03",
+        "ARM04",
+        "ARM06",
+        "ARM07",
+        "ARM10",
+        "CMDT03",
+        "COM02",
+        "DISTRI01",
+        "DISTRI05- Revendas 2026",
+        "FROT03",
+        "FROT04",
+        "RH07",
+        "SHE02",
+        "SHE03",
+        "SHE05",
+        "SHE08"
+      ],
+      "qtd": 19
+    },
+    {
+      "periodicidade": "SEMESTRAL",
+      "familia": "Fotos / Identidade Visual",
+      "indicadores": [
+        "ADM05",
+        "ARM01",
+        "ARM02",
+        "ARM03",
+        "ARM04",
+        "ARM06",
+        "ARM07",
+        "ARM10",
+        "COM02",
+        "DISTRI01",
+        "DISTRI05- Revendas 2026",
+        "FROT03",
+        "FROT04",
+        "RH07",
+        "SHE03",
+        "SHE08"
+      ],
+      "qtd": 16
+    },
+    {
+      "periodicidade": "SEMESTRAL",
+      "familia": "Documentos / Política / Carta",
+      "indicadores": [
+        "ADM01",
+        "ARM01",
+        "ARM02",
+        "ARM03",
+        "ARM04",
+        "ARM10",
+        "CMDT03",
+        "COM02",
+        "DISTRI05- Revendas 2026",
+        "FROT03",
+        "FROT04",
+        "RH07",
+        "SHE02",
+        "SHE08"
+      ],
+      "qtd": 14
+    },
+    {
+      "periodicidade": "SEMESTRAL",
+      "familia": "Frota / Veículos",
+      "indicadores": [
+        "ADM01",
+        "ADM05",
+        "ARM01",
+        "ARM02",
+        "ARM06",
+        "COM02",
+        "DISTRI01",
+        "DISTRI05- Revendas 2026",
+        "FROT03",
+        "FROT04",
+        "RH07",
+        "SHE02",
+        "SHE03",
+        "SHE08"
+      ],
+      "qtd": 14
+    },
+    {
+      "periodicidade": "SEMESTRAL",
+      "familia": "Estoque / Armazém / Logística",
+      "indicadores": [
+        "ARM01",
+        "ARM02",
+        "ARM03",
+        "ARM04",
+        "ARM06",
+        "ARM07",
+        "ARM10",
+        "CMDT03",
+        "COM02",
+        "DISTRI05- Revendas 2026",
+        "FROT03",
+        "FROT04",
+        "SHE02"
+      ],
+      "qtd": 13
+    },
+    {
+      "periodicidade": "TRIMESTRAL",
+      "familia": "BI / Painel / Sistema",
+      "indicadores": [
+        "ADM10",
+        "ARM05",
+        "COM01",
+        "COM07",
+        "COM28",
+        "FROT01",
+        "RH04",
+        "RH06",
+        "SHE01",
+        "SHE04",
+        "STO01",
+        "TRD01",
+        "TRD02- Revendas 2026"
+      ],
+      "qtd": 13
+    },
+    {
+      "periodicidade": "TRIMESTRAL",
+      "familia": "RH / Pessoas",
+      "indicadores": [
+        "ARM05",
+        "COM01",
+        "COM07",
+        "FROT01",
+        "RH04",
+        "RH06",
+        "RH08",
+        "SHE01",
+        "SHE04",
+        "SHE06",
+        "STO01",
+        "TRD01",
+        "TRD07- Revendas 2026"
+      ],
+      "qtd": 13
+    },
+    {
+      "periodicidade": "TRIMESTRAL",
+      "familia": "Documentos / Política / Carta",
+      "indicadores": [
+        "ADM10",
+        "COM01",
+        "COM07",
+        "COM13",
+        "COM28",
+        "FROT01",
+        "RH04",
+        "RH08",
+        "SHE01",
+        "TRD01",
+        "TRD02- Revendas 2026",
+        "TRD07- Revendas 2026"
+      ],
+      "qtd": 12
+    },
+    {
+      "periodicidade": "SEMESTRAL",
+      "familia": "BI / Painel / Sistema",
+      "indicadores": [
+        "ADM01",
+        "ARM01",
+        "ARM02",
+        "ARM03",
+        "ARM07",
+        "ARM10",
+        "CMDT03",
+        "RH07",
+        "SHE02",
+        "SHE08"
+      ],
+      "qtd": 10
+    },
+    {
+      "periodicidade": "TRIMESTRAL",
+      "familia": "Estoque / Armazém / Logística",
+      "indicadores": [
+        "ADM04",
+        "ADM10",
+        "ARM05",
+        "COM01",
+        "COM28",
+        "DISTRI04- Revendas 2026",
+        "FROT01",
+        "SHE04",
+        "STO01"
+      ],
+      "qtd": 9
+    },
+    {
+      "periodicidade": "TRIMESTRAL",
+      "familia": "Reunião / Governança / Ata",
+      "indicadores": [
+        "ADM10",
+        "COM01",
+        "COM13",
+        "COM28",
+        "FROT01",
+        "RH08",
+        "SHE04",
+        "SHE06",
+        "STO01"
+      ],
+      "qtd": 9
+    },
+    {
+      "periodicidade": "MENSAL",
+      "familia": "Frota / Veículos",
+      "indicadores": [
+        "ADM06",
+        "COM09",
+        "COM11",
+        "DISTRI02- Revendas 2026",
+        "DISTRI03- Revendas 2026",
+        "FROT02",
+        "FROT05",
+        "RH02"
+      ],
+      "qtd": 8
+    },
+    {
+      "periodicidade": "MENSAL",
+      "familia": "SHE / Segurança",
+      "indicadores": [
+        "ADM06",
+        "COM03",
+        "COM04",
+        "COM08",
+        "COM09",
+        "DISTRI02- Revendas 2026",
+        "FROT05",
+        "SHE09"
+      ],
+      "qtd": 8
+    },
+    {
+      "periodicidade": "MENSAL",
+      "familia": "Lista de Presença / Treinamento",
+      "indicadores": [
+        "ADM06",
+        "COM08",
+        "COM09",
+        "DISTRI02- Revendas 2026",
+        "RH02",
+        "STO02",
+        "TRD04"
+      ],
+      "qtd": 7
+    },
+    {
+      "periodicidade": "SEMESTRAL",
+      "familia": "SHE / Segurança",
+      "indicadores": [
+        "ARM01",
+        "ARM10",
+        "COM02",
+        "SHE02",
+        "SHE03",
+        "SHE05",
+        "SHE08"
+      ],
+      "qtd": 7
+    },
+    {
+      "periodicidade": "TRIMESTRAL",
+      "familia": "Rota / Visita de Mercado",
+      "indicadores": [
+        "ADM10",
+        "COM01",
+        "COM07",
+        "COM28",
+        "FROT01",
+        "STO01",
+        "TRD07- Revendas 2026"
+      ],
+      "qtd": 7
+    },
+    {
+      "periodicidade": "TRIMESTRAL",
+      "familia": "Trade / Ativos / MPDV",
+      "indicadores": [
+        "ADM10",
+        "COM01",
+        "COM07",
+        "RH04",
+        "TRD01",
+        "TRD02- Revendas 2026",
+        "TRD07- Revendas 2026"
+      ],
+      "qtd": 7
+    },
+    {
+      "periodicidade": "MENSAL",
+      "familia": "Fotos / Identidade Visual",
+      "indicadores": [
+        "ADM06",
+        "CMDT01",
+        "COM04",
+        "FROT02",
+        "STO02",
+        "TRD05- Revendas 2026"
+      ],
+      "qtd": 6
+    },
+    {
+      "periodicidade": "SEMESTRAL",
+      "familia": "Reunião / Governança / Ata",
+      "indicadores": [
+        "ADM01",
+        "ARM03",
+        "ARM04",
+        "CMDT03",
+        "RH07",
+        "SHE02"
+      ],
+      "qtd": 6
+    },
+    {
+      "periodicidade": "SEMESTRAL",
+      "familia": "Rota / Visita de Mercado",
+      "indicadores": [
+        "ARM06",
+        "COM02",
+        "DISTRI05- Revendas 2026",
+        "FROT03",
+        "FROT04",
+        "RH07"
+      ],
+      "qtd": 6
+    },
+    {
+      "periodicidade": "TRIMESTRAL",
+      "familia": "Frota / Veículos",
+      "indicadores": [
+        "DISTRI04- Revendas 2026",
+        "FROT01",
+        "RH04",
+        "RH08",
+        "SHE06",
+        "TRD07- Revendas 2026"
+      ],
+      "qtd": 6
+    },
+    {
+      "periodicidade": "ANUAL",
+      "familia": "BI / Painel / Sistema",
+      "indicadores": [
+        "ADM02",
+        "ADM03",
+        "COM17",
+        "RH05",
+        "SHE07"
+      ],
+      "qtd": 5
+    },
+    {
+      "periodicidade": "ANUAL",
+      "familia": "RH / Pessoas",
+      "indicadores": [
+        "ADM03",
+        "COM17",
+        "COM29",
+        "RH05",
+        "SHE07"
+      ],
+      "qtd": 5
+    },
+    {
+      "periodicidade": "TRIMESTRAL",
+      "familia": "Lista de Presença / Treinamento",
+      "indicadores": [
+        "ADM10",
+        "RH06",
+        "SHE01",
+        "SHE04",
+        "SHE06"
+      ],
+      "qtd": 5
+    },
+    {
+      "periodicidade": "ANUAL",
+      "familia": "Documentos / Política / Carta",
+      "indicadores": [
+        "ADM02",
+        "ADM03",
+        "COM29",
+        "SHE07"
+      ],
+      "qtd": 4
+    },
+    {
+      "periodicidade": "ANUAL",
+      "familia": "Lista de Presença / Treinamento",
+      "indicadores": [
+        "ADM03",
+        "COM29",
+        "RH05",
+        "SHE07"
+      ],
+      "qtd": 4
+    },
+    {
+      "periodicidade": "ANUAL",
+      "familia": "Reunião / Governança / Ata",
+      "indicadores": [
+        "ADM03",
+        "COM17",
+        "COM29",
+        "RH05"
+      ],
+      "qtd": 4
+    },
+    {
+      "periodicidade": "TRIMESTRAL",
+      "familia": "Fotos / Identidade Visual",
+      "indicadores": [
+        "ARM05",
+        "COM13",
+        "FROT01",
+        "SHE06"
+      ],
+      "qtd": 4
+    },
+    {
+      "periodicidade": "TRIMESTRAL",
+      "familia": "SHE / Segurança",
+      "indicadores": [
+        "FROT01",
+        "SHE01",
+        "SHE04",
+        "SHE06"
+      ],
+      "qtd": 4
+    },
+    {
+      "periodicidade": "SEMESTRAL",
+      "familia": "Trade / Ativos / MPDV",
+      "indicadores": [
+        "ADM01",
+        "ARM07",
+        "CMDT03"
+      ],
+      "qtd": 3
+    },
+    {
+      "periodicidade": "TRIMESTRAL",
+      "familia": "Cobertura de Marca / Comercial",
+      "indicadores": [
+        "ADM04",
+        "COM07",
+        "COM28"
+      ],
+      "qtd": 3
+    },
+    {
+      "periodicidade": "ANUAL",
+      "familia": "Cobertura de Marca / Comercial",
+      "indicadores": [
+        "COM17",
+        "COM29"
+      ],
+      "qtd": 2
+    },
+    {
+      "periodicidade": "ANUAL",
+      "familia": "Rota / Visita de Mercado",
+      "indicadores": [
+        "COM17",
+        "COM29"
+      ],
+      "qtd": 2
+    },
+    {
+      "periodicidade": "ANUAL",
+      "familia": "SHE / Segurança",
+      "indicadores": [
+        "ADM03",
+        "SHE07"
+      ],
+      "qtd": 2
+    },
+    {
+      "periodicidade": "NÃO INFORMADO",
+      "familia": "BI / Painel / Sistema",
+      "indicadores": [
+        "ADM08",
+        "COM30"
+      ],
+      "qtd": 2
+    },
+    {
+      "periodicidade": "NÃO INFORMADO",
+      "familia": "Rota / Visita de Mercado",
+      "indicadores": [
+        "ADM08",
+        "COM30"
+      ],
+      "qtd": 2
+    },
+    {
+      "periodicidade": "SEMESTRAL",
+      "familia": "Lista de Presença / Treinamento",
+      "indicadores": [
+        "COM02",
+        "SHE05"
+      ],
+      "qtd": 2
+    }
+  ],
+  "paresAltaSimilaridade": [
+    {
+      "a": "COM03",
+      "b": "COM04",
+      "sim": 0.839,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado",
+        "SHE / Segurança",
+        "Trade / Ativos / MPDV"
+      ]
+    },
+    {
+      "a": "COM18",
+      "b": "COM21",
+      "sim": 0.821,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM18",
+      "b": "COM22- Revendas 2026",
+      "sim": 0.821,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM18",
+      "b": "COM20",
+      "sim": 0.817,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM18",
+      "b": "COM19",
+      "sim": 0.768,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM21",
+      "b": "COM22- Revendas 2026",
+      "sim": 0.754,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM20",
+      "b": "COM21",
+      "sim": 0.75,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM20",
+      "b": "COM22- Revendas 2026",
+      "sim": 0.75,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM24",
+      "b": "COM25",
+      "sim": 0.718,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Cobertura de Marca / Comercial",
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM19",
+      "b": "COM21",
+      "sim": 0.705,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM19",
+      "b": "COM22- Revendas 2026",
+      "sim": 0.705,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM19",
+      "b": "COM20",
+      "sim": 0.702,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM24",
+      "b": "COM26",
+      "sim": 0.699,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Cobertura de Marca / Comercial",
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM25",
+      "b": "COM26",
+      "sim": 0.679,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Cobertura de Marca / Comercial",
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "FROT02",
+      "b": "FROT03",
+      "sim": 0.577,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": false,
+      "familiasComuns": [
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "Fotos / Identidade Visual",
+        "Frota / Veículos",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM05",
+      "b": "COM06",
+      "sim": 0.555,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "RH / Pessoas",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado",
+        "Trade / Ativos / MPDV"
+      ]
+    },
+    {
+      "a": "COM25",
+      "b": "COM27",
+      "sim": 0.469,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Cobertura de Marca / Comercial",
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM09",
+      "b": "DISTRI02- Revendas 2026",
+      "sim": 0.458,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Documentos / Política / Carta",
+        "Frota / Veículos",
+        "Lista de Presença / Treinamento",
+        "RH / Pessoas",
+        "Reunião / Governança / Ata",
+        "SHE / Segurança"
+      ]
+    },
+    {
+      "a": "ADM07",
+      "b": "COM10",
+      "sim": 0.454,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado",
+        "Trade / Ativos / MPDV"
+      ]
+    },
+    {
+      "a": "COM24",
+      "b": "COM27",
+      "sim": 0.437,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Cobertura de Marca / Comercial",
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "FROT02",
+      "b": "FROT04",
+      "sim": 0.416,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": false,
+      "familiasComuns": [
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "Fotos / Identidade Visual",
+        "Frota / Veículos",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "FROT03",
+      "b": "FROT04",
+      "sim": 0.408,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "Fotos / Identidade Visual",
+        "Frota / Veículos",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM24",
+      "b": "DISTRI06- Revendas 2026",
+      "sim": 0.379,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM08",
+      "b": "COM09",
+      "sim": 0.367,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Documentos / Política / Carta",
+        "Lista de Presença / Treinamento",
+        "RH / Pessoas",
+        "Reunião / Governança / Ata",
+        "SHE / Segurança"
+      ]
+    },
+    {
+      "a": "COM26",
+      "b": "COM27",
+      "sim": 0.365,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Cobertura de Marca / Comercial",
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM24",
+      "b": "TRD06- Revendas 2026",
+      "sim": 0.356,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Cobertura de Marca / Comercial",
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM26",
+      "b": "DISTRI06- Revendas 2026",
+      "sim": 0.351,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM25",
+      "b": "DISTRI06- Revendas 2026",
+      "sim": 0.349,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "ADM07",
+      "b": "COM30",
+      "sim": 0.338,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": false,
+      "mesmaPeriodicidade": false,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Cobertura de Marca / Comercial",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM25",
+      "b": "TRD06- Revendas 2026",
+      "sim": 0.338,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Cobertura de Marca / Comercial",
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM08",
+      "b": "DISTRI02- Revendas 2026",
+      "sim": 0.327,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Documentos / Política / Carta",
+        "Lista de Presença / Treinamento",
+        "RH / Pessoas",
+        "Reunião / Governança / Ata",
+        "Rota / Visita de Mercado",
+        "SHE / Segurança"
+      ]
+    },
+    {
+      "a": "COM26",
+      "b": "TRD06- Revendas 2026",
+      "sim": 0.327,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Cobertura de Marca / Comercial",
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "ADM07",
+      "b": "ADM09",
+      "sim": 0.324,
+      "mesmaMicroArea": true,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "RH / Pessoas",
+        "Reunião / Governança / Ata"
+      ]
+    },
+    {
+      "a": "ADM08",
+      "b": "DISTRI03- Revendas 2026",
+      "sim": 0.316,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": false,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Estoque / Armazém / Logística",
+        "Frota / Veículos",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "COM27",
+      "b": "TRD06- Revendas 2026",
+      "sim": 0.314,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Cobertura de Marca / Comercial",
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    },
+    {
+      "a": "DISTRI02- Revendas 2026",
+      "b": "SHE04",
+      "sim": 0.306,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": false,
+      "mesmaPeriodicidade": false,
+      "familiasComuns": [
+        "BI / Painel / Sistema",
+        "Estoque / Armazém / Logística",
+        "Lista de Presença / Treinamento",
+        "RH / Pessoas",
+        "Reunião / Governança / Ata",
+        "SHE / Segurança"
+      ]
+    },
+    {
+      "a": "DISTRI06- Revendas 2026",
+      "b": "TRD06- Revendas 2026",
+      "sim": 0.303,
+      "mesmaMicroArea": false,
+      "mesmaPiramide": true,
+      "mesmaPeriodicidade": true,
+      "familiasComuns": [
+        "Documentos / Política / Carta",
+        "Estoque / Armazém / Logística",
+        "RH / Pessoas",
+        "Rota / Visita de Mercado"
+      ]
+    }
+  ],
+  "grafo": {
+    "nodes": [
+      {
+        "id": "ADM01",
+        "label": "ADM01",
+        "macroArea": "Vendas",
+        "microArea": "ADMINISTRATIVO",
+        "piramide": "COMPLIANCE",
+        "descricao": "Dados Cadastrais e documentos normativos.",
+        "pontos": 1,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Frota / Veículos",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 55
+      },
+      {
+        "id": "ADM02",
+        "label": "ADM02",
+        "macroArea": "Vendas",
+        "microArea": "ADMINISTRATIVO",
+        "piramide": "COMPLIANCE",
+        "descricao": "Notificação extrajudicial da HNK",
+        "pontos": 1,
+        "tipoResposta": "Binária",
+        "periodicidade": "ANUAL",
+        "familias": [
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema"
+        ],
+        "cluster": 63
+      },
+      {
+        "id": "ADM03",
+        "label": "ADM03",
+        "macroArea": "Vendas",
+        "microArea": "ADMINISTRATIVO",
+        "piramide": "COMPLIANCE",
+        "descricao": "Combate ao assédio e outras formas de violência (Lei 14.457/22)",
+        "pontos": 1,
+        "tipoResposta": "Binária",
+        "periodicidade": "ANUAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "RH / Pessoas"
+        ],
+        "cluster": 64
+      },
+      {
+        "id": "ADM04",
+        "label": "ADM04",
+        "macroArea": "Vendas",
+        "microArea": "ADMINISTRATIVO",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Estoque mínimo dos produtos",
+        "pontos": 10,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Estoque / Armazém / Logística",
+          "Cobertura de Marca / Comercial"
+        ],
+        "cluster": 61
+      },
+      {
+        "id": "ADM05",
+        "label": "ADM05",
+        "macroArea": "Vendas",
+        "microArea": "ADMINISTRATIVO",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Identidade Visual - Fachada e áreas perimetrais da revenda",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 66
+      },
+      {
+        "id": "ADM06",
+        "label": "ADM06",
+        "macroArea": "Vendas",
+        "microArea": "ADMINISTRATIVO",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Governança de SHE",
+        "pontos": 10,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Reunião / Governança / Ata",
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 5
+      },
+      {
+        "id": "ADM07",
+        "label": "ADM07",
+        "macroArea": "Vendas",
+        "microArea": "ADMINISTRATIVO",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Governança dos resultados comerciais - Proprietário e liderança",
+        "pontos": 10,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 4
+      },
+      {
+        "id": "ADM08",
+        "label": "ADM08",
+        "macroArea": "Vendas",
+        "microArea": "ADMINISTRATIVO",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Governança dos resultados logísticos - Proprietário e liderança",
+        "pontos": 10,
+        "tipoResposta": "Binária",
+        "periodicidade": "NÃO INFORMADO",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 10
+      },
+      {
+        "id": "ADM09",
+        "label": "ADM09",
+        "macroArea": "Vendas",
+        "microArea": "ADMINISTRATIVO",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Governança do Programa de Excelência",
+        "pontos": 10,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "RH / Pessoas"
+        ],
+        "cluster": 5
+      },
+      {
+        "id": "ADM10",
+        "label": "ADM10",
+        "macroArea": "Vendas",
+        "microArea": "ADMINISTRATIVO",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Limite de crédito (scoring) aos clientes",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 48
+      },
+      {
+        "id": "ADM11",
+        "label": "ADM11",
+        "macroArea": "Vendas",
+        "microArea": "ADMINISTRATIVO",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Autoavaliação",
+        "pontos": 10,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 47
+      },
+      {
+        "id": "ARM01",
+        "label": "ARM01",
+        "macroArea": "Logística",
+        "microArea": "ARMAZÉM",
+        "piramide": "COMPLIANCE",
+        "descricao": "Sinalização do armazém",
+        "pontos": 1,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Estoque / Armazém / Logística",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 7
+      },
+      {
+        "id": "ARM02",
+        "label": "ARM02",
+        "macroArea": "Logística",
+        "microArea": "ARMAZÉM",
+        "piramide": "COMPLIANCE",
+        "descricao": "Banheiros, vestiários e armários",
+        "pontos": 1,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 39
+      },
+      {
+        "id": "ARM03",
+        "label": "ARM03",
+        "macroArea": "Logística",
+        "microArea": "ARMAZÉM",
+        "piramide": "COMPLIANCE",
+        "descricao": "Produtos impróprios",
+        "pontos": 1,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "RH / Pessoas"
+        ],
+        "cluster": 67
+      },
+      {
+        "id": "ARM04",
+        "label": "ARM04",
+        "macroArea": "Logística",
+        "microArea": "ARMAZÉM",
+        "piramide": "COMPLIANCE",
+        "descricao": "Controle de pragas",
+        "pontos": 1,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "Estoque / Armazém / Logística",
+          "RH / Pessoas"
+        ],
+        "cluster": 43
+      },
+      {
+        "id": "ARM05",
+        "label": "ARM05",
+        "macroArea": "Logística",
+        "microArea": "ARMAZÉM",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Organização e ordenação do estoque",
+        "pontos": 5,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "RH / Pessoas"
+        ],
+        "cluster": 41
+      },
+      {
+        "id": "ARM06",
+        "label": "ARM06",
+        "macroArea": "Logística",
+        "microArea": "ARMAZÉM",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Instalações prediais - Salas",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 36
+      },
+      {
+        "id": "ARM07",
+        "label": "ARM07",
+        "macroArea": "Logística",
+        "microArea": "ARMAZÉM",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Estoque de ativos - Material pesado",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 7
+      },
+      {
+        "id": "ARM08",
+        "label": "ARM08",
+        "macroArea": "Logística",
+        "microArea": "ARMAZÉM",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "FEFO (First Expire, First Out)",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Cobertura de Marca / Comercial"
+        ],
+        "cluster": 45
+      },
+      {
+        "id": "ARM09",
+        "label": "ARM09",
+        "macroArea": "Logística",
+        "microArea": "ARMAZÉM",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Inventário",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística"
+        ],
+        "cluster": 59
+      },
+      {
+        "id": "ARM10",
+        "label": "ARM10",
+        "macroArea": "Logística",
+        "microArea": "ARMAZÉM",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Manutenção do sistema de combate a incêndio",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Estoque / Armazém / Logística",
+          "RH / Pessoas"
+        ],
+        "cluster": 53
+      },
+      {
+        "id": "CMDT01",
+        "label": "CMDT01",
+        "macroArea": "Logística",
+        "microArea": "COMODATO",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Manutenção dos equipamentos",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 52
+      },
+      {
+        "id": "CMDT02",
+        "label": "CMDT02",
+        "macroArea": "Logística",
+        "microArea": "COMODATO",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Assepsia - Chopeiras",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 37
+      },
+      {
+        "id": "CMDT03",
+        "label": "CMDT03",
+        "macroArea": "Logística",
+        "microArea": "COMODATO",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Parque de vasilhames",
+        "pontos": 10,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 38
+      },
+      {
+        "id": "COM01",
+        "label": "COM01",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Estrutura comercial",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 62
+      },
+      {
+        "id": "COM02",
+        "label": "COM02",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Identidade Visual - Comercial",
+        "pontos": 5,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "SHE / Segurança",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 51
+      },
+      {
+        "id": "COM03",
+        "label": "COM03",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Matinal - Supervisor",
+        "pontos": 8,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 8
+      },
+      {
+        "id": "COM04",
+        "label": "COM04",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Matinal - GV",
+        "pontos": 8,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Fotos / Identidade Visual",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 8
+      },
+      {
+        "id": "COM05",
+        "label": "COM05",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Vespertina - Supervisor de vendas",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Rota / Visita de Mercado",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 9
+      },
+      {
+        "id": "COM06",
+        "label": "COM06",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Vespertina - GV",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 9
+      },
+      {
+        "id": "COM07",
+        "label": "COM07",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Plano Market Share",
+        "pontos": 10,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 42
+      },
+      {
+        "id": "COM08",
+        "label": "COM08",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Capacitação e desenvolvimento - Vendedor",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Rota / Visita de Mercado",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 1
+      },
+      {
+        "id": "COM09",
+        "label": "COM09",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Capacitação e desenvolvimento - Promotor",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 1
+      },
+      {
+        "id": "COM10",
+        "label": "COM10",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "RPS estratégico de vendas -  Liderança",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 4
+      },
+      {
+        "id": "COM11",
+        "label": "COM11",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "RPS execução - Supervisor e Promotor",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 60
+      },
+      {
+        "id": "COM12",
+        "label": "COM12",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Planejamento estratégico (Base COMPASS)",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial"
+        ],
+        "cluster": 29
+      },
+      {
+        "id": "COM13",
+        "label": "COM13",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Boas práticas",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta"
+        ],
+        "cluster": 35
+      },
+      {
+        "id": "COM14",
+        "label": "COM14",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Dados cadastrais - Base PDVs",
+        "pontos": 10,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 44
+      },
+      {
+        "id": "COM15",
+        "label": "COM15",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Tabela de preço",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas"
+        ],
+        "cluster": 33
+      },
+      {
+        "id": "COM16",
+        "label": "COM16",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Ação de mercado",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial"
+        ],
+        "cluster": 50
+      },
+      {
+        "id": "COM17",
+        "label": "COM17",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Nível de serviço (Planner)",
+        "pontos": 10,
+        "tipoResposta": "Binária",
+        "periodicidade": "ANUAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 34
+      },
+      {
+        "id": "COM18",
+        "label": "COM18",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Cobertura Total",
+        "pontos": 10,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial"
+        ],
+        "cluster": 2
+      },
+      {
+        "id": "COM19",
+        "label": "COM19",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Cobertura RGB + CHOPP",
+        "pontos": 10,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial"
+        ],
+        "cluster": 2
+      },
+      {
+        "id": "COM20",
+        "label": "COM20",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Cobertura Craft",
+        "pontos": 10,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial"
+        ],
+        "cluster": 2
+      },
+      {
+        "id": "COM21",
+        "label": "COM21",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Cobertura Premium",
+        "pontos": 10,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial"
+        ],
+        "cluster": 2
+      },
+      {
+        "id": "COM22- Revendas 2026",
+        "label": "COM22- Revendas 2026",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Cobertura Mainstream",
+        "pontos": 10,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial"
+        ],
+        "cluster": 2
+      },
+      {
+        "id": "COM23",
+        "label": "COM23",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Mapa térmico",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial"
+        ],
+        "cluster": 25
+      },
+      {
+        "id": "COM24",
+        "label": "COM24",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Rota - GC",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Documentos / Política / Carta",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas"
+        ],
+        "cluster": 0
+      },
+      {
+        "id": "COM25",
+        "label": "COM25",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Rota - GV",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Documentos / Política / Carta",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas"
+        ],
+        "cluster": 0
+      },
+      {
+        "id": "COM26",
+        "label": "COM26",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Rota - SV",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Documentos / Política / Carta",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas"
+        ],
+        "cluster": 0
+      },
+      {
+        "id": "COM27",
+        "label": "COM27",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Rota - Proprietário / Diretor / Representante legal",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas"
+        ],
+        "cluster": 0
+      },
+      {
+        "id": "COM28",
+        "label": "COM28",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Fora de rota",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial"
+        ],
+        "cluster": 46
+      },
+      {
+        "id": "COM29",
+        "label": "COM29",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Pesquisa censitária",
+        "pontos": 10,
+        "tipoResposta": "Binária",
+        "periodicidade": "ANUAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas"
+        ],
+        "cluster": 56
+      },
+      {
+        "id": "COM30",
+        "label": "COM30",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Heishop",
+        "pontos": 10,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "NÃO INFORMADO",
+        "familias": [
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial"
+        ],
+        "cluster": 4
+      },
+      {
+        "id": "COM31",
+        "label": "COM31",
+        "macroArea": "Vendas",
+        "microArea": "COMERCIAL",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Gestão de relacionamento com o cliente (CRM)",
+        "pontos": 10,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 54
+      },
+      {
+        "id": "DISTRI01",
+        "label": "DISTRI01",
+        "macroArea": "Logística",
+        "microArea": "DISTRIBUIÇÃO",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Identidade Visual - Uniforme distribuição",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 3
+      },
+      {
+        "id": "DISTRI02- Revendas 2026",
+        "label": "DISTRI02- Revendas 2026",
+        "macroArea": "Logística",
+        "microArea": "DISTRIBUIÇÃO",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Capacitação e desenvolvimento - Motoristas e ajudantes",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 1
+      },
+      {
+        "id": "DISTRI03- Revendas 2026",
+        "label": "DISTRI03- Revendas 2026",
+        "macroArea": "Logística",
+        "microArea": "DISTRIBUIÇÃO",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Gestão dos Indicadores logísticos",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 10
+      },
+      {
+        "id": "DISTRI04- Revendas 2026",
+        "label": "DISTRI04- Revendas 2026",
+        "macroArea": "Logística",
+        "microArea": "DISTRIBUIÇÃO",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Nível de serviço ao cliente - Devolução",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Estoque / Armazém / Logística",
+          "Frota / Veículos"
+        ],
+        "cluster": 57
+      },
+      {
+        "id": "DISTRI05- Revendas 2026",
+        "label": "DISTRI05- Revendas 2026",
+        "macroArea": "Logística",
+        "microArea": "DISTRIBUIÇÃO",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Modelo de transporte assegura a qualidade dos produtos?",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 22
+      },
+      {
+        "id": "DISTRI06- Revendas 2026",
+        "label": "DISTRI06- Revendas 2026",
+        "macroArea": "Logística",
+        "microArea": "DISTRIBUIÇÃO",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Rota - Execução Logística",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Documentos / Política / Carta",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "RH / Pessoas"
+        ],
+        "cluster": 0
+      },
+      {
+        "id": "FROT01",
+        "label": "FROT01",
+        "macroArea": "Logística",
+        "microArea": "FROTA",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Cadastro dos veículos e colaboradores",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 6
+      },
+      {
+        "id": "FROT02",
+        "label": "FROT02",
+        "macroArea": "Logística",
+        "microArea": "FROTA",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Identidade Visual - Carros",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 3
+      },
+      {
+        "id": "FROT03",
+        "label": "FROT03",
+        "macroArea": "Logística",
+        "microArea": "FROTA",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Identidade Visual - Caminhões",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 3
+      },
+      {
+        "id": "FROT04",
+        "label": "FROT04",
+        "macroArea": "Logística",
+        "microArea": "FROTA",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Identidade Visual - Motos",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 3
+      },
+      {
+        "id": "FROT05",
+        "label": "FROT05",
+        "macroArea": "Logística",
+        "microArea": "FROTA",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Check list de segurança da frota",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 6
+      },
+      {
+        "id": "RH01",
+        "label": "RH01",
+        "macroArea": "Vendas",
+        "microArea": "RH",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Cadastro dos funcionários",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "RH / Pessoas"
+        ],
+        "cluster": 18
+      },
+      {
+        "id": "RH02",
+        "label": "RH02",
+        "macroArea": "Vendas",
+        "microArea": "RH",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Integração funcional vendas - Academia Heineken",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 58
+      },
+      {
+        "id": "RH03",
+        "label": "RH03",
+        "macroArea": "Vendas",
+        "microArea": "RH",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Remuneração Variável",
+        "pontos": 10,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas"
+        ],
+        "cluster": 26
+      },
+      {
+        "id": "RH04",
+        "label": "RH04",
+        "macroArea": "Vendas",
+        "microArea": "RH",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Plano de Carreira e retenção de talentos",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Frota / Veículos",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 40
+      },
+      {
+        "id": "RH05",
+        "label": "RH05",
+        "macroArea": "Vendas",
+        "microArea": "RH",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Gestão de Clima",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "ANUAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "RH / Pessoas"
+        ],
+        "cluster": 65
+      },
+      {
+        "id": "RH06",
+        "label": "RH06",
+        "macroArea": "Vendas",
+        "microArea": "RH",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Promover a diversidade",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "BI / Painel / Sistema",
+          "RH / Pessoas"
+        ],
+        "cluster": 16
+      },
+      {
+        "id": "RH07",
+        "label": "RH07",
+        "macroArea": "Vendas",
+        "microArea": "RH",
+        "piramide": "ESTRATÉGIA",
+        "descricao": "Sustentabilidade",
+        "pontos": 10,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 49
+      },
+      {
+        "id": "RH08",
+        "label": "RH08",
+        "macroArea": "Vendas",
+        "microArea": "RH",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Prevenção de Multas",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 31
+      },
+      {
+        "id": "SHE01",
+        "label": "SHE01",
+        "macroArea": "Logística",
+        "microArea": "SHE",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Pirâmide de SHE",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "RH / Pessoas"
+        ],
+        "cluster": 24
+      },
+      {
+        "id": "SHE02",
+        "label": "SHE02",
+        "macroArea": "Logística",
+        "microArea": "SHE",
+        "piramide": "COMPLIANCE",
+        "descricao": "Gestão dos EPIs",
+        "pontos": 1,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Estoque / Armazém / Logística",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 14
+      },
+      {
+        "id": "SHE03",
+        "label": "SHE03",
+        "macroArea": "Logística",
+        "microArea": "SHE",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Sinalização dos EPIs",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "SHE / Segurança",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 21
+      },
+      {
+        "id": "SHE04",
+        "label": "SHE04",
+        "macroArea": "Logística",
+        "microArea": "SHE",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Comportamento seguro e EPIs",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Estoque / Armazém / Logística",
+          "RH / Pessoas"
+        ],
+        "cluster": 1
+      },
+      {
+        "id": "SHE05",
+        "label": "SHE05",
+        "macroArea": "Logística",
+        "microArea": "SHE",
+        "piramide": "COMPLIANCE",
+        "descricao": "Certificados dos treinamentos de atividades de risco",
+        "pontos": 1,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "SHE / Segurança",
+          "RH / Pessoas"
+        ],
+        "cluster": 19
+      },
+      {
+        "id": "SHE06",
+        "label": "SHE06",
+        "macroArea": "Logística",
+        "microArea": "SHE",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Treinamento - Direção defensiva + EPIs",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Reunião / Governança / Ata",
+          "Fotos / Identidade Visual",
+          "SHE / Segurança",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 1
+      },
+      {
+        "id": "SHE07",
+        "label": "SHE07",
+        "macroArea": "Logística",
+        "microArea": "SHE",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Semana de segurança",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "ANUAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "RH / Pessoas"
+        ],
+        "cluster": 30
+      },
+      {
+        "id": "SHE08",
+        "label": "SHE08",
+        "macroArea": "Logística",
+        "microArea": "SHE",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Sistema de ancoragem",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "SEMESTRAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "SHE / Segurança",
+          "Frota / Veículos",
+          "RH / Pessoas"
+        ],
+        "cluster": 13
+      },
+      {
+        "id": "SHE09",
+        "label": "SHE09",
+        "macroArea": "Logística",
+        "microArea": "SHE",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Inspeção de SHE",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "SHE / Segurança",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "RH / Pessoas"
+        ],
+        "cluster": 17
+      },
+      {
+        "id": "STO01",
+        "label": "STO01",
+        "macroArea": "Vendas",
+        "microArea": "SISTEMA OPERACIONAL",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Ferramentas gerenciais",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "RH / Pessoas"
+        ],
+        "cluster": 32
+      },
+      {
+        "id": "STO02",
+        "label": "STO02",
+        "macroArea": "Vendas",
+        "microArea": "SISTEMA OPERACIONAL",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Televendas",
+        "pontos": 10,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 15
+      },
+      {
+        "id": "TRD01",
+        "label": "TRD01",
+        "macroArea": "Vendas",
+        "microArea": "TRADE",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Estrutura funcional Trade Execução",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 28
+      },
+      {
+        "id": "TRD02- Revendas 2026",
+        "label": "TRD02- Revendas 2026",
+        "macroArea": "Vendas",
+        "microArea": "TRADE",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "ABP - BTL e CAPEX",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 23
+      },
+      {
+        "id": "TRD03",
+        "label": "TRD03",
+        "macroArea": "Vendas",
+        "microArea": "TRADE",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Gestão de ativos comerciais",
+        "pontos": 10,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "BI / Painel / Sistema",
+          "Rota / Visita de Mercado",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 20
+      },
+      {
+        "id": "TRD04",
+        "label": "TRD04",
+        "macroArea": "Vendas",
+        "microArea": "TRADE",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Execução de FDS e Ações de Trade Marketing",
+        "pontos": 10,
+        "tipoResposta": "Maturidade",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Lista de Presença / Treinamento",
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 11
+      },
+      {
+        "id": "TRD05- Revendas 2026",
+        "label": "TRD05- Revendas 2026",
+        "macroArea": "Vendas",
+        "microArea": "TRADE",
+        "piramide": "COND. BÁSICA",
+        "descricao": "Visibilidade e ativação",
+        "pontos": 3,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Fotos / Identidade Visual",
+          "Documentos / Política / Carta",
+          "BI / Painel / Sistema",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 27
+      },
+      {
+        "id": "TRD06- Revendas 2026",
+        "label": "TRD06- Revendas 2026",
+        "macroArea": "Vendas",
+        "microArea": "TRADE",
+        "piramide": "EXECUÇÃO",
+        "descricao": "Rota - Trade",
+        "pontos": 8,
+        "tipoResposta": "Binária",
+        "periodicidade": "MENSAL",
+        "familias": [
+          "Reunião / Governança / Ata",
+          "Documentos / Política / Carta",
+          "Estoque / Armazém / Logística",
+          "Rota / Visita de Mercado",
+          "Cobertura de Marca / Comercial",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 0
+      },
+      {
+        "id": "TRD07- Revendas 2026",
+        "label": "TRD07- Revendas 2026",
+        "macroArea": "Vendas",
+        "microArea": "TRADE",
+        "piramide": "EFICIÊNCIA",
+        "descricao": "Promotores",
+        "pontos": 5,
+        "tipoResposta": "Binária",
+        "periodicidade": "TRIMESTRAL",
+        "familias": [
+          "Documentos / Política / Carta",
+          "Rota / Visita de Mercado",
+          "Frota / Veículos",
+          "RH / Pessoas",
+          "Trade / Ativos / MPDV"
+        ],
+        "cluster": 12
+      }
+    ],
+    "edges": [
+      {
+        "source": "ADM07",
+        "target": "ADM09",
+        "sim": 0.324
+      },
+      {
+        "source": "ADM07",
+        "target": "COM10",
+        "sim": 0.454
+      },
+      {
+        "source": "ADM07",
+        "target": "COM30",
+        "sim": 0.338
+      },
+      {
+        "source": "ADM08",
+        "target": "DISTRI03- Revendas 2026",
+        "sim": 0.316
+      },
+      {
+        "source": "ARM01",
+        "target": "ARM07",
+        "sim": 0.3
+      },
+      {
+        "source": "COM03",
+        "target": "COM04",
+        "sim": 0.839
+      },
+      {
+        "source": "COM05",
+        "target": "COM06",
+        "sim": 0.555
+      },
+      {
+        "source": "COM08",
+        "target": "COM09",
+        "sim": 0.367
+      },
+      {
+        "source": "COM08",
+        "target": "DISTRI02- Revendas 2026",
+        "sim": 0.327
+      },
+      {
+        "source": "COM09",
+        "target": "DISTRI02- Revendas 2026",
+        "sim": 0.458
+      },
+      {
+        "source": "COM09",
+        "target": "SHE04",
+        "sim": 0.282
+      },
+      {
+        "source": "COM18",
+        "target": "COM19",
+        "sim": 0.768
+      },
+      {
+        "source": "COM18",
+        "target": "COM20",
+        "sim": 0.817
+      },
+      {
+        "source": "COM18",
+        "target": "COM21",
+        "sim": 0.821
+      },
+      {
+        "source": "COM18",
+        "target": "COM22- Revendas 2026",
+        "sim": 0.821
+      },
+      {
+        "source": "COM19",
+        "target": "COM20",
+        "sim": 0.702
+      },
+      {
+        "source": "COM19",
+        "target": "COM21",
+        "sim": 0.705
+      },
+      {
+        "source": "COM19",
+        "target": "COM22- Revendas 2026",
+        "sim": 0.705
+      },
+      {
+        "source": "COM20",
+        "target": "COM21",
+        "sim": 0.75
+      },
+      {
+        "source": "COM20",
+        "target": "COM22- Revendas 2026",
+        "sim": 0.75
+      },
+      {
+        "source": "COM21",
+        "target": "COM22- Revendas 2026",
+        "sim": 0.754
+      },
+      {
+        "source": "COM24",
+        "target": "COM25",
+        "sim": 0.718
+      },
+      {
+        "source": "COM24",
+        "target": "COM26",
+        "sim": 0.699
+      },
+      {
+        "source": "COM24",
+        "target": "COM27",
+        "sim": 0.437
+      },
+      {
+        "source": "COM24",
+        "target": "DISTRI06- Revendas 2026",
+        "sim": 0.379
+      },
+      {
+        "source": "COM24",
+        "target": "TRD06- Revendas 2026",
+        "sim": 0.356
+      },
+      {
+        "source": "COM25",
+        "target": "COM26",
+        "sim": 0.679
+      },
+      {
+        "source": "COM25",
+        "target": "COM27",
+        "sim": 0.469
+      },
+      {
+        "source": "COM25",
+        "target": "DISTRI06- Revendas 2026",
+        "sim": 0.349
+      },
+      {
+        "source": "COM25",
+        "target": "TRD06- Revendas 2026",
+        "sim": 0.338
+      },
+      {
+        "source": "COM26",
+        "target": "COM27",
+        "sim": 0.365
+      },
+      {
+        "source": "COM26",
+        "target": "DISTRI06- Revendas 2026",
+        "sim": 0.351
+      },
+      {
+        "source": "COM26",
+        "target": "TRD06- Revendas 2026",
+        "sim": 0.327
+      },
+      {
+        "source": "COM27",
+        "target": "TRD06- Revendas 2026",
+        "sim": 0.314
+      },
+      {
+        "source": "DISTRI02- Revendas 2026",
+        "target": "SHE04",
+        "sim": 0.306
+      },
+      {
+        "source": "DISTRI06- Revendas 2026",
+        "target": "TRD06- Revendas 2026",
+        "sim": 0.303
+      },
+      {
+        "source": "FROT02",
+        "target": "FROT03",
+        "sim": 0.577
+      },
+      {
+        "source": "FROT02",
+        "target": "FROT04",
+        "sim": 0.416
+      },
+      {
+        "source": "FROT03",
+        "target": "FROT04",
+        "sim": 0.408
+      }
+    ]
+  }
+}

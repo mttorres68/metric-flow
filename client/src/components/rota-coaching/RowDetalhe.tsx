@@ -11,10 +11,10 @@ interface Props {
 export function RowDetalhe({ row, idx, mapRowKey, setMapRowKey }: Props) {
     return (
         <>
-            <div className="grid grid-cols-2 gap-6 border border-slate-200 rounded-xl p-4 bg-white">
+            <div className="grid grid-cols-2 gap-6 border border-slate-200 dark:border-[var(--border)] rounded-xl p-4 bg-white dark:bg-[var(--card)]">
                 {/* Perguntas de controle */}
                 <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1" style={{ fontWeight: 700 }}>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-[var(--border)] pb-1" style={{ fontWeight: 700 }}>
                         Perguntas de Controle
                     </p>
                     <div className="grid grid-cols-2 gap-3">
@@ -22,15 +22,15 @@ export function RowDetalhe({ row, idx, mapRowKey, setMapRowKey }: Props) {
                             ["GA fez a Rota?",
                                 row.agendado
                                     ? (row.gaVis > 0 ? <span className="text-green-600">✅ Sim</span> : <span className="text-red-500">❌ Não</span>)
-                                    : <span className="text-slate-400">— Não Agendado</span>
+                                    : <span className="text-slate-400 dark:text-slate-500">— Não Agendado</span>
                             ],
-                            ["Vendedor no App GA", <span className="font-mono text-indigo-600">{row.agendado && row.gaVis > 0 ? (row.vendedor_no_app || "N/A") : "—"}</span>],
-                            ["Clientes Programados", <span className="font-mono">{row.pdvsProg} PDVs</span>],
-                            ["Clientes Comuns", <span className="font-mono text-indigo-600">{row.clientes_comuns?.length ?? 0} PDVs</span>],
+                            ["Vendedor no App GA", <span className="font-mono text-indigo-600 dark:text-indigo-400">{row.agendado && row.gaVis > 0 ? (row.vendedor_no_app || "N/A") : "—"}</span>],
+                            ["Clientes Programados", <span className="font-mono dark:text-slate-200">{row.pdvsProg} PDVs</span>],
+                            ["Clientes Comuns", <span className="font-mono text-indigo-600 dark:text-indigo-400">{row.clientes_comuns?.length ?? 0} PDVs</span>],
                         ].map(([lbl, val]) => (
-                            <div key={String(lbl)} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-                                <p className="text-xs text-slate-400 mb-1" style={{ fontWeight: 600 }}>{lbl}</p>
-                                <div className="text-sm" style={{ fontWeight: 600 }}>{val}</div>
+                            <div key={String(lbl)} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 border border-slate-100 dark:border-slate-700/50">
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mb-1" style={{ fontWeight: 600 }}>{lbl}</p>
+                                <div className="text-sm dark:text-slate-200" style={{ fontWeight: 600 }}>{val}</div>
                             </div>
                         ))}
                     </div>
@@ -38,7 +38,7 @@ export function RowDetalhe({ row, idx, mapRowKey, setMapRowKey }: Props) {
 
                 {/* Cobertura de Visitas */}
                 <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1" style={{ fontWeight: 700 }}>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-[var(--border)] pb-1" style={{ fontWeight: 700 }}>
                         Cobertura de Visitas
                     </p>
                     {[
@@ -49,17 +49,17 @@ export function RowDetalhe({ row, idx, mapRowKey, setMapRowKey }: Props) {
                         },
                     ].map(b => (
                         <div key={b.label} className="mb-4">
-                            <div className="flex justify-between text-xs text-slate-500 mb-1">
+                            <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
                                 <span>{b.label}</span>
                                 <span className="font-mono" style={{ fontWeight: 600 }}>{b.val}/{b.total}</span>
                             </div>
-                            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="w-full h-2 bg-slate-100 dark:bg-slate-700/60 rounded-full overflow-hidden">
                                 <div className={`h-full rounded-full transition-all ${b.color}`}
                                     style={{ width: `${Math.min(100, b.total > 0 ? (b.val / b.total) * 100 : 0)}%` }} />
                             </div>
                         </div>
                     ))}
-                    <p className="text-xs text-slate-400 italic mt-3 pt-2 border-t border-slate-100">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 italic mt-3 pt-2 border-t border-slate-100 dark:border-[var(--border)]">
                         {!row.agendado
                             ? "Nenhuma rota agendada para este GA."
                             : row.gaVis === 0
@@ -76,7 +76,7 @@ export function RowDetalhe({ row, idx, mapRowKey, setMapRowKey }: Props) {
 
             {/* Sem dados */}
             {(!row.geo_detalhes || row.geo_detalhes.length === 0) && row.agendado && row.gaVis > 0 && (
-                <p className="text-xs text-slate-400 italic mt-3 pt-3 border-t border-slate-100">
+                <p className="text-xs text-slate-400 dark:text-slate-500 italic mt-3 pt-3 border-t border-slate-100 dark:border-[var(--border)]">
                     Dados de rota não disponíveis.
                 </p>
             )}

@@ -20,33 +20,35 @@ export function GeoDetalhesTabela({ row, idx, mapRowKey, setMapRowKey }: Props) 
     const nFora = row.clientes_fora_raio?.length ?? 0;
 
     return (
-        <div className="mt-4 pt-4 border-t border-slate-100">
+        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-[var(--border)]">
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
-                <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">
+                <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-widest font-bold">
                     Rota do Vendedor
                 </p>
                 <div className="flex items-center gap-2 flex-wrap justify-end">
                     {temGA && (temApp || temCalc) && (
-                        <span className="text-xs px-2 py-0.5 rounded-full border bg-blue-50 border-blue-200 text-blue-600">
+                        <span className="text-xs px-2 py-0.5 rounded-full border bg-blue-50 dark:bg-blue-900/25 border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400">
                             {temApp ? '📍 app' : '📐 Haversine'}
                         </span>
                     )}
                     {nDentro > 0 && (
-                        <span className="text-xs px-2 py-0.5 rounded-full border bg-green-50 border-green-200 text-green-700 font-bold">
+                        <span className="text-xs px-2 py-0.5 rounded-full border bg-green-50 dark:bg-green-900/25 border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400 font-bold">
                             ✓ {nDentro} confirmados
                         </span>
                     )}
                     {nFora > 0 && (
-                        <span className="text-xs px-2 py-0.5 rounded-full border bg-red-50 border-red-200 text-red-600 font-bold">
+                        <span className="text-xs px-2 py-0.5 rounded-full border bg-red-50 dark:bg-red-900/25 border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400 font-bold">
                             ✗ {nFora} distantes
                         </span>
                     )}
                     {row.pct_geo_confirmado != null && (
                         <span className={`text-xs px-2 py-0.5 rounded-full border font-bold ${
-                            row.pct_geo_confirmado >= 80 ? "bg-green-50 border-green-200 text-green-700"
-                            : row.pct_geo_confirmado >= 50 ? "bg-amber-50 border-amber-200 text-amber-700"
-                            : "bg-red-50 border-red-200 text-red-600"
+                            row.pct_geo_confirmado >= 80
+                                ? "bg-green-50 dark:bg-green-900/25 border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400"
+                                : row.pct_geo_confirmado >= 50
+                                    ? "bg-amber-50 dark:bg-amber-900/25 border-amber-200 dark:border-amber-800/50 text-amber-700 dark:text-amber-400"
+                                    : "bg-red-50 dark:bg-red-900/25 border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400"
                         }`}>
                             {row.pct_geo_confirmado}% confirmados no raio
                         </span>
@@ -55,10 +57,10 @@ export function GeoDetalhesTabela({ row, idx, mapRowKey, setMapRowKey }: Props) 
             </div>
 
             {/* Tabela */}
-            <div className="overflow-x-auto rounded-xl border border-slate-100">
+            <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-[var(--border)]">
                 <table className="w-full text-xs">
                     <thead>
-                        <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 uppercase tracking-widest">
+                        <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-[var(--border)] text-slate-500 dark:text-slate-400 uppercase tracking-widest">
                             <th className="px-3 py-2 text-left font-bold w-6">#</th>
                             <th className="px-3 py-2 text-left font-bold">Cliente</th>
                             <th className="px-3 py-2 text-center font-bold">Hr Vendedor</th>
@@ -93,30 +95,30 @@ export function GeoDetalhesTabela({ row, idx, mapRowKey, setMapRowKey }: Props) 
                             const lonPdv = g.lon_pdv ?? null;
 
                             const rowBg = temGa
-                                ? g.dentro_raio === true ? "bg-green-50/60"
-                                    : g.dentro_raio === false ? "bg-red-50/40"
-                                        : "bg-blue-50/30"
-                                : gi % 2 === 1 ? "bg-slate-50/40" : "";
+                                ? g.dentro_raio === true ? "bg-green-50/60 dark:bg-green-900/20"
+                                    : g.dentro_raio === false ? "bg-red-50/40 dark:bg-red-900/15"
+                                        : "bg-blue-50/30 dark:bg-blue-900/15"
+                                : gi % 2 === 1 ? "bg-slate-50/40 dark:bg-slate-800/30" : "";
 
                             const isVenda = /^\d/.test(valorPed) && valorPed !== '0,00' && valorPed !== '—';
                             const respVendColor = isVenda ? "#16a34a" : "#94a3b8";
 
                             return (
-                                <tr key={gi} className={`border-b border-slate-50 transition-colors ${rowBg}`}>
-                                    <td className="px-3 py-2 text-slate-400 tabular-nums">{gi + 1}</td>
+                                <tr key={gi} className={`border-b border-slate-50 dark:border-slate-700/40 transition-colors ${rowBg}`}>
+                                    <td className="px-3 py-2 text-slate-400 dark:text-slate-500 tabular-nums">{gi + 1}</td>
 
                                     <td className="px-3 py-2">
-                                        <div className="font-mono text-slate-700 font-semibold">{codPt}</div>
-                                        {razao && <div className="text-slate-400 truncate max-w-[180px]" title={razao}>{razao}</div>}
+                                        <div className="font-mono text-slate-700 dark:text-slate-200 font-semibold">{codPt}</div>
+                                        {razao && <div className="text-slate-400 dark:text-slate-500 truncate max-w-[180px]" title={razao}>{razao}</div>}
                                         {temGa && idGaShort && (
                                             <div className="text-indigo-400 font-mono text-xs" title={idGaFull ?? ''}>{idGaShort}</div>
                                         )}
                                     </td>
 
-                                    <td className="px-3 py-2 text-center font-mono text-slate-600 whitespace-nowrap">
+                                    <td className="px-3 py-2 text-center font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
                                         {hIni
-                                            ? <>{hIni.slice(0, 5)}{hFim ? <span className="text-slate-400"> – {hFim.slice(0, 5)}</span> : ''}</>
-                                            : <span className="text-slate-300">—</span>
+                                            ? <>{hIni.slice(0, 5)}{hFim ? <span className="text-slate-400 dark:text-slate-500"> – {hFim.slice(0, 5)}</span> : ''}</>
+                                            : <span className="text-slate-300 dark:text-slate-600">—</span>
                                         }
                                     </td>
 
@@ -129,18 +131,18 @@ export function GeoDetalhesTabela({ row, idx, mapRowKey, setMapRowKey }: Props) 
                                     <td className="px-3 py-2 text-center font-mono whitespace-nowrap">
                                         {temGa
                                             ? hGA
-                                                ? <span className="text-indigo-500">{hGA}</span>
-                                                : <span className="text-slate-300">—</span>
-                                            : <span className="text-slate-200">·</span>
+                                                ? <span className="text-indigo-500 dark:text-indigo-400">{hGA}</span>
+                                                : <span className="text-slate-300 dark:text-slate-600">—</span>
+                                            : <span className="text-slate-200 dark:text-slate-700">·</span>
                                         }
                                     </td>
 
                                     <td className="px-3 py-2 text-center">
                                         {temGa
                                             ? q1
-                                                ? <span className="text-xs text-indigo-600">{q1}</span>
-                                                : <span className="text-slate-300 text-xs">—</span>
-                                            : <span className="text-slate-200 text-xs">·</span>
+                                                ? <span className="text-xs text-indigo-600 dark:text-indigo-400">{q1}</span>
+                                                : <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
+                                            : <span className="text-slate-200 dark:text-slate-700 text-xs">·</span>
                                         }
                                     </td>
 
@@ -149,37 +151,37 @@ export function GeoDetalhesTabela({ row, idx, mapRowKey, setMapRowKey }: Props) 
                                             ? <span style={{ fontWeight: 600, color: g.dentro_raio ? "#16a34a" : g.dentro_raio === false ? "#dc2626" : "#94a3b8" }}>
                                                 {dist >= 1000 ? `${(dist / 1000).toFixed(1)} km` : `${dist.toFixed(0)} m`}
                                             </span>
-                                            : <span className="text-slate-200">·</span>
+                                            : <span className="text-slate-200 dark:text-slate-700">·</span>
                                         }
                                     </td>
 
                                     <td className="px-3 py-2 text-center">
                                         {temGa
-                                            ? g.dentro_raio === true ? <span className="text-green-600 font-semibold">✓ Próximo</span>
-                                                : g.dentro_raio === false ? <span className="text-red-500 font-semibold">✗ Distante</span>
-                                                    : <span className="text-slate-400">sem coord</span>
-                                            : <span className="text-slate-300 text-xs">sem GA</span>
+                                            ? g.dentro_raio === true ? <span className="text-green-600 dark:text-green-400 font-semibold">✓ Próximo</span>
+                                                : g.dentro_raio === false ? <span className="text-red-500 dark:text-red-400 font-semibold">✗ Distante</span>
+                                                    : <span className="text-slate-400 dark:text-slate-500">sem coord</span>
+                                            : <span className="text-slate-300 dark:text-slate-600 text-xs">sem GA</span>
                                         }
                                     </td>
 
-                                    <td className="px-3 py-2 text-center font-mono text-slate-500 text-xs whitespace-nowrap">
+                                    <td className="px-3 py-2 text-center font-mono text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">
                                         {latVend !== null && lonVend !== null
                                             ? `${latVend.toFixed(5)}, ${lonVend.toFixed(5)}`
-                                            : <span className="text-slate-200">·</span>
+                                            : <span className="text-slate-200 dark:text-slate-700">·</span>
                                         }
                                     </td>
 
                                     <td className="px-3 py-2 text-center font-mono text-indigo-400 text-xs whitespace-nowrap">
                                         {temGa && latGa !== null && lonGa !== null
                                             ? `${latGa.toFixed(5)}, ${lonGa.toFixed(5)}`
-                                            : <span className="text-slate-200">·</span>
+                                            : <span className="text-slate-200 dark:text-slate-700">·</span>
                                         }
                                     </td>
 
-                                    <td className="px-3 py-2 text-center font-mono text-slate-400 text-xs whitespace-nowrap">
+                                    <td className="px-3 py-2 text-center font-mono text-slate-400 dark:text-slate-500 text-xs whitespace-nowrap">
                                         {latPdv !== null && lonPdv !== null
                                             ? `${latPdv.toFixed(5)}, ${lonPdv.toFixed(5)}`
-                                            : <span className="text-slate-200">·</span>
+                                            : <span className="text-slate-200 dark:text-slate-700">·</span>
                                         }
                                     </td>
                                 </tr>
@@ -192,17 +194,17 @@ export function GeoDetalhesTabela({ row, idx, mapRowKey, setMapRowKey }: Props) 
             {/* Legenda + botão mapa */}
             <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
                 <div className="flex gap-3 flex-wrap">
-                    <span className="flex items-center gap-1 text-xs text-slate-400">
-                        <span className="w-3 h-3 rounded bg-green-100 border border-green-200 inline-block" />GA confirmado próximo
+                    <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                        <span className="w-3 h-3 rounded bg-green-100 dark:bg-green-900/40 border border-green-200 dark:border-green-800/50 inline-block" />GA confirmado próximo
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-slate-400">
-                        <span className="w-3 h-3 rounded bg-red-50 border border-red-200 inline-block" />GA distante
+                    <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                        <span className="w-3 h-3 rounded bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 inline-block" />GA distante
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-slate-400">
-                        <span className="w-3 h-3 rounded bg-blue-50 border border-blue-200 inline-block" />GA visitou (sem coord PDV)
+                    <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                        <span className="w-3 h-3 rounded bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 inline-block" />GA visitou (sem coord PDV)
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-slate-400">
-                        <span className="w-3 h-3 rounded bg-slate-50 border border-slate-200 inline-block" />Só vendedor
+                    <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                        <span className="w-3 h-3 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 inline-block" />Só vendedor
                     </span>
                 </div>
                 <button
@@ -210,7 +212,7 @@ export function GeoDetalhesTabela({ row, idx, mapRowKey, setMapRowKey }: Props) 
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                         mapRowKey === idx
                             ? "bg-indigo-600 text-white border-indigo-600"
-                            : "bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                            : "bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
                     }`}
                 >
                     <MapPin size={13} />

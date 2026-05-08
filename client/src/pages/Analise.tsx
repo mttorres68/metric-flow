@@ -19,6 +19,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { generateWordReport } from "@/lib/wordGenerator";
+import { useTheme } from "@/contexts/ThemeContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -33,12 +34,12 @@ function fmt(v: number | null | undefined, suffix = "") {
 
 function Badge({ children, color }: { children: React.ReactNode; color: string }) {
     const styles: Record<string, string> = {
-        green: "bg-green-50 text-green-700 border-green-200",
-        red: "bg-red-50 text-red-600 border-red-200",
-        amber: "bg-amber-50 text-amber-700 border-amber-200",
-        blue: "bg-blue-50 text-blue-600 border-blue-200",
-        slate: "bg-slate-50 text-slate-500 border-slate-200",
-        indigo: "bg-indigo-50 text-indigo-600 border-indigo-200",
+        green: "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700/50",
+        red: "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700/50",
+        amber: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/50",
+        blue: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700/50",
+        slate: "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-700/50 dark:text-slate-300 dark:border-slate-600/50",
+        indigo: "bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-700/50",
     };
     return (
         <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-semibold ${styles[color] ?? styles.slate}`}>
@@ -63,7 +64,7 @@ function Td({ children, center, mono, className = "" }: {
     children: React.ReactNode; center?: boolean; mono?: boolean; className?: string
 }) {
     return (
-        <td className={`px-2 py-2 text-xs border-b border-slate-100 ${center ? "text-center" : ""} ${mono ? "font-mono" : ""} ${className}`}>
+        <td className={`px-2 py-2 text-xs border-b border-slate-100 dark:border-slate-700/40 ${center ? "text-center" : ""} ${mono ? "font-mono" : ""} ${className}`}>
             {children}
         </td>
     );
@@ -97,6 +98,7 @@ const ALL_COLS = [
     { id: "t_maior", label: "T. Maior" },
     { id: "t_medio", label: "T. Médio" },
     { id: "t_total", label: "T. Total" },
+    { id: "soma_percurso", label: "Σ Percurso" },
     { id: "percurso", label: "Maior Percurso" },
     { id: "ini_percurso", label: "Ini. Percurso" },
     { id: "fim_percurso", label: "Fim Percurso" },
@@ -158,34 +160,34 @@ function ColumnsSelector({ col, toggle, toggleAll, allOn, hiddenCount }: {
         <div ref={ref} className="relative">
             <button
                 onClick={() => setOpen(o => !o)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-slate-200 text-slate-600 hover:bg-slate-50"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50"
             >
                 <SlidersHorizontal size={12} />
                 Colunas
                 {hiddenCount > 0 && (
-                    <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 text-[10px] font-bold leading-none">
+                    <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold leading-none">
                         {hiddenCount}
                     </span>
                 )}
             </button>
             {open && (
-                <div className="absolute right-0 mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-lg p-3 w-52">
-                    <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-100">
-                        <span className="text-xs font-bold text-slate-700">Colunas visíveis</span>
-                        <button onClick={toggleAll} className="text-[11px] text-indigo-600 hover:underline">
+                <div className="absolute right-0 mt-1 z-50 bg-white dark:bg-[var(--card)] border border-slate-200 dark:border-[var(--border)] rounded-xl shadow-lg p-3 w-52">
+                    <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-100 dark:border-slate-700">
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Colunas visíveis</span>
+                        <button onClick={toggleAll} className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline">
                             {allOn ? "Ocultar todas" : "Mostrar todas"}
                         </button>
                     </div>
                     <div className="flex flex-col gap-0.5 max-h-64 overflow-y-auto">
                         {ALL_COLS.map(c => (
-                            <label key={c.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-1 py-0.5 rounded">
+                            <label key={c.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 px-1 py-0.5 rounded">
                                 <input
                                     type="checkbox"
                                     checked={col(c.id)}
                                     onChange={() => toggle(c.id)}
                                     className="accent-indigo-500 w-3.5 h-3.5 shrink-0"
                                 />
-                                <span className="text-xs text-slate-700">{c.label}</span>
+                                <span className="text-xs text-slate-700 dark:text-slate-200">{c.label}</span>
                             </label>
                         ))}
                     </div>
@@ -381,6 +383,8 @@ type RevStatus = "idle" | "generating" | "sending" | "done" | "error" | "skipped
 interface RevState {
     rev: string;
     dests: string[];        // apelidos dos destinatários associados
+    destIds: string[];      // IDs dos destinatários
+    selectedDestIds: Set<string>;
     checked: boolean;
     status: RevStatus;
     detail: string;         // mensagem de detalhe do status
@@ -480,16 +484,35 @@ function EnviarWAModal({
         ? new Date(data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
         : "";
 
+    const WA_SEL_KEY = "metricflow:wa-selecoes";
+
+    function loadSavedSelecoes(): Record<string, { checked: boolean; selectedDestIds: string[] }> {
+        try { return JSON.parse(localStorage.getItem(WA_SEL_KEY) || "{}"); }
+        catch { return {}; }
+    }
+
+    function saveSelecoes(rows: RevState[]) {
+        const map: Record<string, { checked: boolean; selectedDestIds: string[] }> = {};
+        rows.forEach(r => { map[r.rev] = { checked: r.checked, selectedDestIds: [...r.selectedDestIds] }; });
+        localStorage.setItem(WA_SEL_KEY, JSON.stringify(map));
+    }
+
     // Monta estado inicial por revenda
-    const buildRows = React.useCallback((): RevState[] =>
-        revendasOrdenadas.map(rev => {
-            const dests = allDests
-                .filter(d => d.revendas.some(r => revendasMatch(r, rev)))
-                .map(d => d.apelido || d.nome);
-            return { rev, dests, checked: dests.length > 0, status: "idle", detail: "" };
-        }),
+    const buildRows = React.useCallback((): RevState[] => {
+        const saved = loadSavedSelecoes();
+        return revendasOrdenadas.map(rev => {
+            const destsForRev = allDests.filter(d => d.revendas.some(r => revendasMatch(r, rev)));
+            const dests = destsForRev.map(d => d.apelido || d.nome);
+            const destIds = destsForRev.map(d => d.id);
+            const s = saved[rev];
+            const selectedDestIds = s
+                ? new Set(s.selectedDestIds.filter(id => destIds.includes(id)))
+                : new Set(destIds);
+            const checked = s ? s.checked && selectedDestIds.size > 0 : dests.length > 0;
+            return { rev, dests, destIds, selectedDestIds, checked, status: "idle", detail: "" };
+        });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [revendasOrdenadas, destQuery.data]);
+    }, [revendasOrdenadas, destQuery.data]);
 
     const [rows, setRows] = React.useState<RevState[]>([]);
     const [sending, setSending] = React.useState(false);
@@ -556,7 +579,24 @@ function EnviarWAModal({
     }
 
     function toggleRow(rev: string) {
-        setRows(prev => prev.map(r => r.rev === rev ? { ...r, checked: !r.checked } : r));
+        setRows(prev => {
+            const next = prev.map(r => r.rev === rev ? { ...r, checked: !r.checked } : r);
+            saveSelecoes(next);
+            return next;
+        });
+    }
+
+    function toggleDest(rev: string, destId: string) {
+        setRows(prev => {
+            const next = prev.map(r => {
+                if (r.rev !== rev) return r;
+                const ids = new Set(r.selectedDestIds);
+                ids.has(destId) ? ids.delete(destId) : ids.add(destId);
+                return { ...r, selectedDestIds: ids, checked: ids.size > 0 };
+            });
+            saveSelecoes(next);
+            return next;
+        });
     }
 
     function setRowStatus(rev: string, status: RevStatus, detail = "") {
@@ -579,7 +619,7 @@ function EnviarWAModal({
         for (const row of targets) {
             const { rev } = row;
             const destObjs = allDests.filter(d =>
-                d.revendas.some(r => revendasMatch(r, rev))
+                d.revendas.some(r => revendasMatch(r, rev)) && row.selectedDestIds.has(d.id)
             );
 
             if (destObjs.length === 0) {
@@ -654,34 +694,34 @@ function EnviarWAModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-white dark:bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-lg border border-slate-100 dark:border-[var(--border)] overflow-hidden flex flex-col max-h-[90vh]">
 
                 {/* Header */}
-                <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 shrink-0">
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-[var(--border)] shrink-0">
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
                         style={{ background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)" }}>
                         <MessageCircle className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1">
-                        <p className="text-sm font-bold text-slate-800">Enviar relatórios via WhatsApp</p>
-                        <p className="text-xs text-slate-500">{dateLabel}</p>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Enviar relatórios via WhatsApp</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{dateLabel}</p>
                     </div>
                     <button onClick={onClose} disabled={sending}
-                        className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors disabled:opacity-40">
+                        className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-40">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
 
                 {/* Tabs de modo */}
-                <div className="flex border-b border-slate-100 shrink-0">
+                <div className="flex border-b border-slate-100 dark:border-[var(--border)] shrink-0">
                     {(["byRevenda", "unified"] as const).map(m => (
                         <button
                             key={m}
                             onClick={() => { setMode(m); setDone(false); setUnifiedStatus({ status: "idle", detail: "" }); }}
                             disabled={sending}
                             className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${mode === m
-                                ? "border-b-2 border-green-500 text-green-700 bg-green-50/50"
-                                : "text-slate-500 hover:bg-slate-50"}`}
+                                ? "border-b-2 border-green-500 text-green-700 dark:text-green-400 bg-green-50/50 dark:bg-green-900/20"
+                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50"}`}
                         >
                             {m === "byRevenda" ? "Por Revenda" : "PDF Unificado"}
                         </button>
@@ -693,9 +733,9 @@ function EnviarWAModal({
 
                     {/* Mensagem prévia */}
                     <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                            <MessageCircle className="w-3.5 h-3.5 text-slate-400" />
-                            Mensagem prévia <span className="text-slate-400 font-normal">(opcional — enviada antes do PDF)</span>
+                        <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                            <MessageCircle className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                            Mensagem prévia <span className="text-slate-400 dark:text-slate-500 font-normal">(opcional — enviada antes do PDF)</span>
                         </label>
                         <textarea
                             value={preMsg}
@@ -703,26 +743,26 @@ function EnviarWAModal({
                             disabled={sending}
                             rows={3}
                             placeholder="Digite aqui uma mensagem de texto que será enviada antes de cada PDF…"
-                            className="w-full text-xs rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 resize-none placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 disabled:opacity-50 transition"
+                            className="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-[var(--input)] text-slate-700 dark:text-slate-200 px-3 py-2.5 resize-none placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 disabled:opacity-50 transition"
                         />
                     </div>
 
                     {/* Aviso WA desconectado */}
                     {!connected && (
-                        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs">
+                        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 text-amber-700 dark:text-amber-400 text-xs">
                             <AlertCircle className="w-4 h-4 shrink-0" />
                             WhatsApp desconectado. Conecte em <strong>Configurações → WhatsApp</strong>.
                         </div>
                     )}
 
                     {destQuery.isLoading ? (
-                        <div className="flex items-center gap-2 text-slate-400 text-xs py-4">
+                        <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-xs py-4">
                             <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando destinatários…
                         </div>
                     ) : mode === "byRevenda" ? (
                         <>
                             {!hasAnyDests && (
-                                <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs">
+                                <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 text-xs">
                                     <AlertCircle className="w-4 h-4 shrink-0" />
                                     Nenhuma revenda tem destinatários associados. Configure em <strong>WhatsApp → Destinatários</strong>.
                                 </div>
@@ -730,16 +770,33 @@ function EnviarWAModal({
                             <div className="space-y-2">
                                 {rows.map(row => (
                                     <div key={row.rev}
-                                        className={`flex items-start gap-3 px-4 py-3 rounded-xl border transition-colors ${row.checked ? "bg-indigo-50/70 border-indigo-200" : "bg-slate-50 border-slate-200"} ${row.dests.length === 0 ? "opacity-50" : ""}`}
+                                        className={`flex items-start gap-3 px-4 py-3 rounded-xl border transition-colors ${row.checked ? "bg-indigo-50/70 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-700/50" : "bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-600"} ${row.dests.length === 0 ? "opacity-50" : ""}`}
                                     >
                                         <input type="checkbox" checked={row.checked} onChange={() => toggleRow(row.rev)}
                                             disabled={sending || row.dests.length === 0}
                                             className="mt-0.5 w-3.5 h-3.5 accent-indigo-500 shrink-0" />
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-bold text-slate-800">{row.rev}</p>
-                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                {row.dests.length > 0 ? row.dests.join(", ") : <span className="italic">sem destinatários associados</span>}
-                                            </p>
+                                            <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{row.rev}</p>
+                                            {row.dests.length > 0 ? (
+                                                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
+                                                    {allDests.filter(d => row.destIds.includes(d.id)).map(dest => {
+                                                        const sel = row.selectedDestIds.has(dest.id);
+                                                        return (
+                                                            <label key={dest.id}
+                                                                className={`flex items-center gap-1 cursor-pointer select-none text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors ${sel ? "bg-indigo-100 dark:bg-indigo-900/40 border-indigo-300 dark:border-indigo-600 text-indigo-700 dark:text-indigo-400" : "bg-slate-100 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 line-through"} ${sending ? "pointer-events-none" : ""}`}
+                                                            >
+                                                                <input type="checkbox" checked={sel}
+                                                                    onChange={() => toggleDest(row.rev, dest.id)}
+                                                                    disabled={sending}
+                                                                    className="w-3 h-3 accent-indigo-500 shrink-0" />
+                                                                {dest.apelido || dest.nome}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 italic">sem destinatários associados</p>
+                                            )}
                                             {row.detail && (
                                                 <p className={`text-[11px] mt-1 font-medium ${row.status === "error" ? "text-red-500" : row.status === "skipped" ? "text-amber-500" : row.status === "done" ? "text-green-600" : "text-indigo-500"}`}>
                                                     {row.detail}
@@ -754,11 +811,11 @@ function EnviarWAModal({
                     ) : (
                         /* ── Modo Unificado ── */
                         <div className="space-y-3">
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
                                 Gera um único PDF com todas as revendas e envia para os destinatários selecionados abaixo.
                             </p>
                             {allDests.length === 0 ? (
-                                <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs">
+                                <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 text-xs">
                                     <AlertCircle className="w-4 h-4 shrink-0" />
                                     Nenhum destinatário cadastrado. Configure em <strong>WhatsApp → Destinatários</strong>.
                                 </div>
@@ -768,7 +825,7 @@ function EnviarWAModal({
                                         const checked = unifiedSelected.has(dest.id);
                                         return (
                                             <div key={dest.id}
-                                                className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors cursor-pointer ${checked ? "bg-green-50/70 border-green-200" : "bg-slate-50 border-slate-200"}`}
+                                                className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors cursor-pointer ${checked ? "bg-green-50/70 dark:bg-green-900/20 border-green-200 dark:border-green-700/50" : "bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-600"}`}
                                                 onClick={() => !sending && setUnifiedSelected(prev => {
                                                     const next = new Set(prev);
                                                     next.has(dest.id) ? next.delete(dest.id) : next.add(dest.id);
@@ -778,10 +835,10 @@ function EnviarWAModal({
                                                 <input type="checkbox" checked={checked} readOnly disabled={sending}
                                                     className="w-3.5 h-3.5 accent-green-500 shrink-0 pointer-events-none" />
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-bold text-slate-800">{dest.apelido || dest.nome}</p>
-                                                    <p className="text-xs text-slate-400 font-mono">{dest.telefone}</p>
+                                                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{dest.apelido || dest.nome}</p>
+                                                    <p className="text-xs text-slate-400 dark:text-slate-500 font-mono">{dest.telefone}</p>
                                                 </div>
-                                                <User className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                                                <User className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 shrink-0" />
                                             </div>
                                         );
                                     })}
@@ -798,12 +855,12 @@ function EnviarWAModal({
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50/60 shrink-0">
+                <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-slate-100 dark:border-[var(--border)] bg-slate-50/60 dark:bg-[var(--card)] shrink-0">
                     {mode === "byRevenda" ? (
                         <button
-                            onClick={() => setRows(prev => prev.map(r => ({ ...r, checked: r.dests.length > 0 })))}
+                            onClick={() => setRows(prev => { const next = prev.map(r => ({ ...r, checked: r.dests.length > 0, selectedDestIds: new Set(r.destIds) })); saveSelecoes(next); return next; })}
                             disabled={sending}
-                            className="text-xs text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
+                            className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors disabled:opacity-40"
                         >
                             Restaurar seleção
                         </button>
@@ -811,14 +868,14 @@ function EnviarWAModal({
                         <button
                             onClick={() => setUnifiedSelected(new Set(allDests.map(d => d.id)))}
                             disabled={sending}
-                            className="text-xs text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
+                            className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors disabled:opacity-40"
                         >
                             Selecionar todos
                         </button>
                     )}
                     <div className="flex items-center gap-2">
                         <button onClick={onClose} disabled={sending}
-                            className="px-4 py-2 rounded-xl text-sm text-slate-500 hover:bg-slate-100 transition-colors disabled:opacity-40">
+                            className="px-4 py-2 rounded-xl text-sm text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-40">
                             {done ? "Fechar" : "Cancelar"}
                         </button>
                         {!done && mode === "unified" && (
@@ -867,6 +924,8 @@ export default function Analise() {
     );
 
     const { col, toggle, toggleAll, allOn, hiddenCount } = useColumnVisibility();
+    const { theme } = useTheme();
+    const isDark = theme === "dark";
     const [sortBy, setSortBy] = useState<string>("vendedor");
     const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
     const [expandedHelp, setExpandedHelp] = useState(false);
@@ -1125,7 +1184,7 @@ export default function Analise() {
             compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
             relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching", analises: "/analises",
             trello_atraso: "/trello-atraso",
-            whatsapp: "/whatsapp",
+            whatsapp: "/whatsapp", assessment: "/assessment",
         };
         if (rotas[page]) { window.location.href = rotas[page]; return; }
         if (page !== "analises") toast.info(`Módulo "${page}" em breve`);
@@ -1133,23 +1192,23 @@ export default function Analise() {
     };
 
     return (
-        <div className="flex h-screen bg-slate-50 overflow-hidden">
+        <div className="flex h-screen bg-slate-50 dark:bg-[var(--background)] overflow-hidden">
             <Sidebar activePage={activePage} onNavigate={handleNavigate} />
 
             <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-60'}`}>
                 {/* Header */}
-                <div className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+                <div className="bg-white dark:bg-[var(--card)] border-b border-slate-100 dark:border-[var(--border)] px-6 py-4 flex items-center justify-between">
                     <div>
-                        <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <BarChart3 size={20} className="text-indigo-500" />
+                        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <BarChart3 size={20} className="text-indigo-500 dark:text-indigo-400" />
                             Análise de Vendedores
                         </h1>
-                        <p className="text-xs text-slate-400 mt-0.5">Métricas detalhadas por vendedor e dia</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Métricas detalhadas por vendedor e dia</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setExpandedHelp(h => !h)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-slate-200 text-slate-500 hover:bg-slate-50"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50"
                         >
                             <AlertTriangle size={12} /> Glossário
                         </button>
@@ -1169,14 +1228,14 @@ export default function Analise() {
                                     console.error(e);
                                 }
                             }}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-slate-200 text-indigo-600 hover:bg-indigo-50"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-slate-200 dark:border-slate-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
                         >
                             <FileText size={12} /> Exportar Word
                         </button>
                         <button
                             onClick={() => downloadPDF()}
                             disabled={downloadingPDF !== null || downloadingUnified}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-indigo-300 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-50"
                             title="Baixar PDF de todas as revendas (ZIP)"
                         >
                             <Printer size={12} /> {downloadingPDF === "__all__" ? "Gerando..." : "Baixar todos (ZIP)"}
@@ -1184,7 +1243,7 @@ export default function Analise() {
                         <button
                             onClick={() => downloadPDFUnificado()}
                             disabled={downloadingPDF !== null || downloadingUnified}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-green-300 text-green-700 hover:bg-green-50 disabled:opacity-50"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50"
                             title="Baixar todas as revendas em um único arquivo PDF"
                         >
                             <Printer size={12} /> {downloadingUnified ? "Gerando..." : "Baixar unificado (PDF)"}
@@ -1213,8 +1272,12 @@ export default function Analise() {
                             className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border disabled:opacity-40 transition-colors"
                             style={
                                 healthQuery.data?.online
-                                    ? { background: "#f0fdf4", color: "#16a34a", borderColor: "#86efac" }
-                                    : { background: "#f8fafc", color: "#94a3b8", borderColor: "#e2e8f0" }
+                                    ? isDark
+                                        ? { background: "oklch(0.20 0.06 162 / 0.35)", color: "#4ade80", borderColor: "oklch(0.38 0.12 162)" }
+                                        : { background: "#f0fdf4", color: "#16a34a", borderColor: "#86efac" }
+                                    : isDark
+                                        ? { background: "oklch(0.155 0.020 252)", color: "#64748b", borderColor: "oklch(0.265 0.018 252)" }
+                                        : { background: "#f8fafc", color: "#94a3b8", borderColor: "#e2e8f0" }
                             }
                         >
                             {runMutation.isPending
@@ -1226,14 +1289,14 @@ export default function Analise() {
                         </button>
                         <button
                             onClick={() => refetch()}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/30"
                         >
                             <RefreshCw size={12} /> Atualizar
                         </button>
                         <button
                             onClick={() => setHeaderExpanded(e => !e)}
                             title={headerExpanded ? "Recolher filtros e KPIs" : "Expandir filtros e KPIs"}
-                            className="flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
+                            className="flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                         >
                             {headerExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>
@@ -1245,8 +1308,8 @@ export default function Analise() {
                     <>
                         {/* Glossário */}
                         {expandedHelp && (
-                            <div className="bg-amber-50 border-b border-amber-100 px-6 py-3">
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-slate-600 max-w-5xl">
+                            <div className="bg-amber-50 dark:bg-amber-900/10 border-b border-amber-100 dark:border-amber-800/30 px-6 py-3">
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-slate-600 dark:text-slate-300 max-w-5xl">
                                     {[
                                         ["Pedido SFA", "Pedidos realizados pelo vendedor via sistema SFA"],
                                         ["Pedido Heishop", "Pedidos realizados via plataforma Heishop"],
@@ -1260,7 +1323,7 @@ export default function Analise() {
                                         ["Tempo Ñ Atend.", "Jornada − tempo em visita. Trava às 17:00"],
                                     ].map(([k, v]) => (
                                         <div key={k} className="flex gap-2">
-                                            <span className="font-semibold text-slate-700 min-w-[140px]">{k}:</span>
+                                            <span className="font-semibold text-slate-700 dark:text-slate-200 min-w-[140px]">{k}:</span>
                                             <span>{v}</span>
                                         </div>
                                     ))}
@@ -1269,8 +1332,8 @@ export default function Analise() {
                         )}
 
                         {/* Filtros */}
-                        <div className="bg-white rounded-2xl px-5 py-4 flex flex-wrap items-center gap-4 mx-6 mt-4"
-                            style={{ border: "1px solid oklch(0.93 0.006 240)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                        <div className="bg-white dark:bg-[var(--card)] rounded-2xl px-5 py-4 flex flex-wrap items-center gap-4 mx-6 mt-4"
+                            style={{ border: `1px solid ${isDark ? "oklch(0.265 0.018 252)" : "oklch(0.93 0.006 240)"}`, boxShadow: isDark ? "0 1px 4px rgba(0,0,0,0.25)" : "0 1px 4px rgba(0,0,0,0.04)" }}>
                             <FilterSelect
                                 label="Revenda"
                                 value={filtros.revenda ?? ""}
@@ -1289,29 +1352,29 @@ export default function Analise() {
                             <FilterDate label="Data Fim" value={filtros.dataFim ?? ""} onChange={v => setFiltro("dataFim", v || undefined)} />
                             {temFiltro && (
                                 <button onClick={resetFiltros}
-                                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-all"
+                                    className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all"
                                     style={{ fontWeight: 600 }}>
                                     <X className="w-3.5 h-3.5" /> Limpar
                                 </button>
                             )}
-                            <span className="text-xs text-slate-400 ml-auto" style={{ fontWeight: 500 }}>{sorted.length} vendedor(es)</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto" style={{ fontWeight: 500 }}>{sorted.length} vendedor(es)</span>
                             <ColumnsSelector col={col} toggle={toggle} toggleAll={toggleAll} allOn={allOn} hiddenCount={hiddenCount} />
                         </div>
 
                         {/* KPI Cards */}
                         <div className="px-6 pt-4 pb-2 grid grid-cols-5 gap-3">
                             {[
-                                { label: "Vendedores", value: totais.vendedores, color: "text-slate-700", icon: <BarChart3 size={16} className="text-indigo-400" /> },
-                                { label: "PDVs Visitados", value: totais.pdvs, sub: totais.pdvs_total, color: "text-slate-700", icon: <TrendingUp size={16} className="text-green-400" /> },
+                                { label: "Vendedores", value: totais.vendedores, color: "text-slate-700 dark:text-slate-200", icon: <BarChart3 size={16} className="text-indigo-400" /> },
+                                { label: "PDVs Visitados", value: totais.pdvs, sub: totais.pdvs_total, color: "text-slate-700 dark:text-slate-200", icon: <TrendingUp size={16} className="text-green-400" /> },
                                 { label: "Pedidos Heishop", value: totais.heishop, color: "text-amber-600", icon: <AlertTriangle size={16} className="text-amber-400" /> },
                                 { label: "Relâmpago médio", value: pct(totais.relampago_avg), color: totais.relampago_avg > 20 ? "text-red-600" : "text-green-600", icon: <TrendingDown size={16} className="text-red-400" /> },
                                 { label: "IV médio", value: pct(totais.iv_avg), color: "text-indigo-600", icon: <Clock size={16} className="text-indigo-400" /> },
                             ].map(k => (
-                                <div key={k.label} className="bg-white rounded-xl border border-slate-100 px-4 py-3 flex items-center gap-3" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                                <div key={k.label} className="bg-white dark:bg-[var(--card)] rounded-xl border border-slate-100 dark:border-[var(--border)] px-4 py-3 flex items-center gap-3" style={{ boxShadow: isDark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.06)" }}>
                                     {k.icon}
                                     <div>
-                                        <div className={`text-lg font-bold ${k.color}`}>{k.value}{k.sub ? <span className="text-xs text-slate-400">/{k.sub}</span> : ""}</div>
-                                        <div className="text-xs text-slate-400">{k.label}</div>
+                                        <div className={`text-lg font-bold ${k.color}`}>{k.value}{k.sub ? <span className="text-xs text-slate-400 dark:text-slate-500">/{k.sub} = {k.sub - k.value}</span> : ""}</div>
+                                        <div className="text-xs text-slate-400 dark:text-slate-500">{k.label}</div>
                                     </div>
                                 </div>
                             ))}
@@ -1322,7 +1385,7 @@ export default function Analise() {
                 {/* Tabela */}
                 <div className="flex-1 overflow-auto px-6 pb-6">
                     {isLoading && (
-                        <div className="flex items-center justify-center h-40 text-slate-400 text-sm">
+                        <div className="flex items-center justify-center h-40 text-slate-400 dark:text-slate-500 text-sm">
                             <RefreshCw size={16} className="animate-spin mr-2" /> Carregando...
                         </div>
                     )}
@@ -1334,12 +1397,12 @@ export default function Analise() {
                     {!isLoading && !error && (
                         <div className="flex flex-col gap-6">
                             {revendasOrdenadas.length === 0 && (
-                                <div className="bg-white p-12 rounded-xl text-center text-slate-400 border border-slate-100">Nenhum dado para os filtros selecionados</div>
+                                <div className="bg-white dark:bg-[var(--card)] p-12 rounded-xl text-center text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-[var(--border)]">Nenhum dado para os filtros selecionados</div>
                             )}
                             {revendasOrdenadas.map(rev => (
-                                <div key={rev} id={`revenda-${rev}`} className="bg-white rounded-xl border border-slate-100 overflow-hidden" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
-                                    <div className="px-5 py-3 border-b border-indigo-100 bg-indigo-50/50 flex items-center justify-between">
-                                        <h2 className="text-sm font-bold text-slate-800 tracking-wide uppercase">Revenda: <span className="text-indigo-600">{rev}</span></h2>
+                                <div key={rev} id={`revenda-${rev}`} className="bg-white dark:bg-[var(--card)] rounded-xl border border-slate-100 dark:border-[var(--border)] overflow-hidden" style={{ boxShadow: isDark ? "0 1px 8px rgba(0,0,0,0.3)" : "0 1px 8px rgba(0,0,0,0.06)" }}>
+                                    <div className="px-5 py-3 border-b border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/50 dark:bg-indigo-900/10 flex items-center justify-between">
+                                        <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-wide uppercase">Revenda: <span className="text-indigo-600 dark:text-indigo-400">{rev}</span></h2>
                                         <div className="flex items-center gap-3">
                                             {(() => {
                                                 const maiorFim = groupedData[rev]
@@ -1348,12 +1411,12 @@ export default function Analise() {
                                                     .sort()
                                                     .at(-1);
                                                 return maiorFim ? (
-                                                    <span className="text-xs font-semibold text-slate-500">
-                                                        Último fim: <span className="text-indigo-600 font-bold">{maiorFim.substring(0, 5)}</span>
+                                                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                                        Último fim: <span className="text-indigo-600 dark:text-indigo-400 font-bold">{maiorFim.substring(0, 5)}</span>
                                                     </span>
                                                 ) : null;
                                             })()}
-                                            <span className="text-xs font-semibold text-slate-500">{groupedData[rev].length} Vendedor(es)</span>
+                                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{groupedData[rev].length} Vendedor(es)</span>
                                         </div>
                                     </div>
                                     <div className="overflow-x-auto overflow-y-auto max-h-[480px]">
@@ -1412,6 +1475,7 @@ export default function Analise() {
                                                     {col("t_total") && <Th title="Soma de todos os tempos de visita dentro do PDV" center>T. Total</Th>}
 
                                                     {/* Percurso */}
+                                                    {col("soma_percurso") && <Th title="Soma de todos os intervalos entre visitas consecutivas (≤ 60min)" center>Σ Percurso</Th>}
                                                     {col("percurso") && <Th title="Maior intervalo entre visitas consecutivas (≤ 60min)" center>Maior Percurso</Th>}
                                                     {col("ini_percurso") && <Th title="Início do maior intervalo entre visitas" center>Ini. Percurso</Th>}
                                                     {col("fim_percurso") && <Th title="Fim do maior intervalo entre visitas" center>Fim Percurso</Th>}
@@ -1427,13 +1491,13 @@ export default function Analise() {
                                             </thead>
                                             <tbody>
                                                 {groupedData[rev].map((r, i) => {
-                                                    const rowBg = i % 2 === 1 ? "bg-slate-50" : "";
+                                                    const rowBg = i % 2 === 1 ? "bg-slate-50 dark:bg-slate-800/30" : "dark:bg-[var(--card)]";
                                                     const isRuim = r.ranking_critico <= 3;
                                                     return (
-                                                        <tr key={`${r.vendedor}-${r.data}`} className={`hover:bg-indigo-50/80 transition-colors ${rowBg}`}>
+                                                        <tr key={`${r.vendedor}-${r.data}`} className={`hover:bg-indigo-50/80 dark:hover:bg-indigo-900/20 transition-colors ${rowBg}`}>
                                                             {/* Identidade — sempre visíveis */}
                                                             <Td mono>
-                                                                <button onClick={() => { sessionStorage.setItem(SCROLL_TO_REVENDA_KEY, r.revenda); setLocation(`/analises/vendedor/${encodeURIComponent(r.revenda)}/${r.vendedor}/${r.data}`); }} className="font-bold text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-1 transition-all">
+                                                                <button onClick={() => { sessionStorage.setItem(SCROLL_TO_REVENDA_KEY, r.revenda); setLocation(`/analises/vendedor/${encodeURIComponent(r.revenda)}/${r.vendedor}/${r.data}`); }} className="font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline inline-flex items-center gap-1 transition-all">
                                                                     {r.vendedor}
                                                                 </button>
                                                             </Td>
@@ -1446,7 +1510,7 @@ export default function Analise() {
                                                                             checked={!!(checkboxState[rev]?.[String(r.vendedor)]?.deslocamento)}
                                                                             onChange={() => toggleCheck(rev, r.vendedor, "deslocamento")}
                                                                         />
-                                                                        <span className="text-[10px] text-amber-700">Desl.</span>
+                                                                        <span className="text-[10px] text-amber-700 dark:text-amber-400">Desl.</span>
                                                                     </label>
                                                                     <label className="flex items-center gap-1 cursor-pointer select-none whitespace-nowrap">
                                                                         <input
@@ -1455,15 +1519,15 @@ export default function Analise() {
                                                                             checked={!!(checkboxState[rev]?.[String(r.vendedor)]?.problema)}
                                                                             onChange={() => toggleCheck(rev, r.vendedor, "problema")}
                                                                         />
-                                                                        <span className="text-[10px] text-red-700">Prob.</span>
+                                                                        <span className="text-[10px] text-red-700 dark:text-red-400">Prob.</span>
                                                                     </label>
                                                                 </div>
                                                             </Td>
-                                                            {col("data") && <Td mono className="text-slate-500">{r.data}</Td>}
+                                                            {col("data") && <Td mono className="text-slate-500 dark:text-slate-400">{r.data}</Td>}
 
                                                             {/* Horários */}
-                                                            {col("inicio") && <Td center mono className={r.inicio && (r.inicio < "07:30" || r.inicio > "08:45") ? "text-amber-700 font-bold" : "text-slate-600"}>{r.inicio ?? "—"}</Td>}
-                                                            {col("fim") && <Td center mono className="text-slate-600">{r.fim ?? "—"}</Td>}
+                                                            {col("inicio") && <Td center mono className={r.inicio && (r.inicio < "07:30" || r.inicio > "08:45") ? "text-amber-700 dark:text-amber-400 font-bold" : "text-slate-600 dark:text-slate-300"}>{r.inicio ?? "—"}</Td>}
+                                                            {col("fim") && <Td center mono className="text-slate-600 dark:text-slate-300">{r.fim ?? "—"}</Td>}
                                                             {col("almoco") && (
                                                                 <Td center>
                                                                     {r.almoco > 0 ? <Badge color="amber">{r.almoco}</Badge> : <span className="text-slate-300">—</span>}
@@ -1472,8 +1536,8 @@ export default function Analise() {
                                                             {col("apos14h") && (
                                                                 <Td center>
                                                                     {r.apos14h > 0
-                                                                        ? <span className={r.apos14h_pct < 25 ? "text-red-500 font-bold" : "text-slate-600 font-bold"}>{pct(r.apos14h_pct, 0)} <span className="text-slate-400 font-normal">({r.apos14h}/{r.apos14h_total})</span></span>
-                                                                        : <span className="text-slate-300">—</span>
+                                                                        ? <span className={r.apos14h_pct < 25 ? "text-red-500 font-bold" : "text-slate-600 dark:text-slate-300 font-bold"}>{pct(r.apos14h_pct, 0)} <span className="text-slate-400 dark:text-slate-500 font-normal">({r.apos14h}/{r.apos14h_total})</span></span>
+                                                                        : <span className="text-slate-300 dark:text-slate-600">—</span>
                                                                     }
                                                                 </Td>
                                                             )}
@@ -1482,13 +1546,13 @@ export default function Analise() {
                                                             {col("visitas") && (
                                                                 <Td center>
                                                                     <span className={r.visitas_pct == 100 ? "text-green-600 font-extrabold" : r.visitas_pct >= 90 ? "text-amber-600 font-extrabold" : "text-red-500 font-extrabold"}>
-                                                                        {pct(r.visitas_pct, 0)} <span className="text-slate-400 font-normal">({r.visitas}/{r.visitas_total})</span>
+                                                                        {pct(r.visitas_pct, 0)} <span className="text-slate-400 dark:text-slate-500 font-normal">({r.visitas}/{r.visitas_total})</span>
                                                                     </span>
                                                                 </Td>
                                                             )}
                                                             {col("pdv_sem_visita") && (
                                                                 <Td center>
-                                                                    {r.pdvs_sem_visita > 0 ? <Badge color="red">{r.pdvs_sem_visita}</Badge> : <span className="text-slate-300">0</span>}
+                                                                    {r.pdvs_sem_visita > 0 ? <Badge color="red">{r.pdvs_sem_visita}</Badge> : <span className="text-slate-300 dark:text-slate-600">0</span>}
                                                                 </Td>
                                                             )}
 
@@ -1496,14 +1560,14 @@ export default function Analise() {
                                                             {col("relampago") && (
                                                                 <Td center>
                                                                     <span className={r.relampago_pct >= 30 ? "text-red-600 font-bold" : r.relampago_pct >= 15 ? "text-amber-600 font-semibold" : "text-green-600"}>
-                                                                        {pct(r.relampago_pct, 0)} <span className="text-slate-400 font-normal">({r.relampago}/{r.visitas_total_dentro_raio})</span>
+                                                                        {pct(r.relampago_pct, 0)} <span className="text-slate-400 dark:text-slate-500 font-normal">({r.relampago}/{r.visitas_total_dentro_raio})</span>
                                                                     </span>
                                                                 </Td>
                                                             )}
 
                                                             {/* Pedidos */}
-                                                            {col("sfa") && <Td center mono>{r.pedido_sfa > 0 ? <span className="text-blue-600 font-semibold">{r.pedido_sfa}</span> : <span className="text-slate-300">0</span>}</Td>}
-                                                            {col("heishop") && <Td center mono>{r.pedido_heishop > 0 ? <span className="text-amber-600 font-semibold">{r.pedido_heishop}</span> : <span className="text-slate-300">0</span>}</Td>}
+                                                            {col("sfa") && <Td center mono>{r.pedido_sfa > 0 ? <span className="text-blue-600 dark:text-blue-400 font-semibold">{r.pedido_sfa}</span> : <span className="text-slate-300 dark:text-slate-600">0</span>}</Td>}
+                                                            {col("heishop") && <Td center mono>{r.pedido_heishop > 0 ? <span className="text-amber-600 dark:text-amber-400 font-semibold">{r.pedido_heishop}</span> : <span className="text-slate-300 dark:text-slate-600">0</span>}</Td>}
                                                             {col("heishop_verif") && <Td center mono>{r.heishop_verif > 0 ? <Badge color="green">{r.heishop_verif}</Badge> : <span className="text-slate-300">0</span>}</Td>}
 
                                                             {/* Índices */}
@@ -1516,29 +1580,34 @@ export default function Analise() {
                                                             )}
                                                             {col("iav") && (
                                                                 <Td center>
-                                                                    {r.iav > 0 ? <span className="text-indigo-600 font-semibold">{pct(r.iav)}</span> : <span className="text-slate-300">—</span>}
+                                                                    {r.iav > 0 ? <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{pct(r.iav)}</span> : <span className="text-slate-300 dark:text-slate-600">—</span>}
                                                                 </Td>
                                                             )}
 
                                                             {/* Atendimento */}
-                                                            {col("atend_35") && <Td center>{r.atend_maior35 > 0 ? <Badge color="amber">{r.atend_maior35}</Badge> : <span className="text-slate-300">0</span>}</Td>}
-                                                            {col("soma_35") && <Td center mono className="text-slate-600">{r.soma_maior35_fmt}</Td>}
-                                                            {col("t_menor") && <Td center mono className={r.tempo_menor !== null && r.tempo_menor < 3 ? "text-red-700" : "text-slate-600"}>{r.tempo_menor_fmt}</Td>}
-                                                            {col("t_maior") && <Td center mono className={r.tempo_maior !== null && r.tempo_maior > 35 ? "text-red-500" : "text-slate-600"}>{r.tempo_maior_fmt}</Td>}
-                                                            {col("t_medio") && <Td center mono className="text-slate-600">{r.tempo_medio_fmt}</Td>}
-                                                            {col("t_total") && <Td center mono className="text-indigo-600 font-semibold">{r.tempo_total_fmt}</Td>}
+                                                            {col("atend_35") && <Td center>{r.atend_maior35 > 0 ? <Badge color="amber">{r.atend_maior35}</Badge> : <span className="text-slate-300 dark:text-slate-600">0</span>}</Td>}
+                                                            {col("soma_35") && <Td center mono className="text-slate-600 dark:text-slate-300">{r.soma_maior35_fmt}</Td>}
+                                                            {col("t_menor") && <Td center mono className={r.tempo_menor !== null && r.tempo_menor < 3 ? "text-red-700 dark:text-red-400" : "text-slate-600 dark:text-slate-300"}>{r.tempo_menor_fmt}</Td>}
+                                                            {col("t_maior") && <Td center mono className={r.tempo_maior !== null && r.tempo_maior > 35 ? "text-red-500" : "text-slate-600 dark:text-slate-300"}>{r.tempo_maior_fmt}</Td>}
+                                                            {col("t_medio") && <Td center mono className="text-slate-600 dark:text-slate-300">{r.tempo_medio_fmt}</Td>}
+                                                            {col("t_total") && <Td center mono className={`${r.tempo_total_fmt && r.tempo_total_fmt < "02:00:00" ? "text-red-500" : "text-indigo-600 dark:text-indigo-400 font-semibold"}`}>{r.tempo_total_fmt}</Td>}
 
                                                             {/* Percurso */}
+                                                            {col("soma_percurso") && (
+                                                                <Td center mono className="text-slate-600 dark:text-slate-300">
+                                                                    {r.total_percurso !== null ? minToHM_display(r.total_percurso) : "—"}
+                                                                </Td>
+                                                            )}
                                                             {col("percurso") && (
-                                                                <Td center mono className={r.maior_percurso !== null && r.maior_percurso > 30 ? "text-amber-600 font-semibold" : "text-slate-600"}>
+                                                                <Td center mono className={r.maior_percurso !== null && r.maior_percurso > 30 ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-slate-600 dark:text-slate-300"}>
                                                                     {r.maior_percurso !== null ? minToHM_display(r.maior_percurso) : "—"}
                                                                 </Td>
                                                             )}
-                                                            {col("ini_percurso") && <Td center mono className="text-slate-500">{r.percurso_ini ?? "—"}</Td>}
-                                                            {col("fim_percurso") && <Td center mono className="text-slate-500">{r.percurso_fim ?? "—"}</Td>}
-                                                            {col("pdvs_percurso") && <Td center mono>{r.pdvs_apos_gap > 0 ? <span className="text-slate-700 font-semibold">{r.pdvs_apos_gap}</span> : <span className="text-slate-300">—</span>}</Td>}
+                                                            {col("ini_percurso") && <Td center mono className="text-slate-500 dark:text-slate-400">{r.percurso_ini ?? "—"}</Td>}
+                                                            {col("fim_percurso") && <Td center mono className="text-slate-500 dark:text-slate-400">{r.percurso_fim ?? "—"}</Td>}
+                                                            {col("pdvs_percurso") && <Td center mono>{r.pdvs_apos_gap > 0 ? <span className="text-slate-700 dark:text-slate-200 font-semibold">{r.pdvs_apos_gap}</span> : <span className="text-slate-300 dark:text-slate-600">—</span>}</Td>}
                                                             {col("t_nao_atend") && (
-                                                                <Td center mono className={r.tempo_nao_atend !== null && r.tempo_nao_atend > 120 ? "text-red-500 font-bold" : r.tempo_nao_atend !== null && r.tempo_nao_atend > 60 ? "text-amber-600 font-semibold" : "text-slate-600"}>
+                                                                <Td center mono className={r.tempo_nao_atend !== null && r.tempo_nao_atend > 120 ? "text-red-500 font-bold" : r.tempo_nao_atend !== null && r.tempo_nao_atend > 60 ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-slate-600 dark:text-slate-300"}>
                                                                     {r.tempo_nao_atend_fmt}
                                                                 </Td>
                                                             )}
@@ -1550,14 +1619,14 @@ export default function Analise() {
                                     </div>
 
                                     {/* ── Editor de análise por revenda ── */}
-                                    <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/40">
+                                    <div className="px-5 py-4 border-t border-slate-100 dark:border-[var(--border)] bg-slate-50/40 dark:bg-[var(--background)]/40">
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2">
-                                                <PenLine className="w-3.5 h-3.5 text-indigo-500" />
-                                                <span className="text-xs text-indigo-700 uppercase tracking-widest" style={{ fontWeight: 700 }}>
+                                                <PenLine className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+                                                <span className="text-xs text-indigo-700 dark:text-indigo-400 uppercase tracking-widest" style={{ fontWeight: 700 }}>
                                                     Análise · {rev}
                                                 </span>
-                                                <span className="text-xs text-slate-400 ml-1" style={{ fontWeight: 400 }}>
+                                                <span className="text-xs text-slate-400 dark:text-slate-500 ml-1" style={{ fontWeight: 400 }}>
                                                     — será incluída no PDF
                                                 </span>
                                             </div>
@@ -1618,11 +1687,11 @@ function FilterSelect({ label, value, onChange, placeholder, options }: {
 }) {
     return (
         <div className="flex items-center gap-2">
-            <label className="text-xs text-slate-500 whitespace-nowrap" style={{ fontWeight: 600 }}>{label}</label>
+            <label className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap" style={{ fontWeight: 600 }}>{label}</label>
             <select
                 value={value}
                 onChange={e => onChange(e.target.value)}
-                className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="text-xs bg-slate-50 dark:bg-[var(--input)] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[var(--border)] rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             >
                 <option value="">{placeholder}</option>
                 {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -1638,12 +1707,12 @@ function FilterDate({ label, value, onChange }: {
 }) {
     return (
         <div className="flex items-center gap-2">
-            <label className="text-xs text-slate-500 whitespace-nowrap" style={{ fontWeight: 600 }}>{label}</label>
+            <label className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap" style={{ fontWeight: 600 }}>{label}</label>
             <input
                 type="date"
                 value={value}
                 onChange={e => onChange(e.target.value)}
-                className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="text-xs bg-slate-50 dark:bg-[var(--input)] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[var(--border)] rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             />
         </div>
     );

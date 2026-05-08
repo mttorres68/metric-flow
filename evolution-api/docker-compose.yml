@@ -60,9 +60,9 @@ services:
       - evolution_redis:/data
     networks:
       - evolution-net
-    # Descomente para acessar o Redis diretamente
-    # ports:
-    #   - "6379:6379"
+    # Porta exposta para acesso local (e.g. Terraforce API em dev)
+    ports:
+      - "6379:6379"
 
 # ─── Volumes persistentes ─────────────────────────────────────────────────────
 volumes:

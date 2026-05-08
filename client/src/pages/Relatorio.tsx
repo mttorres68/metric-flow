@@ -100,7 +100,7 @@ export default function Relatorio() {
       relatorio: "/relatorio", relatorio_semanal: "/relatorio-semanal",
       rota_coaching: "/rota-coaching", analises: "/analises",
       trello_atraso: "/trello-atraso",
-            whatsapp: "/whatsapp",
+            whatsapp: "/whatsapp", assessment: "/assessment",
     };
     if (rotas[page]) window.location.href = rotas[page];
   };

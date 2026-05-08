@@ -113,3 +113,13 @@ rota_coaching_all.json
 fluxo-analise.ini
 
 docs/*
+.claude/*
+.manus-logs/*
+
+script/*
+conversas_resolvidas_parcial.json
+conversas_resolvidas.json
+infleet_telemetria_mapeamento.docx
+Analise_Clusters_Assessment.docx
+evolution-api/* 
+

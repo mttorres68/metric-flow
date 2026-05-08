@@ -5,6 +5,7 @@
  */
 
 import {
+  Award,
   BarChart2,
   BarChartHorizontal,
   CircleCheckBig,
@@ -41,6 +42,7 @@ const navItems = [
   { id: "analises", label: "Análises", icon: LineChart },
   { id: "trello_atraso", label: "Trello Atraso", icon: Trello },
   { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+  { id: "assessment", label: "Assessment", icon: Award },
 
   { id: "pedidos", label: "Pedidos", icon: ShoppingCart },
   { id: "tendencias", label: "Tendências", icon: TrendingUp },
@@ -97,7 +99,7 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activePage === item.id;
-            const isBlocked = item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" && item.id !== "relatorio" && item.id !== "relatorio_semanal" && item.id !== "rota_coaching" && item.id !== "analises" && item.id !== "trello_atraso" && item.id !== "whatsapp";
+            const isBlocked = item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" && item.id !== "relatorio" && item.id !== "relatorio_semanal" && item.id !== "rota_coaching" && item.id !== "analises" && item.id !== "trello_atraso" && item.id !== "whatsapp" && item.id !== "assessment";
 
             return (
               <li key={item.id}>

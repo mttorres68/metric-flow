@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(node:*)",
-      "WebFetch(domain:docs.api.infleet.com.br)"
+      "WebFetch(domain:docs.api.infleet.com.br)",
+      "Bash(npx tsc *)"
     ]
   }
 }

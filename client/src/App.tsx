@@ -16,6 +16,7 @@ import Analise from "./pages/Analise";
 import AnaliseVisitasDetalhes from "./pages/AnaliseVisitasDetalhes";
 import TrelloAtraso from "./pages/TrelloAtraso";
 import WhatsApp from "./pages/WhatsApp";
+import Assessment from "./pages/Assessment";
 // MetricFlow — Pastel Command Center — tema claro com pastéis
 
 function Router() {
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/analises/vendedor/:revenda/:vendedor/:data" component={AnaliseVisitasDetalhes} />
       <Route path="/trello-atraso" component={TrelloAtraso} />
       <Route path="/whatsapp" component={WhatsApp} />
+      <Route path="/assessment" component={Assessment} />
 
 
       {/* Final fallback route */}

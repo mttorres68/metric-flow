@@ -642,25 +642,45 @@ function WhatsAppModal({
 
   const destinatariosIds = destinatarios?.map((d) => d.id) ?? [];
 
-  // Inicializa todos selecionados quando os destinatários carregam
+  const WA_TRELLO_SEL_KEY = "metricflow:trello-wa-selecoes";
+
+  function loadSaved(): string[] | null {
+    try {
+      const map = JSON.parse(localStorage.getItem(WA_TRELLO_SEL_KEY) || "{}");
+      return map[revenda] ?? null;
+    } catch { return null; }
+  }
+
+  function saveSelecionados(ids: string[]) {
+    try {
+      const map = JSON.parse(localStorage.getItem(WA_TRELLO_SEL_KEY) || "{}");
+      map[revenda] = ids;
+      localStorage.setItem(WA_TRELLO_SEL_KEY, JSON.stringify(map));
+    } catch { /* ignore */ }
+  }
+
+  // Inicializa: usa seleção salva (filtrando IDs que ainda existem) ou todos
   useEffect(() => {
     if (destinatarios && destinatarios.length > 0) {
-      setSelecionados(destinatarios.map((d) => d.id));
+      const allIds = destinatarios.map((d) => d.id);
+      const saved = loadSaved();
+      setSelecionados(saved ? saved.filter((id) => allIds.includes(id)) : allIds);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [destinatarios]);
 
   function toggleSelecionado(id: string) {
-    setSelecionados((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
-    );
+    setSelecionados((prev) => {
+      const next = prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id];
+      saveSelecionados(next);
+      return next;
+    });
   }
 
   function toggleTodos() {
-    if (selecionados.length === destinatariosIds.length) {
-      setSelecionados([]);
-    } else {
-      setSelecionados(destinatariosIds);
-    }
+    const next = selecionados.length === destinatariosIds.length ? [] : destinatariosIds;
+    saveSelecionados(next);
+    setSelecionados(next);
   }
 
   const destinatariosSelecionados = destinatarios?.filter((d) => selecionados.includes(d.id)) ?? [];
@@ -1177,7 +1197,7 @@ export default function TrelloAtraso() {
             rota_coaching: "/rota-coaching",
             analises: "/analises",
             trello_atraso: "/trello-atraso",
-            whatsapp: "/whatsapp",
+            whatsapp: "/whatsapp", assessment: "/assessment",
           };
           if (routes[page]) window.location.href = routes[page];
         }}

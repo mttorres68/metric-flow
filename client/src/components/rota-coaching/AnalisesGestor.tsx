@@ -12,24 +12,24 @@ export function AnalisesGestor({ revendasUnicas, dateStart, getAnalise, setAnali
     if (revendasUnicas.length === 0) return null;
 
     return (
-        <div className="bg-white rounded-2xl overflow-hidden"
-            style={{ border: "1px solid oklch(0.93 0.006 240)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
+        <div className="bg-white dark:bg-[var(--card)] rounded-2xl overflow-hidden border border-slate-200 dark:border-[var(--border)]"
+            style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <div className="px-5 py-3 border-b border-slate-100 dark:border-[var(--border)] flex items-center gap-2">
                 <FileText className="w-4 h-4 text-emerald-600" />
-                <span className="text-sm text-slate-800" style={{ fontWeight: 800 }}>
+                <span className="text-sm text-slate-800 dark:text-slate-100" style={{ fontWeight: 800 }}>
                     Análise do Gestor — GAs
                 </span>
-                <span className="text-xs text-slate-400 ml-1">
+                <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">
                     — será incluída no PDF · referência: {dateStart}
                 </span>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-[var(--border)]">
                 {revendasUnicas.map(rev => (
                     <div key={rev} className="px-5 py-4">
                         <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
                                 <PenLine className="w-3.5 h-3.5 text-emerald-500" />
-                                <span className="text-xs text-emerald-700 uppercase tracking-widest" style={{ fontWeight: 700 }}>
+                                <span className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-widest" style={{ fontWeight: 700 }}>
                                     {rev}
                                 </span>
                             </div>
