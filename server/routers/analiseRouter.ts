@@ -120,7 +120,10 @@ function calcularVendedorDia(
         return parseFloat(clean) || 9999;
     }
 
-    const dentroRaio = comVisita.filter(v => parseDistPV(v.distPV) <= RAIO || parseDistPV(v.distPV) === "AC");
+    const dentroRaio = comVisita.filter(v => {
+        const dist = parseDistPV(v.distPV);
+        return typeof dist === "string" ? true : dist <= RAIO;
+    });
     const unicos = [...new Map(dentroRaio.map(v => [v.codCliente, v])).values()];
 
     // Tempos das visitas dentro do PDV
@@ -355,5 +358,141 @@ export const analiseRouter = router({
             });
 
             return visitasDia;
+        }),
+
+    getClientesForeaRaio: publicProcedure
+        .input(z.object({
+            revenda: z.string(),
+            data: z.string(),
+            horaInicio: z.string().optional(),
+            horaFim: z.string().optional(),
+        }))
+        .query(async ({ input }) => {
+            const visitas = await getVisitasData();
+            const RAIO = 300; // metros
+
+            function parseDistPV(s: string): number | string {
+                if (!s || s === "ND") return 9999;
+                if (s === "AC") return "AC";
+                const clean = s.replace(/\./g, "").replace(",", ".").replace(/[^0-9.\-]/g, "");
+                return parseFloat(clean) || 9999;
+            }
+
+            function hmsToMin(s: string | null | undefined): number | null {
+                if (!s || s === "ND") return null;
+                const parts = s.split(":");
+                if (parts.length < 2) return null;
+                const h = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                const sec = parts[2] ? parseInt(parts[2], 10) : 0;
+                if (isNaN(h) || isNaN(m)) return null;
+                return h * 60 + m + sec / 60;
+            }
+
+            function minToHM(min: number): string {
+                const h = Math.floor(min / 60);
+                const m = Math.round(min % 60);
+                return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+            }
+
+            // Filtra visitas da revenda e data
+            const todasVisitas = visitas.filter(v =>
+                v.revenda === input.revenda &&
+                v.data === input.data &&
+                v.horaInicio &&
+                v.horaInicio !== "ND"
+            );
+
+            // Identifica clientes com qualquer visita dentro do raio (ou AC)
+            const clienteTemDentro: Record<number, Record<string, boolean>> = {};
+            for (const v of todasVisitas) {
+                const setor = v.vendedor;
+                const clienteKey = String(v.codCliente);
+                const dist = parseDistPV(v.distPV);
+                const isDentro = dist === "AC" || (typeof dist === "number" && dist <= RAIO);
+                if (isDentro) {
+                    clienteTemDentro[setor] ??= {};
+                    clienteTemDentro[setor][clienteKey] = true;
+                }
+            }
+
+            // Aplica filtro de hora apenas nas visitas de interesse
+            let visitasFiltradas = todasVisitas;
+            if (input.horaInicio || input.horaFim) {
+                const horaIniMin = input.horaInicio ? hmsToMin(input.horaInicio) : null;
+                const horaFimMin = input.horaFim ? hmsToMin(input.horaFim) : null;
+
+                visitasFiltradas = visitasFiltradas.filter(v => {
+                    const visitaMin = hmsToMin(v.horaInicio);
+                    if (visitaMin === null) return false;
+                    if (horaIniMin !== null && visitaMin < horaIniMin) return false;
+                    if (horaFimMin !== null && visitaMin > horaFimMin) return false;
+                    return true;
+                });
+            }
+            
+            console.log("Clientes fora do raio (após filtro de hora):", visitasFiltradas);
+
+            // Filtra apenas visitas FORA do raio e ignora clientes com qualquer visita dentro do raio
+            const foraRaio = visitasFiltradas.filter(v => {
+                const dist = parseDistPV(v.distPV);
+                if (typeof dist === "string") return false; // "AC" não é fora do raio
+                return dist > RAIO;
+            }).filter(v => {
+                const clienteKey = String(v.codCliente);
+                return !clienteTemDentro[v.vendedor]?.[clienteKey];
+            });
+
+            //console.log("Clientes fora do raio (filtrados):", foraRaio);
+
+            // Agrupa por setor e cliente
+            const porSetorCliente: Record<number, Record<string, typeof foraRaio>> = {};
+            for (const v of foraRaio) {
+                const setor = v.vendedor;
+                const clienteKey = String(v.codCliente);
+                porSetorCliente[setor] ??= {};
+                porSetorCliente[setor][clienteKey] ??= [];
+                porSetorCliente[setor][clienteKey].push(v);
+            }
+
+            //console.log("Clientes fora do raio (agrupados):", porSetorCliente);
+
+            // Formata resultado agrupado por setor
+            const resultado = Object.entries(porSetorCliente).map(([setorStr, clientesMap]) => {
+                const setor = parseInt(setorStr, 10);
+                const clientes = Object.values(clientesMap)
+                    .map(visitasCliente => {
+                        const visitasOrdenadas = [...visitasCliente].sort((a, b) => {
+                            const aTime = a.horaInicio === "ND" || !a.horaInicio ? "99:99" : a.horaInicio;
+                            const bTime = b.horaInicio === "ND" || !b.horaInicio ? "99:99" : b.horaInicio;
+                            return aTime.localeCompare(bTime);
+                        });
+
+                        const primeiraVisita = visitasOrdenadas[0];
+                        const tempoMin = hmsToMin(primeiraVisita.tempoVisita);
+                        const tempo = tempoMin !== null ? minToHM(tempoMin) : "—";
+                        const dist = parseDistPV(primeiraVisita.distPV);
+                        const distStr = typeof dist === "string" ? dist : `${dist}m`;
+
+                        return {
+                            setor,
+                            cliente: primeiraVisita.cliente,
+                            codCliente: String(primeiraVisita.codCliente),
+                            horaInicio: primeiraVisita.horaInicio,
+                            horaFim: primeiraVisita.horaFim,
+                            tempo,
+                            distancia: distStr,
+                            valorPedido: primeiraVisita.valorPedido,
+                            visitasCount: visitasOrdenadas.length,
+                        };
+                    })
+                    .filter(Boolean);
+
+                    console.log({ setor, clientes });
+
+                return { setor, clientes };
+            });
+
+            return resultado;
         }),
 });

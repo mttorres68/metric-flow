@@ -13,7 +13,7 @@ import {
     AlertTriangle, BarChart3,
     Clock, RefreshCw, TrendingDown, TrendingUp, X, FileText, PenLine, Printer,
     MessageCircle, Send, Loader2, CheckCircle2, AlertCircle, User,
-    Play, Wifi, WifiOff, SlidersHorizontal, ChevronDown, ChevronUp,
+    Play, Wifi, WifiOff, SlidersHorizontal, ChevronDown, ChevronUp, MapPin,
 } from "lucide-react";
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -1417,6 +1417,13 @@ export default function Analise() {
                                                 ) : null;
                                             })()}
                                             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{groupedData[rev].length} Vendedor(es)</span>
+                                            <button
+                                                onClick={() => setLocation(`/analises/foera-raio/${encodeURIComponent(rev)}/${filtros.dataInicio || new Date().toISOString().slice(0, 10)}`)}
+                                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors font-semibold whitespace-nowrap"
+                                                title="Ver clientes visitados fora do raio permitido"
+                                            >
+                                                <MapPin size={12} /> Fora do Raio
+                                            </button>
                                         </div>
                                     </div>
                                     <div className="overflow-x-auto overflow-y-auto max-h-[480px]">
