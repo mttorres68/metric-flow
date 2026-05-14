@@ -38,6 +38,7 @@ import {
     Phone,
     Briefcase,
     UserPlus,
+    BarChart2,
 } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { trpc } from "@/lib/trpc";
@@ -2915,7 +2916,7 @@ function EquipeView({
 }) {
     const now = new Date();
     const [revendaId, setRevendaId] = useState<number | null>(null);
-    const [subTab, setSubTab] = useState<"colaboradores" | "responsabilidades">("colaboradores");
+    const [subTab, setSubTab] = useState<"visao-geral" | "colaboradores" | "responsabilidades">("visao-geral");
     const [form, setForm] = useState<{ id?: number; nome: string; cargo: string; whatsapp: string } | null>(null);
     const [selectedAno, setSelectedAno] = useState(now.getFullYear());
     const [selectedMes, setSelectedMes] = useState(now.getMonth() + 1);
@@ -2983,6 +2984,33 @@ function EquipeView({
 
     const revendaNome = revendasQ.data?.find(r => r.id === revendaId)?.nome ?? "";
 
+    const alocacaoStats = useMemo(() => {
+        const total = itensList.length;
+        let comResp = 0, comApoio = 0, completo = 0, semNenhum = 0;
+
+        const porMacro = macroGroups.map(([macro, items]) => {
+            let mResp = 0, mApoio = 0;
+            items.forEach(i => {
+                const cur = respMap.get(i.item);
+                if (cur?.responsavelId) mResp++;
+                if (cur?.apoioId) mApoio++;
+            });
+            return { macro, total: items.length, comResp: mResp, comApoio: mApoio };
+        });
+
+        itensList.forEach(i => {
+            const cur = respMap.get(i.item);
+            const hasR = !!(cur?.responsavelId);
+            const hasA = !!(cur?.apoioId);
+            if (hasR) comResp++;
+            if (hasA) comApoio++;
+            if (hasR && hasA) completo++;
+            if (!hasR && !hasA) semNenhum++;
+        });
+
+        return { total, comResp, comApoio, completo, semNenhum, porMacro };
+    }, [itensList, macroGroups, respMap]);
+
     const statusQuery = trpc.assessment.list.useQuery(
         { revenda: revendaNome, ano: selectedAno, mes: selectedMes },
         { enabled: revendaId !== null && !!revendaNome && subTab === "responsabilidades" },
@@ -3022,22 +3050,152 @@ function EquipeView({
                 <>
                     {/* Sub-tabs */}
                     <div className="flex items-center gap-2">
-                        {(["colaboradores", "responsabilidades"] as const).map(t => (
-                            <button key={t}
-                                onClick={() => setSubTab(t)}
+                        {([
+                            { id: "visao-geral",       label: "Visão Geral",       icon: <BarChart2 className="w-3.5 h-3.5" /> },
+                            { id: "colaboradores",     label: "Colaboradores",     icon: <Briefcase className="w-3.5 h-3.5" /> },
+                            { id: "responsabilidades", label: "Responsabilidades", icon: <UserCheck className="w-3.5 h-3.5" /> },
+                        ] as const).map(t => (
+                            <button key={t.id}
+                                onClick={() => setSubTab(t.id)}
                                 className={classNames(
                                     "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all",
-                                    subTab === t
+                                    subTab === t.id
                                         ? "bg-indigo-500 text-white border-indigo-500"
                                         : "bg-white dark:bg-[var(--card)] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[var(--border)] hover:bg-slate-50 dark:hover:bg-[var(--accent)]",
                                 )}
                                 style={{ fontWeight: 700 }}>
-                                {t === "colaboradores"
-                                    ? <><Briefcase className="w-3.5 h-3.5" /> Colaboradores</>
-                                    : <><UserCheck className="w-3.5 h-3.5" /> Responsabilidades</>}
+                                {t.icon} {t.label}
                             </button>
                         ))}
                     </div>
+
+                    {/* ── Visão Geral ──────────────────────────────────────── */}
+                    {subTab === "visao-geral" && (
+                        <div className="space-y-4">
+                            {responsabilidadesQ.isLoading ? (
+                                <div className="flex items-center justify-center py-16 text-slate-400 text-sm">Carregando…</div>
+                            ) : (
+                                <>
+                                    {/* KPI cards */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        {[
+                                            { label: "Total de itens",    value: alocacaoStats.total,    color: "text-slate-700 dark:text-slate-200", bg: "bg-slate-50 dark:bg-[var(--accent)]" },
+                                            { label: "Com responsável",   value: alocacaoStats.comResp,  color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
+                                            { label: "Com apoio",         value: alocacaoStats.comApoio, color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-50 dark:bg-violet-500/10" },
+                                            { label: "Sem alocação",      value: alocacaoStats.semNenhum, color: "text-rose-600 dark:text-rose-400",   bg: "bg-rose-50 dark:bg-rose-500/10" },
+                                        ].map(k => (
+                                            <div key={k.label}
+                                                className={`${k.bg} rounded-2xl p-4 flex flex-col gap-1`}
+                                                style={{ border: cardBorder, boxShadow: cardShadow }}>
+                                                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>{k.label}</span>
+                                                <span className={`text-3xl tabular-nums ${k.color}`} style={{ fontWeight: 900 }}>{k.value}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Barra de progresso geral */}
+                                    <div className="bg-white dark:bg-[var(--card)] rounded-2xl p-5 space-y-3"
+                                        style={{ border: cardBorder, boxShadow: cardShadow }}>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-slate-700 dark:text-slate-200" style={{ fontWeight: 800 }}>
+                                                Alocação geral — {revendaNome}
+                                            </span>
+                                            <span className="text-sm tabular-nums" style={{ fontWeight: 900, color: alocacaoStats.comResp / alocacaoStats.total >= 0.8 ? "#10b981" : alocacaoStats.comResp / alocacaoStats.total >= 0.5 ? "#f59e0b" : "#f43f5e" }}>
+                                                {alocacaoStats.total > 0 ? Math.round(alocacaoStats.comResp / alocacaoStats.total * 100) : 0}% com responsável
+                                            </span>
+                                        </div>
+                                        {/* Barra empilhada: responsável + apoio apenas + sem nada */}
+                                        {(() => {
+                                            const t = alocacaoStats.total || 1;
+                                            const pResp   = Math.round(alocacaoStats.completo / t * 100);
+                                            const pApoio  = Math.round((alocacaoStats.comApoio - alocacaoStats.completo) / t * 100);
+                                            const pSoloR  = Math.round((alocacaoStats.comResp - alocacaoStats.completo) / t * 100);
+                                            const pVazio  = 100 - pResp - pApoio - pSoloR;
+                                            return (
+                                                <div className="flex h-4 rounded-full overflow-hidden gap-0.5">
+                                                    {pResp  > 0 && <div className="bg-emerald-400"   style={{ width: `${pResp}%`  }} title={`Completo (resp + apoio): ${pResp}%`} />}
+                                                    {pSoloR > 0 && <div className="bg-indigo-400"    style={{ width: `${pSoloR}%` }} title={`Só responsável: ${pSoloR}%`} />}
+                                                    {pApoio > 0 && <div className="bg-violet-400"    style={{ width: `${pApoio}%` }} title={`Só apoio: ${pApoio}%`} />}
+                                                    {pVazio > 0 && <div className="bg-slate-200 dark:bg-slate-700" style={{ width: `${pVazio}%` }} title={`Sem alocação: ${pVazio}%`} />}
+                                                </div>
+                                            );
+                                        })()}
+                                        <div className="flex flex-wrap gap-4 text-[10px] text-slate-500 dark:text-slate-400 pt-1">
+                                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block" /> Resp + Apoio ({alocacaoStats.completo})</span>
+                                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-400 inline-block" /> Só responsável ({alocacaoStats.comResp - alocacaoStats.completo})</span>
+                                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-violet-400 inline-block" /> Só apoio ({alocacaoStats.comApoio - alocacaoStats.completo})</span>
+                                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-slate-200 dark:bg-slate-700 inline-block" /> Sem alocação ({alocacaoStats.semNenhum})</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Tabela por macro área */}
+                                    <div className="bg-white dark:bg-[var(--card)] rounded-2xl overflow-hidden"
+                                        style={{ border: cardBorder, boxShadow: cardShadow }}>
+                                        <div className="p-5 border-b border-slate-100 dark:border-[var(--sidebar-border)]">
+                                            <h3 className="text-sm text-slate-800 dark:text-slate-100" style={{ fontWeight: 800 }}>Por macro área</h3>
+                                        </div>
+                                        <table className="w-full text-xs">
+                                            <thead className="bg-slate-50 dark:bg-[var(--accent)]">
+                                                <tr>
+                                                    <th className="px-4 py-2.5 text-left text-slate-500 dark:text-slate-400" style={{ fontWeight: 700 }}>Macro Área</th>
+                                                    <th className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400 w-16" style={{ fontWeight: 700 }}>Itens</th>
+                                                    <th className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400 w-24" style={{ fontWeight: 700 }}>C/ Resp.</th>
+                                                    <th className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400 w-24" style={{ fontWeight: 700 }}>C/ Apoio</th>
+                                                    <th className="px-4 py-2.5 text-left text-slate-500 dark:text-slate-400 w-48" style={{ fontWeight: 700 }}>Cobertura</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50 dark:divide-[var(--sidebar-border)]">
+                                                {alocacaoStats.porMacro.map(({ macro, total: mt, comResp: mr, comApoio: ma }) => {
+                                                    const pct = mt > 0 ? Math.round(mr / mt * 100) : 0;
+                                                    const pctColor = pct >= 80 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#f43f5e";
+                                                    return (
+                                                        <tr key={macro} className="hover:bg-slate-50 dark:hover:bg-[var(--accent)]/50 transition-colors">
+                                                            <td className="px-4 py-2.5 text-slate-700 dark:text-slate-200" style={{ fontWeight: 700 }}>{macro}</td>
+                                                            <td className="px-4 py-2.5 text-right tabular-nums text-slate-500 dark:text-slate-400" style={{ fontWeight: 600 }}>{mt}</td>
+                                                            <td className="px-4 py-2.5 text-right tabular-nums" style={{ fontWeight: 700, color: pctColor }}>{mr}/{mt}</td>
+                                                            <td className="px-4 py-2.5 text-right tabular-nums text-violet-500 dark:text-violet-400" style={{ fontWeight: 600 }}>{ma}/{mt}</td>
+                                                            <td className="px-4 py-2.5">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                                                                        <div className="h-full rounded-full transition-all"
+                                                                            style={{ width: `${pct}%`, backgroundColor: pctColor }} />
+                                                                    </div>
+                                                                    <span className="text-[10px] tabular-nums w-8 text-right" style={{ fontWeight: 700, color: pctColor }}>{pct}%</span>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                            <tfoot className="bg-slate-50 dark:bg-[var(--accent)] border-t border-slate-200 dark:border-[var(--sidebar-border)]">
+                                                <tr>
+                                                    <td className="px-4 py-2.5 text-slate-700 dark:text-slate-200" style={{ fontWeight: 800 }}>Total</td>
+                                                    <td className="px-4 py-2.5 text-right tabular-nums text-slate-700 dark:text-slate-200" style={{ fontWeight: 800 }}>{alocacaoStats.total}</td>
+                                                    <td className="px-4 py-2.5 text-right tabular-nums" style={{ fontWeight: 800, color: alocacaoStats.total > 0 ? (alocacaoStats.comResp / alocacaoStats.total >= 0.8 ? "#10b981" : "#f59e0b") : undefined }}>
+                                                        {alocacaoStats.comResp}/{alocacaoStats.total}
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-right tabular-nums text-violet-500 dark:text-violet-400" style={{ fontWeight: 800 }}>
+                                                        {alocacaoStats.comApoio}/{alocacaoStats.total}
+                                                    </td>
+                                                    <td className="px-4 py-2.5">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                                                                <div className="h-full rounded-full bg-emerald-400 transition-all"
+                                                                    style={{ width: `${alocacaoStats.total > 0 ? Math.round(alocacaoStats.comResp / alocacaoStats.total * 100) : 0}%` }} />
+                                                            </div>
+                                                            <span className="text-[10px] tabular-nums w-8 text-right text-emerald-500" style={{ fontWeight: 800 }}>
+                                                                {alocacaoStats.total > 0 ? Math.round(alocacaoStats.comResp / alocacaoStats.total * 100) : 0}%
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
 
                     {/* ── Colaboradores ────────────────────────────────────── */}
                     {subTab === "colaboradores" && (
