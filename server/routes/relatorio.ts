@@ -24,6 +24,7 @@ import {
   type CoachingKPIs,
   type CoachingRecord,
   type VendedorRow,
+  type ClienteForaRaioSetor,
 } from "../services/pdfService";
 import { getDb } from "../db";
 import { analises } from "../../drizzle/schema";
@@ -43,6 +44,92 @@ const REVENDA_COACHING_MAP: Record<string, string> = {
 // Tipo para análises inline (passadas no body do POST)
 // ---------------------------------------------------------------------------
 type AnalisesInline = Record<string, { vendedores?: string; gas?: string }>;
+
+// ---------------------------------------------------------------------------
+// Calcula clientes visitados fora do raio de 300m
+// Espelha a lógica do analiseRouter.getClientesForeaRaio (sem filtro de hora)
+// ---------------------------------------------------------------------------
+function calcularClientesForaRaio(visitasRevenda: any[]): ClienteForaRaioSetor[] {
+  const RAIO = 300;
+
+  function parseDistPVLocal(s: string): number | string {
+    if (!s || s === "ND") return 9999;
+    if (s === "AC") return "AC";
+    const clean = s.replace(/\./g, "").replace(",", ".").replace(/[^0-9.\-]/g, "");
+    return parseFloat(clean) || 9999;
+  }
+
+  function hmsToMin(s: string | null | undefined): number | null {
+    if (!s || s === "ND") return null;
+    const parts = s.split(":");
+    if (parts.length < 2) return null;
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const sec = parts[2] ? parseInt(parts[2], 10) : 0;
+    if (isNaN(h) || isNaN(m)) return null;
+    return h * 60 + m + sec / 60;
+  }
+
+  function minToHM(min: number): string {
+    const h = Math.floor(min / 60);
+    const m = Math.round(min % 60);
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }
+
+  const todasVisitas = visitasRevenda.filter((v) => v.horaInicio && v.horaInicio !== "ND");
+
+  const clienteTemDentro: Record<number, Record<string, boolean>> = {};
+  for (const v of todasVisitas) {
+    const dist = parseDistPVLocal(v.distPV ?? "");
+    const isDentro = dist === "AC" || (typeof dist === "number" && dist <= RAIO);
+    if (isDentro) {
+      clienteTemDentro[v.vendedor] ??= {};
+      clienteTemDentro[v.vendedor][String(v.codCliente)] = true;
+    }
+  }
+
+  const foraRaio = todasVisitas
+    .filter((v) => {
+      const dist = parseDistPVLocal(v.distPV ?? "");
+      return typeof dist === "number" && dist > RAIO;
+    })
+    .filter((v) => !clienteTemDentro[v.vendedor]?.[String(v.codCliente)]);
+
+  const porSetorCliente: Record<number, Record<string, any[]>> = {};
+  for (const v of foraRaio) {
+    const key = String(v.codCliente);
+    porSetorCliente[v.vendedor] ??= {};
+    porSetorCliente[v.vendedor][key] ??= [];
+    porSetorCliente[v.vendedor][key].push(v);
+  }
+
+  return Object.entries(porSetorCliente)
+    .map(([setorStr, clientesMap]) => {
+      const setor = parseInt(setorStr, 10);
+      const clientes = Object.values(clientesMap).map((visitasCliente) => {
+        const ordenadas = [...visitasCliente].sort((a, b) => {
+          const at = !a.horaInicio || a.horaInicio === "ND" ? "99:99" : a.horaInicio;
+          const bt = !b.horaInicio || b.horaInicio === "ND" ? "99:99" : b.horaInicio;
+          return at.localeCompare(bt);
+        });
+        const pv = ordenadas[0];
+        const tempoMin = hmsToMin(pv.tempoVisita);
+        const dist = parseDistPVLocal(pv.distPV ?? "");
+        return {
+          cliente: String(pv.cliente ?? ""),
+          codCliente: String(pv.codCliente ?? ""),
+          horaInicio: pv.horaInicio ?? "ND",
+          horaFim: pv.horaFim ?? "ND",
+          tempo: tempoMin !== null ? minToHM(tempoMin) : "—",
+          distancia: typeof dist === "string" ? dist : `${dist}m`,
+          valorPedido: String(pv.valorPedido ?? "—"),
+          visitasCount: ordenadas.length,
+        };
+      });
+      return { setor, clientes };
+    })
+    .sort((a, b) => a.setor - b.setor);
+}
 
 // ---------------------------------------------------------------------------
 // Função principal de geração — compartilhada entre GET e POST
@@ -202,8 +289,10 @@ async function gerarPDFsParaData(
         };
       });
 
+      const clientesForaRaio = calcularClientesForaRaio(visitasRevenda);
+
       const pdfBuffer = await gerarPDFRevenda({
-        revenda, data, vendedoresRows, coachingKPIs, analiseVendedores, analiseGAs,
+        revenda, data, vendedoresRows, coachingKPIs, analiseVendedores, analiseGAs, clientesForaRaio,
       });
 
       const nomeArquivo = `${revenda.replace(/[^a-z0-9\s]/gi, "").trim().replace(/\s+/g, "_")}_${data}.pdf`;

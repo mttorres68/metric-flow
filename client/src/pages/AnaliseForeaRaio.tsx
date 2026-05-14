@@ -297,7 +297,7 @@ export default function AnaliseForeaRaio() {
                     )}
 
                     {!isLoading && !error && setoresFiltrados.length > 0 && (
-                        <div className="space-y-6">
+                        <div className="space-y-6 ">
                             {/* Resumo */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="bg-white dark:bg-[var(--card)] rounded-lg border border-slate-200 dark:border-[var(--border)] p-3">
@@ -311,70 +311,73 @@ export default function AnaliseForeaRaio() {
                             </div>
 
                             {/* Setores */}
-                            {setoresFiltrados.map((setorData: SeTorData) => (
-                                <div
-                                    key={setorData.setor}
-                                    className="bg-white dark:bg-[var(--card)] rounded-lg border border-slate-200 dark:border-[var(--border)] overflow-hidden"
-                                >
-                                    {/* Cabeçalho do setor */}
-                                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 px-4 py-3 border-b border-slate-200 dark:border-[var(--border)]">
-                                        <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200">
-                                            SETOR {String(setorData.setor).padStart(2, "0")}
-                                        </h3>
-                                    </div>
+                            <div className="">
+                                {setoresFiltrados.map((setorData: SeTorData) => (
+                                    <div
+                                        key={setorData.setor}
+                                        className="bg-white dark:bg-[var(--card)] rounded-lg border border-slate-200 dark:border-[var(--border)] overflow-hidden "
+                                    >
+                                        {/* Cabeçalho do setor */}
+                                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 px-4 py-3 border-b border-slate-200 dark:border-[var(--border)]">
+                                            <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                                                SETOR {String(setorData.setor).padStart(2, "0")}
+                                            </h3>
+                                        </div>
 
-                                    {/* Clientes do setor */}
-                                    <div className="divide-y divide-slate-200 dark:divide-slate-700/40">
-                                        {setorData.clientes.map((cliente, idx) => (
-                                            <div key={idx} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                                <div className="space-y-1.5">
-                                                    {/* Cliente */}
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                                                            {cliente.cliente}
-                                                        </span>
-                                                        <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                                                            {cliente.codCliente}
-                                                        </span>
-                                                        {cliente.visitasCount && cliente.visitasCount > 1 && (
-                                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                                                                {cliente.visitasCount}x
+                                        {/* Clientes do setor */}
+                                        <div className="divide-y divide-slate-200 dark:divide-slate-700/40 ">
+                                            {/*  Aplique ornarnção por hora da visita */}
+                                            {setorData.clientes.map((cliente, idx) => (
+                                                <div key={idx} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                                    <div className="space-y-1.5">
+                                                        {/* Cliente */}
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                                                                {cliente.cliente}
                                                             </span>
-                                                        )}
-                                                    </div>
+                                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                                                                {cliente.codCliente}
+                                                            </span>
+                                                            {cliente.visitasCount && cliente.visitasCount > 1 && (
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                                                                    {cliente.visitasCount}x
+                                                                </span>
+                                                            )}
+                                                        </div>
 
-                                                    {/* Horário e tempo */}
-                                                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-                                                        <Clock size={14} className="text-slate-400 dark:text-slate-500 shrink-0" />
-                                                        <span className="font-mono">
-                                                            {cliente.horaInicio}–{cliente.horaFim}
-                                                        </span>
-                                                        <span className="text-slate-500 dark:text-slate-400">
-                                                            {cliente.tempo}
-                                                        </span>
-                                                    </div>
+                                                        {/* Horário e tempo */}
+                                                        <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                                                            <Clock size={14} className="text-slate-400 dark:text-slate-500 shrink-0" />
+                                                            <span className="font-mono">
+                                                                {cliente.horaInicio}–{cliente.horaFim}
+                                                            </span>
+                                                            <span className="text-slate-500 dark:text-slate-400">
+                                                                {cliente.tempo}
+                                                            </span>
+                                                        </div>
 
-                                                    {/* Distância */}
-                                                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-                                                        <MapPin size={14} className="text-amber-500 dark:text-amber-400 shrink-0" />
-                                                        <span className="font-mono text-amber-600 dark:text-amber-400 font-semibold">
-                                                            {cliente.distancia}
-                                                        </span>
-                                                    </div>
+                                                        {/* Distância */}
+                                                        <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                                                            <MapPin size={14} className="text-amber-500 dark:text-amber-400 shrink-0" />
+                                                            <span className="font-mono text-amber-600 dark:text-amber-400 font-semibold">
+                                                                {cliente.distancia}
+                                                            </span>
+                                                        </div>
 
-                                                    {/* Valor do pedido */}
-                                                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-                                                        <DollarSign size={14} className="text-green-500 dark:text-green-400 shrink-0" />
-                                                        <span className="font-mono">
-                                                            {cliente.valorPedido}
-                                                        </span>
+                                                        {/* Valor do pedido */}
+                                                        <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                                                            <DollarSign size={14} className="text-green-500 dark:text-green-400 shrink-0" />
+                                                            <span className="font-mono">
+                                                                {cliente.valorPedido}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>

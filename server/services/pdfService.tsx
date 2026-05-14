@@ -59,6 +59,22 @@ export interface CoachingKPIs {
   registros: CoachingRecord[];
 }
 
+export interface ClienteForaRaioItem {
+  cliente: string;
+  codCliente: string;
+  horaInicio: string;
+  horaFim: string;
+  tempo: string;
+  distancia: string;
+  valorPedido: string;
+  visitasCount: number;
+}
+
+export interface ClienteForaRaioSetor {
+  setor: number;
+  clientes: ClienteForaRaioItem[];
+}
+
 export interface PDFReportData {
   revenda: string;
   data: string;
@@ -66,6 +82,7 @@ export interface PDFReportData {
   coachingKPIs: CoachingKPIs;
   analiseVendedores: string; // HTML — será convertido para texto plano
   analiseGAs: string;        // HTML — será convertido para texto plano
+  clientesForaRaio: ClienteForaRaioSetor[];
 }
 
 // ---------------------------------------------------------------------------
@@ -99,6 +116,18 @@ const CV = {
   tarde: 84,
   vis: 84,
   relamp: 103,
+} as const;
+
+// Larguras das colunas — Clientes Fora do Raio (total = 539pt)
+const CF = {
+  setor: 40,
+  cliente: 160,
+  cod: 55,
+  ini: 48,
+  fim: 48,
+  tempo: 43,
+  dist: 65,
+  pedido: 80,
 } as const;
 
 // Larguras das colunas — GAs
@@ -271,6 +300,33 @@ const s = StyleSheet.create({
   footerText: {
     fontSize: 6.5,
     color: MUTED,
+  },
+  // Resumo (Clientes Fora do Raio)
+  summaryRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 10,
+  },
+  summaryBox: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 4,
+    padding: 8,
+    backgroundColor: "#f0fdf4",
+  },
+  summaryLabel: {
+    fontSize: 7,
+    color: MUTED,
+    fontFamily: "Helvetica-Bold",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontFamily: "Helvetica-Bold",
+    color: TEXTO_NORMAL,
+    marginTop: 2,
   },
   // Caixa vazia
   emptyBox: {
@@ -522,7 +578,85 @@ const PaginaVendedores = ({ d }: { d: PDFReportData }) => {
 };
 
 // ---------------------------------------------------------------------------
-// Página 2 — GAs / Rota Coaching
+// Página 2 — Clientes Fora do Raio
+// ---------------------------------------------------------------------------
+
+const FOREA_RAIO_BG = VERDE_TITULO;
+
+const PaginaClientesForaRaio = ({ d }: { d: PDFReportData }) => {
+  const setores = d.clientesForaRaio ?? [];
+  const totalClientes = setores.reduce((acc, s) => acc + s.clientes.length, 0);
+
+  const linhas = setores.flatMap(s =>
+    s.clientes.map(c => ({ setor: s.setor, ...c }))
+  );
+
+  return (
+    <Page size="A4" style={s.page}>
+      <View style={{ backgroundColor: FOREA_RAIO_BG, paddingHorizontal: 28, paddingVertical: 13 }}>
+        <Text style={s.pageHeaderTitle}>Clientes Fora do Raio</Text>
+        <Text style={s.pageHeaderMeta}>
+          Revenda: {d.revenda} · Data: {fmtDate(d.data)} · Distância máxima permitida: 300m
+        </Text>
+      </View>
+
+      <View style={s.content}>
+        {/* Resumo */}
+        <View style={s.summaryRow}>
+          <View style={s.summaryBox}>
+            <Text style={s.summaryLabel}>Total de Setores</Text>
+            <Text style={s.summaryValue}>{setores.length}</Text>
+          </View>
+          <View style={s.summaryBox}>
+            <Text style={s.summaryLabel}>Total de Clientes</Text>
+            <Text style={s.summaryValue}>{totalClientes}</Text>
+          </View>
+        </View>
+
+        {linhas.length === 0 ? (
+          <View style={s.emptyBox}>
+            <Text style={s.emptyText}>Nenhum cliente visitado fora do raio nesta data.</Text>
+          </View>
+        ) : (
+          <View>
+            <View style={[s.tblHeaderRow, { backgroundColor: FOREA_RAIO_BG }]}>
+              <Text style={[s.th, { width: CF.setor }]}>Setor</Text>
+              <Text style={[s.th, { width: CF.cliente, textAlign: "left" }]}>Cliente</Text>
+              <Text style={[s.th, { width: CF.cod }]}>Código</Text>
+              <Text style={[s.th, { width: CF.ini }]}>Início</Text>
+              <Text style={[s.th, { width: CF.fim }]}>Fim</Text>
+              <Text style={[s.th, { width: CF.tempo }]}>Tempo</Text>
+              <Text style={[s.th, { width: CF.dist }]}>Distância</Text>
+              <Text style={[s.th, { width: CF.pedido }]}>Vl. Pedido</Text>
+            </View>
+
+            {linhas.map((row, i) => (
+              <View key={i} style={i % 2 === 1 ? s.tblRowAlt : s.tblRow}>
+                <Text style={[s.td, { width: CF.setor }]}>
+                  {String(row.setor).padStart(2, "0")}
+                </Text>
+                <Text style={[s.td, { width: CF.cliente, textAlign: "left" }]}>
+                  {row.cliente}
+                </Text>
+                <Text style={[s.td, { width: CF.cod }]}>{row.codCliente}</Text>
+                <Text style={[s.td, { width: CF.ini }]}>{row.horaInicio}</Text>
+                <Text style={[s.td, { width: CF.fim }]}>{row.horaFim}</Text>
+                <Text style={[s.td, { width: CF.tempo }]}>{row.tempo}</Text>
+                <Text style={[s.td, { width: CF.dist, color: "#b45309", fontFamily: "Helvetica-Bold" }]}>{row.distancia}</Text>
+                <Text style={[s.td, { width: CF.pedido }]}>{row.valorPedido}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <FooterBar data={d.data} revenda={d.revenda} />
+    </Page>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Página 3 — GAs / Rota Coaching
 // ---------------------------------------------------------------------------
 
 const PaginaGAs = ({ d }: { d: PDFReportData }) => {
@@ -635,6 +769,7 @@ const RelatorioRevenda = ({ d }: { d: PDFReportData }) => (
     creator="MetricFlow"
   >
     <PaginaVendedores d={d} />
+    <PaginaClientesForaRaio d={d} />
     <PaginaGAs d={d} />
   </Document>
 );

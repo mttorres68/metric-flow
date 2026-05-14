@@ -14,6 +14,7 @@ import { rotaCoachingRouter } from "./routers/rotaCoachingRouter";
 import { trelloRouter } from "./routers/trelloRouter";
 import { evolutionRouter } from "./routers/evolutionRouter";
 import { automacaoRouter } from "./routers/automacaoRouter";
+import { assessmentRouter } from "./routers/assessmentRouter";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -30,6 +31,7 @@ export const appRouter = router({
   trello: trelloRouter,
   evolution: evolutionRouter,
   automacao: automacaoRouter,
+  assessment: assessmentRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
