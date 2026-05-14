@@ -8,6 +8,7 @@ import {
   listColaboradores,
   upsertColaborador,
   listResponsabilidades,
+  listAllResponsabilidades,
   upsertResponsabilidade,
 } from "../db/assessment";
 
@@ -80,6 +81,9 @@ export const assessmentRouter = router({
   listResponsabilidades: publicProcedure
     .input(z.object({ revendaId: z.number().int() }))
     .query(({ input }) => listResponsabilidades(input.revendaId)),
+
+  listAllResponsabilidades: publicProcedure
+    .query(() => listAllResponsabilidades()),
 
   upsertResponsabilidade: publicProcedure
     .input(ResponsabilidadeInput)

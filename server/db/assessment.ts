@@ -185,6 +185,24 @@ export async function listResponsabilidades(revendaId: number) {
   }
 }
 
+export async function listAllResponsabilidades() {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select({
+        id: assessmentResponsabilidades.id,
+        revendaId: assessmentResponsabilidades.revendaId,
+        item: assessmentResponsabilidades.item,
+        responsavelId: assessmentResponsabilidades.responsavelId,
+        apoioId: assessmentResponsabilidades.apoioId,
+      })
+      .from(assessmentResponsabilidades);
+  } catch {
+    return [];
+  }
+}
+
 export async function upsertResponsabilidade(input: InsertAssessmentResponsabilidade) {
   const db = await getDb();
   if (!db) return null;

@@ -3306,6 +3306,24 @@ function EquipeView({
         return m;
     }, [statusQuery.data]);
 
+    const allRespQ = trpc.assessment.listAllResponsabilidades.useQuery(
+        undefined,
+        { enabled: revendaId === null && subTab === "visao-geral" },
+    );
+
+    const allAlocStats = useMemo(() => {
+        const revendasDB = revendasQ.data ?? [];
+        const totalItens = itensList.length;
+        return revendasDB.map(rev => {
+            const rows = (allRespQ.data ?? []).filter(r => r.revendaId === rev.id);
+            const comResp  = rows.filter(r => r.responsavelId).length;
+            const comApoio = rows.filter(r => r.apoioId).length;
+            const completo = rows.filter(r => r.responsavelId && r.apoioId).length;
+            const pct = totalItens > 0 ? Math.round(comResp / totalItens * 100) : 0;
+            return { id: rev.id, nome: rev.nome, comResp, comApoio, completo, semNenhum: totalItens - comResp, pct, totalItens };
+        }).sort((a, b) => b.pct - a.pct);
+    }, [allRespQ.data, revendasQ.data, itensList]);
+
     return (
         <div className="space-y-6">
             {/* Seletor de revenda */}
@@ -3315,6 +3333,18 @@ function EquipeView({
                     <Users className="w-3.5 h-3.5 inline mr-1" /> Revenda
                 </span>
                 {revendasQ.isLoading && <span className="text-xs text-slate-400">Carregando revendas…</span>}
+                {/* Botão "Todas" */}
+                <button
+                    onClick={() => setRevendaId(null)}
+                    className={classNames(
+                        "text-xs px-3 py-1.5 rounded-lg border transition-all",
+                        revendaId === null
+                            ? "bg-indigo-500 text-white border-indigo-500"
+                            : "bg-white dark:bg-[var(--card)] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[var(--border)] hover:bg-slate-50 dark:hover:bg-[var(--accent)]",
+                    )}
+                    style={{ fontWeight: 700 }}>
+                    Todas
+                </button>
                 {revendasQ.data?.map(r => (
                     <button key={r.id}
                         onClick={() => setRevendaId(r.id)}
@@ -3330,8 +3360,7 @@ function EquipeView({
                 ))}
             </div>
 
-            {revendaId !== null && (
-                <>
+            <>
                     {/* Sub-tabs */}
                     <div className="flex items-center gap-2">
                         {([
@@ -3341,11 +3370,13 @@ function EquipeView({
                         ] as const).map(t => (
                             <button key={t.id}
                                 onClick={() => setSubTab(t.id)}
+                                disabled={revendaId === null && t.id !== "visao-geral"}
                                 className={classNames(
                                     "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all",
                                     subTab === t.id
                                         ? "bg-indigo-500 text-white border-indigo-500"
                                         : "bg-white dark:bg-[var(--card)] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[var(--border)] hover:bg-slate-50 dark:hover:bg-[var(--accent)]",
+                                    revendaId === null && t.id !== "visao-geral" && "opacity-40 cursor-not-allowed",
                                 )}
                                 style={{ fontWeight: 700 }}>
                                 {t.icon} {t.label}
@@ -3354,7 +3385,113 @@ function EquipeView({
                     </div>
 
                     {/* ── Visão Geral ──────────────────────────────────────── */}
-                    {subTab === "visao-geral" && (
+                    {subTab === "visao-geral" && revendaId === null && (
+                        <div className="space-y-4">
+                            {allRespQ.isLoading ? (
+                                <div className="flex items-center justify-center py-16">
+                                    <div className="w-8 h-8 rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-indigo-500 animate-spin" />
+                                </div>
+                            ) : (
+                                <>
+                                    {/* KPI totais consolidados */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        {[
+                                            { label: "Total de itens (por revenda)", value: itensList.length,                                         color: "text-slate-700 dark:text-slate-200",   bg: "bg-slate-50 dark:bg-[var(--accent)]" },
+                                            { label: "Média com responsável",        value: `${Math.round(allAlocStats.reduce((s, r) => s + r.pct, 0) / (allAlocStats.length || 1))}%`, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
+                                            { label: "Itens alocados (total)",       value: allAlocStats.reduce((s, r) => s + r.comResp, 0),           color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
+                                            { label: "Sem responsável (total)",      value: allAlocStats.reduce((s, r) => s + r.semNenhum, 0),         color: "text-rose-600 dark:text-rose-400",    bg: "bg-rose-50 dark:bg-rose-500/10" },
+                                        ].map(k => (
+                                            <div key={k.label} className={`${k.bg} rounded-2xl p-4 flex flex-col gap-1`}
+                                                style={{ border: cardBorder, boxShadow: cardShadow }}>
+                                                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>{k.label}</span>
+                                                <span className={`text-3xl tabular-nums ${k.color}`} style={{ fontWeight: 900 }}>{k.value}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Ranking de barras comparativo */}
+                                    <div className="bg-white dark:bg-[var(--card)] rounded-2xl overflow-hidden"
+                                        style={{ border: cardBorder, boxShadow: cardShadow }}>
+                                        <div className="px-5 py-4 border-b border-slate-100 dark:border-[var(--sidebar-border)] flex items-center justify-between">
+                                            <h3 className="text-sm text-slate-800 dark:text-slate-100" style={{ fontWeight: 800 }}>
+                                                Ranking de alocação — todas as revendas
+                                            </h3>
+                                            <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-indigo-400 inline-block" /> Responsável</span>
+                                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-violet-400 inline-block" /> Apoio</span>
+                                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-slate-200 dark:bg-slate-700 inline-block" /> Sem alocação</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-5 space-y-4">
+                                            {allAlocStats.map((rev, idx) => {
+                                                const pctResp  = rev.totalItens > 0 ? rev.comResp  / rev.totalItens * 100 : 0;
+                                                const pctApoio = rev.totalItens > 0 ? rev.comApoio / rev.totalItens * 100 : 0;
+                                                const color = pctResp >= 80 ? "#10b981" : pctResp >= 50 ? "#f59e0b" : "#f43f5e";
+                                                return (
+                                                    <div key={rev.id}>
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] w-5 text-right text-slate-400 tabular-nums" style={{ fontWeight: 700 }}>#{idx + 1}</span>
+                                                                <button
+                                                                    onClick={() => setRevendaId(rev.id)}
+                                                                    className="text-xs text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                                                                    style={{ fontWeight: 700 }}>
+                                                                    {rev.nome}
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 text-[10px]">
+                                                                <span className="text-slate-500 dark:text-slate-400"><span style={{ fontWeight: 700, color }}>{rev.comResp}</span>/{rev.totalItens} resp.</span>
+                                                                <span className="text-violet-500 dark:text-violet-400" style={{ fontWeight: 700 }}>{rev.comApoio} apoio</span>
+                                                                <span className="tabular-nums" style={{ fontWeight: 900, color, minWidth: 36, textAlign: "right" }}>
+                                                                    {Math.round(pctResp)}%
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        {/* Barra empilhada */}
+                                                        <div className="flex h-5 rounded-lg overflow-hidden gap-px">
+                                                            {/* Responsável + Apoio (completo) */}
+                                                            {rev.completo > 0 && (
+                                                                <div className="bg-emerald-400 flex items-center justify-center"
+                                                                    style={{ width: `${rev.completo / rev.totalItens * 100}%` }}
+                                                                    title={`Resp + Apoio: ${rev.completo}`}>
+                                                                    {rev.completo >= 3 && <span className="text-[9px] text-white" style={{ fontWeight: 800 }}>{rev.completo}</span>}
+                                                                </div>
+                                                            )}
+                                                            {/* Só responsável */}
+                                                            {(rev.comResp - rev.completo) > 0 && (
+                                                                <div className="bg-indigo-400 flex items-center justify-center"
+                                                                    style={{ width: `${(rev.comResp - rev.completo) / rev.totalItens * 100}%` }}
+                                                                    title={`Só responsável: ${rev.comResp - rev.completo}`}>
+                                                                    {(rev.comResp - rev.completo) >= 3 && <span className="text-[9px] text-white" style={{ fontWeight: 800 }}>{rev.comResp - rev.completo}</span>}
+                                                                </div>
+                                                            )}
+                                                            {/* Só apoio */}
+                                                            {(rev.comApoio - rev.completo) > 0 && (
+                                                                <div className="bg-violet-400 flex items-center justify-center"
+                                                                    style={{ width: `${(rev.comApoio - rev.completo) / rev.totalItens * 100}%` }}
+                                                                    title={`Só apoio: ${rev.comApoio - rev.completo}`}>
+                                                                    {(rev.comApoio - rev.completo) >= 3 && <span className="text-[9px] text-white" style={{ fontWeight: 800 }}>{rev.comApoio - rev.completo}</span>}
+                                                                </div>
+                                                            )}
+                                                            {/* Sem alocação */}
+                                                            {rev.semNenhum > 0 && (
+                                                                <div className="bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-1"
+                                                                    title={`Sem alocação: ${rev.semNenhum}`}>
+                                                                    {rev.semNenhum >= 5 && <span className="text-[9px] text-slate-400" style={{ fontWeight: 700 }}>{rev.semNenhum}</span>}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {subTab === "visao-geral" && revendaId !== null && (
                         <div className="space-y-4">
                             {responsabilidadesQ.isLoading ? (
                                 <div className="flex items-center justify-center py-16 text-slate-400 text-sm">Carregando…</div>
@@ -3482,7 +3619,13 @@ function EquipeView({
                     )}
 
                     {/* ── Colaboradores ────────────────────────────────────── */}
-                    {subTab === "colaboradores" && (
+                    {subTab === "colaboradores" && revendaId === null && (
+                        <div className="flex items-center justify-center py-16 text-slate-400 text-sm gap-2">
+                            <Users className="w-4 h-4" />
+                            Selecione uma revenda para ver os colaboradores.
+                        </div>
+                    )}
+                    {subTab === "colaboradores" && revendaId !== null && (
                         <div className="bg-white dark:bg-[var(--card)] rounded-2xl overflow-hidden"
                             style={{ border: cardBorder, boxShadow: cardShadow }}>
                             <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-[var(--sidebar-border)]">
@@ -3581,7 +3724,13 @@ function EquipeView({
                     )}
 
                     {/* ── Responsabilidades ────────────────────────────────── */}
-                    {subTab === "responsabilidades" && (
+                    {subTab === "responsabilidades" && revendaId === null && (
+                        <div className="flex items-center justify-center py-16 text-slate-400 text-sm gap-2">
+                            <UserCheck className="w-4 h-4" />
+                            Selecione uma revenda para ver as responsabilidades.
+                        </div>
+                    )}
+                    {subTab === "responsabilidades" && revendaId !== null && (
                         <div className="bg-white dark:bg-[var(--card)] rounded-2xl overflow-hidden"
                             style={{ border: cardBorder, boxShadow: cardShadow }}>
                             <div className="p-5 border-b border-slate-100 dark:border-[var(--sidebar-border)] flex flex-wrap gap-4 items-start justify-between">
@@ -3700,7 +3849,6 @@ function EquipeView({
                         </div>
                     )}
                 </>
-            )}
         </div>
     );
 }
