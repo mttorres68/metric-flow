@@ -270,3 +270,111 @@ export function exportarPDF(
   win.focus();
   setTimeout(() => win.print(), 800);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exportação PDF — Alocação de Responsabilidades por Revenda
+// ─────────────────────────────────────────────────────────────────────────────
+export interface AlocacaoItemPdf {
+  item: string;
+  macroArea: string;
+  microArea: string;
+  descricao: string;
+}
+
+export interface AlocacaoRevendaPdf {
+  nome: string;
+  totalItens: number;
+  comResp: number;
+  faltando: AlocacaoItemPdf[];
+}
+
+export function exportarPdfAlocacao(revendas: AlocacaoRevendaPdf[]): void {
+  const geradoEm = new Date().toLocaleString("pt-BR");
+
+  const blocos = revendas.map(rev => {
+    const pct = rev.totalItens > 0 ? Math.round(rev.comResp / rev.totalItens * 100) : 0;
+    const corBarra = pct >= 80 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#ef4444";
+
+    const macros = Array.from(new Set(rev.faltando.map(i => i.macroArea))).sort();
+
+    const linhas = macros.map(macro => {
+      const itens = rev.faltando.filter(i => i.macroArea === macro);
+      const rows = itens.map(i => `
+        <tr>
+          <td style="padding:5px 8px;font-family:monospace;font-weight:700;color:#e11d48;white-space:nowrap">${i.item}</td>
+          <td style="padding:5px 8px;color:#64748b">${i.microArea}</td>
+          <td style="padding:5px 8px;color:#334155;max-width:320px">${i.descricao}</td>
+        </tr>`).join("");
+      return `
+        <tr style="background:#f1f5f9">
+          <td colspan="3" style="padding:4px 8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#475569">${macro}</td>
+        </tr>
+        ${rows}`;
+    }).join("");
+
+    const tabela = rev.faltando.length > 0 ? `
+      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:10px">
+        <thead>
+          <tr style="background:#e2e8f0">
+            <th style="padding:6px 8px;text-align:left;font-weight:700;color:#475569;width:70px">Item</th>
+            <th style="padding:6px 8px;text-align:left;font-weight:700;color:#475569;width:130px">Micro Área</th>
+            <th style="padding:6px 8px;text-align:left;font-weight:700;color:#475569">Descrição</th>
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>` : `<p style="font-size:11px;color:#10b981;font-weight:700;margin:8px 0 0">✓ Todos os itens estão alocados.</p>`;
+
+    return `
+      <div style="margin-bottom:28px;page-break-inside:avoid">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:14px;font-weight:800;color:#1e293b">${rev.nome}</span>
+          <span style="font-size:12px;font-weight:700;color:${corBarra}">${pct}% alocado · ${rev.comResp}/${rev.totalItens} itens</span>
+        </div>
+        <div style="height:8px;border-radius:4px;background:#e2e8f0;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${corBarra};border-radius:4px"></div>
+        </div>
+        ${rev.faltando.length > 0
+          ? `<p style="font-size:11px;color:#ef4444;font-weight:700;margin:6px 0 0">${rev.faltando.length} item${rev.faltando.length !== 1 ? "s" : ""} sem responsável</p>`
+          : ""}
+        ${tabela}
+      </div>`;
+  }).join('<div style="border-top:1px solid #e2e8f0;margin:12px 0"></div>');
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Alocação de Responsabilidades — Assessment</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; font-size: 12px; color: #1e293b; padding: 32px 40px; }
+    table { border-collapse: collapse; }
+    tbody tr:hover { background: #fef2f2; }
+    @media print {
+      body { padding: 16px 24px; }
+      @page { margin: 14mm 12mm; }
+    }
+  </style>
+</head>
+<body>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;padding-bottom:16px;border-bottom:2px solid #6366f1">
+    <div>
+      <h1 style="font-size:18px;font-weight:900;color:#6366f1">Alocação de Responsabilidades</h1>
+      <p style="font-size:11px;color:#64748b;margin-top:4px">Assessment — Itens sem responsável por revenda</p>
+    </div>
+    <p style="font-size:10px;color:#94a3b8;text-align:right">Gerado em ${geradoEm}</p>
+  </div>
+  ${blocos}
+</body>
+</html>`;
+
+  const win = window.open("", "_blank");
+  if (!win) {
+    alert("Não foi possível abrir a janela. Verifique o bloqueador de pop-ups.");
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 800);
+}

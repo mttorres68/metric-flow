@@ -39,9 +39,11 @@ import {
     Briefcase,
     UserPlus,
     BarChart2,
+    Download,
 } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { trpc } from "@/lib/trpc";
+import { exportarPdfAlocacao } from "@/lib/pdfExport";
 import {
     Bar,
     BarChart,
@@ -3187,10 +3189,11 @@ function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
 // SemResponsavelList — itens sem responsável agrupados por revenda
 // ─────────────────────────────────────────────────────────────────────────────
 type ItemSemResp = { item: string; macroArea: string; microArea: string; descricao: string };
-type RevSemResp  = { id: number; nome: string; faltando: ItemSemResp[]; semNenhum: number; totalItens: number };
+type RevSemResp  = { id: number; nome: string; comResp: number; faltando: ItemSemResp[]; semNenhum: number; totalItens: number };
 
-function SemResponsavelList({ data, onSelectRevenda, cardBorder, cardShadow }: {
+function SemResponsavelList({ data, allStats, onSelectRevenda, cardBorder, cardShadow }: {
     data: RevSemResp[];
+    allStats: RevSemResp[];
     onSelectRevenda: (id: number) => void;
     cardBorder: string;
     cardShadow: string;
@@ -3201,6 +3204,15 @@ function SemResponsavelList({ data, onSelectRevenda, cardBorder, cardShadow }: {
 
     const total = data.reduce((s, r) => s + r.faltando.length, 0);
 
+    function handleExport() {
+        exportarPdfAlocacao(allStats.map(r => ({
+            nome: r.nome,
+            totalItens: r.totalItens,
+            comResp: r.comResp,
+            faltando: r.faltando,
+        })));
+    }
+
     return (
         <div className="bg-white dark:bg-[var(--card)] rounded-2xl overflow-hidden"
             style={{ border: cardBorder, boxShadow: cardShadow }}>
@@ -3208,9 +3220,17 @@ function SemResponsavelList({ data, onSelectRevenda, cardBorder, cardShadow }: {
                 <h3 className="text-sm text-slate-800 dark:text-slate-100" style={{ fontWeight: 800 }}>
                     Itens sem responsável
                 </h3>
-                <span className="text-xs px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400" style={{ fontWeight: 700 }}>
-                    {total} pendente{total !== 1 ? "s" : ""} no total
-                </span>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400" style={{ fontWeight: 700 }}>
+                        {total} pendente{total !== 1 ? "s" : ""} no total
+                    </span>
+                    <button
+                        onClick={handleExport}
+                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/30 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                        style={{ fontWeight: 700 }}>
+                        <Download className="w-3.5 h-3.5" /> Baixar PDF
+                    </button>
+                </div>
             </div>
             <div className="divide-y divide-slate-50 dark:divide-[var(--sidebar-border)]">
                 {data.filter(r => r.faltando.length > 0).map(rev => {
@@ -3592,7 +3612,8 @@ function EquipeView({
                                     {/* Itens sem responsável por revenda */}
                                     {semRespPorRevenda.some(r => r.faltando.length > 0) && (
                                         <SemResponsavelList
-                                            data={semRespPorRevenda}
+                                            data={semRespPorRevenda.filter(r => r.faltando.length > 0)}
+                                            allStats={semRespPorRevenda}
                                             onSelectRevenda={setRevendaId}
                                             cardBorder={cardBorder}
                                             cardShadow={cardShadow}
