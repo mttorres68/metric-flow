@@ -34,8 +34,12 @@ import {
     Users,
     Waves,
     X,
+    RefreshCw,
+    Phone,
+    Briefcase,
+    UserPlus,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { trpc } from "@/lib/trpc";
 import {
     Bar,
@@ -194,7 +198,7 @@ export default function Assessment() {
     const palette = isDark ? PASTEL_DARK : PASTEL_LIGHT;
 
     // ─── Visualização ────────────────────────────────────────────────────────
-    const [view, setView] = useState<"overview" | "clusters" | "resultados" | "respostas">("overview");
+    const [view, setView] = useState<"overview" | "clusters" | "resultados" | "respostas" | "equipe">("overview");
 
     // ─── Dados ───────────────────────────────────────────────────────────────
     const [indicadores, setIndicadores] = useState<Indicador[]>([]);
@@ -202,6 +206,16 @@ export default function Assessment() {
     const [resultados, setResultados] = useState<ResultadosData | null>(null);
     const [loading, setLoading] = useState(true);
     const [errMsg, setErrMsg] = useState<string | null>(null);
+
+    const syncMutation = trpc.assessment.triggerSync.useMutation({
+        onSuccess: (r) => {
+            if (r?.sucesso) toast.success("Sincronização concluída com sucesso!");
+            else toast.error(`Erro na sincronização: ${String(r?.erro ?? "").slice(0, 100)}`);
+        },
+        onError: () => toast.error("Não foi possível conectar à automação"),
+    });
+
+    const dbRevendasQuery = trpc.assessment.listRevendas.useQuery();
 
     useEffect(() => {
         let alive = true;
@@ -410,7 +424,28 @@ export default function Assessment() {
                             >
                                 <PenLine className="w-3.5 h-3.5" /> Respostas
                             </button>
+                            <button
+                                onClick={() => setView("equipe")}
+                                className={classNames(
+                                    "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all",
+                                    view === "equipe"
+                                        ? "bg-white dark:bg-[var(--card)] text-slate-800 dark:text-slate-100 shadow-sm"
+                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200",
+                                )}
+                                style={{ fontWeight: 700 }}
+                            >
+                                <Users className="w-3.5 h-3.5" /> Equipe
+                            </button>
                         </div>
+                        <button
+                            onClick={() => syncMutation.mutate({})}
+                            disabled={syncMutation.isPending}
+                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/30 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 disabled:opacity-50 transition-all"
+                            style={{ fontWeight: 700 }}
+                        >
+                            <RefreshCw className={classNames("w-3.5 h-3.5", syncMutation.isPending && "animate-spin")} />
+                            {syncMutation.isPending ? "Sincronizando…" : "Sincronizar"}
+                        </button>
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/30" style={{ fontWeight: 700 }}>
                             <Award className="w-3.5 h-3.5" />
                             {indicadores.length} indicadores
@@ -509,9 +544,11 @@ export default function Assessment() {
                     ) : view === "clusters" ? (
                         <ClustersView data={clusters} isDark={isDark} cardBorder={cardBorder} cardShadow={cardShadow} />
                     ) : view === "respostas" ? (
-                        <RespostasView data={resultados} indicadores={indicadores} isDark={isDark} cardBorder={cardBorder} cardShadow={cardShadow} />
+                        <RespostasView data={resultados} indicadores={indicadores} dbRevendas={dbRevendasQuery.data ?? []} isDark={isDark} cardBorder={cardBorder} cardShadow={cardShadow} />
                     ) : view === "resultados" ? (
-                        <ResultadosView data={resultados} isDark={isDark} cardBorder={cardBorder} cardShadow={cardShadow} palette={palette} />
+                        <ResultadosView isDark={isDark} cardBorder={cardBorder} cardShadow={cardShadow} palette={palette} />
+                    ) : view === "equipe" ? (
+                        <EquipeView indicadores={indicadores} isDark={isDark} cardBorder={cardBorder} cardShadow={cardShadow} />
                     ) : (
                         <>
                             {/* ─── KPIs ──────────────────────────────────────────────── */}
@@ -1458,13 +1495,23 @@ function pctColor(pct: number): string {
     return "#EF4444";                  // vermelho
 }
 
-function ResultadosView({ data, isDark, cardBorder, cardShadow }: {
-    data: ResultadosData | null;
+const MESES_RES = [
+    { num: 1, label: "Jan" }, { num: 2, label: "Fev" }, { num: 3, label: "Mar" },
+    { num: 4, label: "Abr" }, { num: 5, label: "Mai" }, { num: 6, label: "Jun" },
+    { num: 7, label: "Jul" }, { num: 8, label: "Ago" }, { num: 9, label: "Set" },
+    { num: 10, label: "Out" }, { num: 11, label: "Nov" }, { num: 12, label: "Dez" },
+] as const;
+
+function ResultadosView({ isDark, cardBorder, cardShadow }: {
     isDark: boolean;
     cardBorder: string;
     cardShadow: string;
     palette: string[];
 }) {
+    const hoje = new Date();
+    const [selectedAno, setSelectedAno] = useState(hoje.getFullYear());
+    const [selectedMes, setSelectedMes] = useState(hoje.getMonth() + 1);
+
     // Filtros
     const [fRevendas, setFRevendas] = useState<string[]>([]);
     const [fPadrinhos, setFPadrinhos] = useState<string[]>([]);
@@ -1474,7 +1521,37 @@ function ResultadosView({ data, isDark, cardBorder, cardShadow }: {
     const [fStatusEvid, setFStatusEvid] = useState<string>("");
     const [busca, setBusca] = useState("");
 
-    const respostas = data?.respostas || [];
+    const dbQuery = trpc.assessment.listAll.useQuery(
+        { ano: selectedAno, mes: selectedMes },
+        { retry: false },
+    );
+
+    const respostas = useMemo<RespostaResultado[]>(() =>
+        (dbQuery.data ?? []).map(r => ({
+            data:                r.data ?? `${r.ano}-${String(r.mes).padStart(2, "0")}-01`,
+            operacao:            r.operacao ?? 0,
+            revenda:             r.revenda,
+            shortId:             r.item,
+            item:                r.item,
+            autoavaliacao:       (r.autoavaliacao ?? "Não") as "Sim" | "Não",
+            evidencia:           (r.evidencia ?? "Não") as "Sim" | "Não",
+            padrinho:            r.padrinho || "Sem padrinho",
+            hora:                r.horaCheck ?? null,
+            macroArea:           r.macroArea ?? "",
+            microArea:           r.microArea ?? "",
+            piramide:            r.piramide ?? "",
+            descricao:           r.descricao ?? "",
+            tipoResposta:        r.tipoResposta ?? "",
+            pontoPossivel:       r.pontoPossivel ?? 0,
+            pontosEvidencia:     r.pontosEvidencia ?? 0,
+            pontosAutoavaliacao: r.pontosAutoavaliacao ?? 0,
+        })),
+    [dbQuery.data]);
+
+    const todasRevendas  = useMemo(() => [...new Set(respostas.map(r => r.revenda))].sort(), [respostas]);
+    const todosPadrinhos = useMemo(() =>
+        [...new Set(respostas.map(r => r.padrinho).filter(p => p && p !== "Sem padrinho"))].sort(),
+    [respostas]);
 
     // Opções de filtro
     const opcMacro = useMemo(() => Array.from(new Set(respostas.map(r => r.macroArea))).sort(), [respostas]);
@@ -1667,19 +1744,59 @@ function ResultadosView({ data, isDark, cardBorder, cardShadow }: {
         setFPadrinhos(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
     };
 
-    if (!data) {
+    if (dbQuery.isLoading) {
         return (
-            <div className="bg-white dark:bg-[var(--card)] rounded-2xl p-10 text-center"
+            <div className="flex items-center justify-center h-60 bg-white dark:bg-[var(--card)] rounded-2xl"
                 style={{ border: cardBorder, boxShadow: cardShadow }}>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Resultados não disponíveis. Gere o arquivo <code>/assessment_resultados.json</code> rodando <code>processar_resultados.py</code>.
-                </p>
+                <div className="w-8 h-8 rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-indigo-500 animate-spin" />
             </div>
         );
     }
 
+    const anos = [hoje.getFullYear(), hoje.getFullYear() - 1];
+
     return (
         <div className="space-y-6">
+            {/* Seletor de período */}
+            <div className="bg-white dark:bg-[var(--card)] rounded-2xl p-4 flex flex-wrap items-center gap-3"
+                style={{ border: cardBorder, boxShadow: cardShadow }}>
+                <span className="text-xs text-slate-500 dark:text-slate-400" style={{ fontWeight: 700 }}>Período</span>
+                <div className="flex gap-1">
+                    {MESES_RES.map(m => (
+                        <button key={m.num}
+                            onClick={() => setSelectedMes(m.num)}
+                            className={classNames(
+                                "text-xs px-2.5 py-1 rounded-lg border transition-all",
+                                selectedMes === m.num
+                                    ? "bg-indigo-500 text-white border-indigo-500"
+                                    : "bg-white dark:bg-[var(--card)] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-[var(--border)] hover:bg-slate-50 dark:hover:bg-[var(--accent)]",
+                            )}
+                            style={{ fontWeight: 700 }}>{m.label}</button>
+                    ))}
+                </div>
+                <select value={selectedAno} onChange={e => setSelectedAno(Number(e.target.value))}
+                    className="text-xs bg-slate-50 dark:bg-[var(--input)] border border-slate-200 dark:border-[var(--border)] rounded-lg px-2 py-1.5 focus:outline-none dark:text-slate-200"
+                    style={{ fontWeight: 700 }}>
+                    {anos.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+                {dbQuery.isFetching && (
+                    <span className="text-xs text-indigo-400 animate-pulse ml-1">Carregando…</span>
+                )}
+                <span className="ml-auto text-xs text-slate-400" style={{ fontWeight: 500 }}>
+                    {respostas.length} respostas
+                </span>
+            </div>
+
+            {respostas.length === 0 && !dbQuery.isFetching && (
+                <div className="bg-white dark:bg-[var(--card)] rounded-2xl p-10 text-center"
+                    style={{ border: cardBorder, boxShadow: cardShadow }}>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Nenhum dado para {MESES_RES[selectedMes - 1].label}/{selectedAno}.
+                        Execute <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">check.py --sync</code> para importar.
+                    </p>
+                </div>
+            )}
+
             {/* Filtros */}
             <div className="bg-white dark:bg-[var(--card)] rounded-2xl p-5 space-y-3"
                 style={{ border: cardBorder, boxShadow: cardShadow }}>
@@ -1697,7 +1814,7 @@ function ResultadosView({ data, isDark, cardBorder, cardShadow }: {
                 <div className="flex items-start gap-3">
                     <label className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 shrink-0 w-20" style={{ fontWeight: 600 }}>Revendas</label>
                     <div className="flex flex-wrap gap-1.5">
-                        {data.revendas.map(rev => {
+                        {todasRevendas.map(rev => {
                             const active = fRevendas.includes(rev);
                             const cor = corRevenda(rev);
                             return (
@@ -1726,7 +1843,7 @@ function ResultadosView({ data, isDark, cardBorder, cardShadow }: {
                 <div className="flex items-start gap-3">
                     <label className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 shrink-0 w-20" style={{ fontWeight: 600 }}>Padrinhos</label>
                     <div className="flex flex-wrap gap-1.5">
-                        {data.padrinhos.map(p => {
+                        {todosPadrinhos.map(p => {
                             const active = fPadrinhos.includes(p);
                             return (
                                 <button key={p}
@@ -2076,7 +2193,7 @@ function ResultadosView({ data, isDark, cardBorder, cardShadow }: {
                         Respostas detalhadas
                     </h3>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                        {filtradas.length} respostas no filtro atual · {data.meta.mes}/{data.meta.ano}
+                        {filtradas.length} respostas no filtro atual · {MESES_RES[selectedMes - 1].label}/{selectedAno}
                     </p>
                 </div>
                 <div className="overflow-x-auto max-h-[520px]">
@@ -2149,7 +2266,7 @@ function ResultadosView({ data, isDark, cardBorder, cardShadow }: {
 
             <div className="text-center py-2">
                 <p className="text-xs text-slate-300 dark:text-slate-600" style={{ fontWeight: 500 }}>
-                    MetricFlow · Resultados Assessment · {data.meta.mes}/{data.meta.ano} · {data.meta.totalRespostas} respostas
+                    MetricFlow · Resultados Assessment · {MESES_RES[selectedMes - 1].label}/{selectedAno} · {respostas.length} respostas
                 </p>
             </div>
         </div>
@@ -2180,9 +2297,10 @@ type RowState = {
     saved: boolean;
 };
 
-function RespostasView({ data, indicadores, isDark: _dark, cardBorder, cardShadow: _cs }: {
+function RespostasView({ data, indicadores, dbRevendas, isDark: _dark, cardBorder, cardShadow: _cs }: {
     data: ResultadosData | null;
     indicadores: Indicador[];
+    dbRevendas: { id: number; nome: string; codigo: string }[];
     isDark: boolean;
     cardBorder: string;
     cardShadow: string;
@@ -2232,7 +2350,9 @@ function RespostasView({ data, indicadores, isDark: _dark, cardBorder, cardShado
         return Array.from(ys).sort((a, b) => b - a);
     }, [data, currentYear]);
 
-    const revendas = data?.revendas ?? [];
+    const revendas = dbRevendas.length > 0
+        ? dbRevendas.map(r => r.nome)
+        : (data?.revendas ?? []);
 
     // ── Mapa revenda → operação (derivado das respostas do JSON) ───────────
     const revendaOpMap = useMemo(() => {
@@ -2775,6 +2895,370 @@ function RespostasView({ data, indicadores, isDark: _dark, cardBorder, cardShado
                     MetricFlow · Respostas · {MESES_R[selectedMes - 1].label}/{selectedAno}{selectedRevenda ? ` · ${selectedRevenda}` : ""}
                 </p>
             </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EquipeView — CRUD de colaboradores + mapeamento de responsabilidades
+// ─────────────────────────────────────────────────────────────────────────────
+function EquipeView({
+    indicadores,
+    isDark: _dark,
+    cardBorder,
+    cardShadow,
+}: {
+    indicadores: Indicador[];
+    isDark: boolean;
+    cardBorder: string;
+    cardShadow: string;
+}) {
+    const now = new Date();
+    const [revendaId, setRevendaId] = useState<number | null>(null);
+    const [subTab, setSubTab] = useState<"colaboradores" | "responsabilidades">("colaboradores");
+    const [form, setForm] = useState<{ id?: number; nome: string; cargo: string; whatsapp: string } | null>(null);
+    const [selectedAno, setSelectedAno] = useState(now.getFullYear());
+    const [selectedMes, setSelectedMes] = useState(now.getMonth() + 1);
+
+    const utils = trpc.useUtils();
+    const revendasQ = trpc.assessment.listRevendas.useQuery();
+    const colaboradoresQ = trpc.assessment.listColaboradores.useQuery(
+        { revendaId: revendaId ?? undefined },
+        { enabled: revendaId !== null },
+    );
+    const responsabilidadesQ = trpc.assessment.listResponsabilidades.useQuery(
+        { revendaId: revendaId! },
+        { enabled: revendaId !== null },
+    );
+
+    const upsertColab = trpc.assessment.upsertColaborador.useMutation({
+        onSuccess: () => {
+            utils.assessment.listColaboradores.invalidate();
+            toast.success("Colaborador salvo!");
+            setForm(null);
+        },
+        onError: () => toast.error("Erro ao salvar colaborador"),
+    });
+
+    const upsertResp = trpc.assessment.upsertResponsabilidade.useMutation({
+        onSuccess: () => utils.assessment.listResponsabilidades.invalidate(),
+        onError: () => toast.error("Erro ao salvar responsabilidade"),
+    });
+
+    const colabs = colaboradoresQ.data ?? [];
+
+    const respMap = useMemo(() => {
+        const m = new Map<string, { responsavelId: number | null; apoioId: number | null }>();
+        responsabilidadesQ.data?.forEach(r => {
+            m.set(r.item, { responsavelId: r.responsavelId ?? null, apoioId: r.apoioId ?? null });
+        });
+        return m;
+    }, [responsabilidadesQ.data]);
+
+    const itensList = useMemo(() => {
+        const seen = new Set<string>();
+        return indicadores
+            .filter(i => {
+                const cod = i.idIndicador.split(" - ")[0].trim();
+                if (seen.has(cod)) return false;
+                seen.add(cod);
+                return true;
+            })
+            .map(i => ({
+                item: i.idIndicador.split(" - ")[0].trim(),
+                macroArea: i.macroArea,
+                microArea: i.microArea,
+                descricao: i.descricaoItem,
+            }));
+    }, [indicadores]);
+
+    const macroGroups = useMemo(() => {
+        const groups = new Map<string, typeof itensList>();
+        itensList.forEach(i => {
+            if (!groups.has(i.macroArea)) groups.set(i.macroArea, []);
+            groups.get(i.macroArea)!.push(i);
+        });
+        return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+    }, [itensList]);
+
+    const revendaNome = revendasQ.data?.find(r => r.id === revendaId)?.nome ?? "";
+
+    const statusQuery = trpc.assessment.list.useQuery(
+        { revenda: revendaNome, ano: selectedAno, mes: selectedMes },
+        { enabled: revendaId !== null && !!revendaNome && subTab === "responsabilidades" },
+    );
+
+    const statusMap = useMemo(() => {
+        const m = new Map<string, string | null>();
+        statusQuery.data?.forEach(r => m.set(r.item, r.statusFinal ?? null));
+        return m;
+    }, [statusQuery.data]);
+
+    return (
+        <div className="space-y-6">
+            {/* Seletor de revenda */}
+            <div className="bg-white dark:bg-[var(--card)] rounded-2xl p-5 flex flex-wrap gap-2 items-center"
+                style={{ border: cardBorder, boxShadow: cardShadow }}>
+                <span className="text-xs text-slate-500 dark:text-slate-400 mr-2" style={{ fontWeight: 700 }}>
+                    <Users className="w-3.5 h-3.5 inline mr-1" /> Revenda
+                </span>
+                {revendasQ.isLoading && <span className="text-xs text-slate-400">Carregando revendas…</span>}
+                {revendasQ.data?.map(r => (
+                    <button key={r.id}
+                        onClick={() => setRevendaId(r.id)}
+                        className={classNames(
+                            "text-xs px-3 py-1.5 rounded-lg border transition-all",
+                            revendaId === r.id
+                                ? "bg-indigo-500 text-white border-indigo-500"
+                                : "bg-white dark:bg-[var(--card)] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[var(--border)] hover:bg-slate-50 dark:hover:bg-[var(--accent)]",
+                        )}
+                        style={{ fontWeight: 700 }}>
+                        {r.nome}
+                    </button>
+                ))}
+            </div>
+
+            {revendaId !== null && (
+                <>
+                    {/* Sub-tabs */}
+                    <div className="flex items-center gap-2">
+                        {(["colaboradores", "responsabilidades"] as const).map(t => (
+                            <button key={t}
+                                onClick={() => setSubTab(t)}
+                                className={classNames(
+                                    "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all",
+                                    subTab === t
+                                        ? "bg-indigo-500 text-white border-indigo-500"
+                                        : "bg-white dark:bg-[var(--card)] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[var(--border)] hover:bg-slate-50 dark:hover:bg-[var(--accent)]",
+                                )}
+                                style={{ fontWeight: 700 }}>
+                                {t === "colaboradores"
+                                    ? <><Briefcase className="w-3.5 h-3.5" /> Colaboradores</>
+                                    : <><UserCheck className="w-3.5 h-3.5" /> Responsabilidades</>}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* ── Colaboradores ────────────────────────────────────── */}
+                    {subTab === "colaboradores" && (
+                        <div className="bg-white dark:bg-[var(--card)] rounded-2xl overflow-hidden"
+                            style={{ border: cardBorder, boxShadow: cardShadow }}>
+                            <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-[var(--sidebar-border)]">
+                                <h3 className="text-sm text-slate-800 dark:text-slate-100" style={{ fontWeight: 800 }}>
+                                    Equipe — {revendaNome}
+                                </h3>
+                                <button
+                                    onClick={() => setForm({ nome: "", cargo: "", whatsapp: "" })}
+                                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
+                                    style={{ fontWeight: 700 }}>
+                                    <UserPlus className="w-3.5 h-3.5" /> Novo colaborador
+                                </button>
+                            </div>
+
+                            {/* Formulário inline */}
+                            {form && (
+                                <div className="p-4 bg-indigo-50 dark:bg-indigo-500/10 border-b border-indigo-100 dark:border-indigo-500/30 flex flex-wrap gap-3 items-end">
+                                    <div>
+                                        <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1" style={{ fontWeight: 600 }}>Nome</label>
+                                        <input type="text"
+                                            value={form.nome}
+                                            onChange={e => setForm(f => f && ({ ...f, nome: e.target.value }))}
+                                            placeholder="Nome completo"
+                                            className="text-xs border border-slate-200 dark:border-[var(--border)] rounded-lg px-2 py-1.5 bg-white dark:bg-[var(--input)] focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:text-slate-200 w-48"
+                                            style={{ fontWeight: 500 }} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1" style={{ fontWeight: 600 }}>Cargo</label>
+                                        <input type="text"
+                                            value={form.cargo}
+                                            onChange={e => setForm(f => f && ({ ...f, cargo: e.target.value }))}
+                                            placeholder="Ex: Gerente"
+                                            className="text-xs border border-slate-200 dark:border-[var(--border)] rounded-lg px-2 py-1.5 bg-white dark:bg-[var(--input)] focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:text-slate-200 w-36"
+                                            style={{ fontWeight: 500 }} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1" style={{ fontWeight: 600 }}>
+                                            <Phone className="w-3 h-3 inline mr-0.5" /> WhatsApp
+                                        </label>
+                                        <input type="text"
+                                            value={form.whatsapp}
+                                            onChange={e => setForm(f => f && ({ ...f, whatsapp: e.target.value }))}
+                                            placeholder="5551999999999"
+                                            className="text-xs border border-slate-200 dark:border-[var(--border)] rounded-lg px-2 py-1.5 bg-white dark:bg-[var(--input)] focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:text-slate-200 w-40"
+                                            style={{ fontWeight: 500 }} />
+                                    </div>
+                                    <button
+                                        disabled={!form.nome.trim() || upsertColab.isPending}
+                                        onClick={() => upsertColab.mutate({ ...form, revendaId: revendaId! })}
+                                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+                                        style={{ fontWeight: 700 }}>
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        {upsertColab.isPending ? "Salvando…" : "Salvar"}
+                                    </button>
+                                    <button onClick={() => setForm(null)}
+                                        className="text-xs p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-[var(--accent)] transition-colors">
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            )}
+
+                            <table className="w-full text-xs">
+                                <thead className="bg-slate-50 dark:bg-[var(--accent)]">
+                                    <tr>
+                                        {["Nome", "Cargo", "WhatsApp", "Ativo", ""].map(h => (
+                                            <th key={h} className="px-4 py-2.5 text-left text-slate-500 dark:text-slate-400" style={{ fontWeight: 700 }}>{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50 dark:divide-[var(--sidebar-border)]">
+                                    {colaboradoresQ.isLoading && (
+                                        <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-400">Carregando…</td></tr>
+                                    )}
+                                    {!colaboradoresQ.isLoading && colabs.length === 0 && (
+                                        <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-400">Nenhum colaborador cadastrado.</td></tr>
+                                    )}
+                                    {colabs.map(c => (
+                                        <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-[var(--accent)]/50 transition-colors">
+                                            <td className="px-4 py-2.5 text-slate-800 dark:text-slate-200" style={{ fontWeight: 600 }}>{c.nome}</td>
+                                            <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{c.cargo || "—"}</td>
+                                            <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400 font-mono">{c.whatsapp || "—"}</td>
+                                            <td className="px-4 py-2.5">
+                                                <span className={`w-2 h-2 rounded-full inline-block ${c.ativo ? "bg-emerald-400" : "bg-slate-300 dark:bg-slate-600"}`} />
+                                            </td>
+                                            <td className="px-4 py-2.5 text-right">
+                                                <button
+                                                    onClick={() => setForm({ id: c.id, nome: c.nome, cargo: c.cargo ?? "", whatsapp: c.whatsapp ?? "" })}
+                                                    className="text-xs px-2 py-1 rounded-lg text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+                                                    style={{ fontWeight: 600 }}>Editar</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* ── Responsabilidades ────────────────────────────────── */}
+                    {subTab === "responsabilidades" && (
+                        <div className="bg-white dark:bg-[var(--card)] rounded-2xl overflow-hidden"
+                            style={{ border: cardBorder, boxShadow: cardShadow }}>
+                            <div className="p-5 border-b border-slate-100 dark:border-[var(--sidebar-border)] flex flex-wrap gap-4 items-start justify-between">
+                                <div>
+                                    <h3 className="text-sm text-slate-800 dark:text-slate-100" style={{ fontWeight: 800 }}>
+                                        Responsabilidades — {revendaNome}
+                                    </h3>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                                        Defina o responsável direto e o apoio (padrinho) para cada item
+                                    </p>
+                                    {colabs.length === 0 && (
+                                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 rounded-lg" style={{ fontWeight: 600 }}>
+                                            Cadastre colaboradores primeiro para poder atribuir responsabilidades.
+                                        </p>
+                                    )}
+                                </div>
+                                {/* Seletor de período para ver status */}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-slate-400 dark:text-slate-500" style={{ fontWeight: 600 }}>Status de:</span>
+                                    <select
+                                        value={selectedMes}
+                                        onChange={e => setSelectedMes(Number(e.target.value))}
+                                        className="text-xs border border-slate-200 dark:border-[var(--border)] rounded-lg px-2 py-1 bg-white dark:bg-[var(--input)] focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:text-slate-200">
+                                        {MESES_RES.map(m => (
+                                            <option key={m.num} value={m.num}>{m.label}</option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={selectedAno}
+                                        onChange={e => setSelectedAno(Number(e.target.value))}
+                                        className="text-xs border border-slate-200 dark:border-[var(--border)] rounded-lg px-2 py-1 bg-white dark:bg-[var(--input)] focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:text-slate-200">
+                                        {[2025, 2026, 2027].map(y => (
+                                            <option key={y} value={y}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="overflow-auto max-h-[70vh]">
+                                <table className="w-full text-xs">
+                                    <thead className="bg-slate-50 dark:bg-[var(--accent)] sticky top-0 z-10">
+                                        <tr>
+                                            <th className="px-3 py-2.5 text-left text-slate-500 dark:text-slate-400 w-20" style={{ fontWeight: 700 }}>Item</th>
+                                            <th className="px-3 py-2.5 text-left text-slate-500 dark:text-slate-400 w-24" style={{ fontWeight: 700 }}>Status</th>
+                                            <th className="px-3 py-2.5 text-left text-slate-500 dark:text-slate-400" style={{ fontWeight: 700 }}>Micro Área</th>
+                                            <th className="px-3 py-2.5 text-left text-slate-500 dark:text-slate-400" style={{ fontWeight: 700 }}>Descrição</th>
+                                            <th className="px-3 py-2.5 text-left text-slate-500 dark:text-slate-400 w-44" style={{ fontWeight: 700 }}>Responsável</th>
+                                            <th className="px-3 py-2.5 text-left text-slate-500 dark:text-slate-400 w-44" style={{ fontWeight: 700 }}>Apoio</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50 dark:divide-[var(--sidebar-border)]">
+                                        {macroGroups.map(([macro, items]) => (
+                                            <Fragment key={macro}>
+                                                <tr className="bg-slate-100/60 dark:bg-[var(--accent)]">
+                                                    <td colSpan={6} className="px-3 py-1.5 text-slate-600 dark:text-slate-300 uppercase tracking-wide text-[10px]" style={{ fontWeight: 800 }}>
+                                                        {macro}
+                                                    </td>
+                                                </tr>
+                                                {items.map(i => {
+                                                    const cur = respMap.get(i.item);
+                                                    const st = statusMap.get(i.item);
+                                                    const badge = st === "Sim"
+                                                        ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" style={{ fontWeight: 700 }}>Sim</span>
+                                                        : st === "Parcial"
+                                                        ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400" style={{ fontWeight: 700 }}>Parcial</span>
+                                                        : st === "Não"
+                                                        ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400" style={{ fontWeight: 700 }}>Não</span>
+                                                        : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500" style={{ fontWeight: 600 }}>—</span>;
+                                                    return (
+                                                        <tr key={i.item} className="hover:bg-slate-50/60 dark:hover:bg-[var(--accent)]/40 transition-colors">
+                                                            <td className="px-3 py-2 font-mono text-indigo-600 dark:text-indigo-400" style={{ fontWeight: 700 }}>{i.item}</td>
+                                                            <td className="px-3 py-2">{badge}</td>
+                                                            <td className="px-3 py-2 text-slate-400 dark:text-slate-500">{i.microArea}</td>
+                                                            <td className="px-3 py-2 text-slate-600 dark:text-slate-300 max-w-xs">
+                                                                <span className="block truncate" title={i.descricao}>{i.descricao}</span>
+                                                            </td>
+                                                            <td className="px-3 py-2">
+                                                                <select
+                                                                    value={cur?.responsavelId ?? ""}
+                                                                    disabled={colabs.length === 0}
+                                                                    onChange={e => upsertResp.mutate({
+                                                                        revendaId: revendaId!,
+                                                                        item: i.item,
+                                                                        responsavelId: e.target.value ? Number(e.target.value) : null,
+                                                                        apoioId: cur?.apoioId ?? null,
+                                                                    })}
+                                                                    className="text-xs bg-white dark:bg-[var(--input)] border border-slate-200 dark:border-[var(--border)] rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:text-slate-200 w-40 disabled:opacity-50"
+                                                                    style={{ fontWeight: cur?.responsavelId ? 700 : 400 }}>
+                                                                    <option value="">— nenhum —</option>
+                                                                    {colabs.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                                                                </select>
+                                                            </td>
+                                                            <td className="px-3 py-2">
+                                                                <select
+                                                                    value={cur?.apoioId ?? ""}
+                                                                    disabled={colabs.length === 0}
+                                                                    onChange={e => upsertResp.mutate({
+                                                                        revendaId: revendaId!,
+                                                                        item: i.item,
+                                                                        responsavelId: cur?.responsavelId ?? null,
+                                                                        apoioId: e.target.value ? Number(e.target.value) : null,
+                                                                    })}
+                                                                    className="text-xs bg-white dark:bg-[var(--input)] border border-slate-200 dark:border-[var(--border)] rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:text-slate-200 w-40 disabled:opacity-50"
+                                                                    style={{ fontWeight: cur?.apoioId ? 700 : 400 }}>
+                                                                    <option value="">— nenhum —</option>
+                                                                    {colabs.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                                                                </select>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </Fragment>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
         </div>
     );
 }

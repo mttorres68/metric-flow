@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../db";
 import {
+  assessmentItens,
   assessmentRespostas,
   assessmentResponsabilidades,
   colaboradores,
@@ -14,6 +15,19 @@ import {
 // ---------------------------------------------------------------------------
 // Respostas
 // ---------------------------------------------------------------------------
+export async function listAllRespostas(ano: number, mes: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select()
+      .from(assessmentRespostas)
+      .where(and(eq(assessmentRespostas.ano, ano), eq(assessmentRespostas.mes, mes)));
+  } catch {
+    return [];
+  }
+}
+
 export async function listRespostas(revenda: string, ano: number, mes: number) {
   const db = await getDb();
   if (!db) return [];
@@ -67,6 +81,19 @@ export async function upsertResposta(input: InsertAssessmentResposta) {
   } catch (err) {
     console.error("[Assessment] upsertResposta failed:", err);
     throw err;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Catálogo de itens
+// ---------------------------------------------------------------------------
+export async function listAssessmentItens() {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(assessmentItens);
+  } catch {
+    return [];
   }
 }
 

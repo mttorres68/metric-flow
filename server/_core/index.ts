@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { relatorioRouter } from "../routes/relatorio";
+import { assessmentSyncRouter } from "../routes/assessmentSync";
 import { initWATables } from "../db/whatsapp";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -44,6 +45,7 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Relatórios PDF (REST — retorna ZIP/PDF com múltiplos arquivos binários)
   app.use("/api/relatorio", relatorioRouter);
+  app.use("/api/assessment", assessmentSyncRouter);
   // tRPC API
   app.use(
     "/api/trpc",
