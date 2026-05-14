@@ -2957,16 +2957,17 @@ function EquipeView({
     }, [responsabilidadesQ.data]);
 
     const itensList = useMemo(() => {
+        const extractCode = (id: string) => id.match(/^([A-Z]+\d+)/)?.[1] ?? id.split(" - ")[0].trim();
         const seen = new Set<string>();
         return indicadores
             .filter(i => {
-                const cod = i.idIndicador.split(" - ")[0].trim();
+                const cod = extractCode(i.idIndicador);
                 if (seen.has(cod)) return false;
                 seen.add(cod);
                 return true;
             })
             .map(i => ({
-                item: i.idIndicador.split(" - ")[0].trim(),
+                item: extractCode(i.idIndicador),
                 macroArea: i.macroArea,
                 microArea: i.microArea,
                 descricao: i.descricaoItem,
