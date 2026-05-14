@@ -3396,10 +3396,10 @@ function EquipeView({
                                     {/* KPI totais consolidados */}
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                         {[
-                                            { label: "Total de itens (por revenda)", value: itensList.length,                                         color: "text-slate-700 dark:text-slate-200",   bg: "bg-slate-50 dark:bg-[var(--accent)]" },
-                                            { label: "Média com responsável",        value: `${Math.round(allAlocStats.reduce((s, r) => s + r.pct, 0) / (allAlocStats.length || 1))}%`, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
-                                            { label: "Itens alocados (total)",       value: allAlocStats.reduce((s, r) => s + r.comResp, 0),           color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
-                                            { label: "Sem responsável (total)",      value: allAlocStats.reduce((s, r) => s + r.semNenhum, 0),         color: "text-rose-600 dark:text-rose-400",    bg: "bg-rose-50 dark:bg-rose-500/10" },
+                                            { label: "Itens por revenda",       value: itensList.length,                                                                                    color: "text-slate-700 dark:text-slate-200",     bg: "bg-slate-50 dark:bg-[var(--accent)]" },
+                                            { label: "Média de alocação",       value: `${Math.round(allAlocStats.reduce((s, r) => s + r.pct, 0) / (allAlocStats.length || 1))}%`,    color: "text-indigo-600 dark:text-indigo-400",   bg: "bg-indigo-50 dark:bg-indigo-500/10" },
+                                            { label: "Com responsável (total)", value: allAlocStats.reduce((s, r) => s + r.comResp, 0),                                               color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
+                                            { label: "Sem responsável (total)", value: allAlocStats.reduce((s, r) => s + r.semNenhum, 0),                                             color: "text-rose-600 dark:text-rose-400",       bg: "bg-rose-50 dark:bg-rose-500/10" },
                                         ].map(k => (
                                             <div key={k.label} className={`${k.bg} rounded-2xl p-4 flex flex-col gap-1`}
                                                 style={{ border: cardBorder, boxShadow: cardShadow }}>
@@ -3417,16 +3417,14 @@ function EquipeView({
                                                 Ranking de alocação — todas as revendas
                                             </h3>
                                             <div className="flex items-center gap-3 text-[10px] text-slate-400">
-                                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-indigo-400 inline-block" /> Responsável</span>
-                                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-violet-400 inline-block" /> Apoio</span>
-                                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-slate-200 dark:bg-slate-700 inline-block" /> Sem alocação</span>
+                                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-indigo-400 inline-block" /> Com responsável</span>
+                                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-slate-200 dark:bg-slate-700 inline-block" /> Sem responsável</span>
                                             </div>
                                         </div>
                                         <div className="p-5 space-y-4">
                                             {allAlocStats.map((rev, idx) => {
-                                                const pctResp  = rev.totalItens > 0 ? rev.comResp  / rev.totalItens * 100 : 0;
-                                                const pctApoio = rev.totalItens > 0 ? rev.comApoio / rev.totalItens * 100 : 0;
-                                                const color = pctResp >= 80 ? "#10b981" : pctResp >= 50 ? "#f59e0b" : "#f43f5e";
+                                                const pct   = rev.totalItens > 0 ? Math.round(rev.comResp / rev.totalItens * 100) : 0;
+                                                const color = pct >= 80 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#f43f5e";
                                                 return (
                                                     <div key={rev.id}>
                                                         <div className="flex items-center justify-between mb-1.5">
@@ -3440,46 +3438,27 @@ function EquipeView({
                                                                 </button>
                                                             </div>
                                                             <div className="flex items-center gap-3 text-[10px]">
-                                                                <span className="text-slate-500 dark:text-slate-400"><span style={{ fontWeight: 700, color }}>{rev.comResp}</span>/{rev.totalItens} resp.</span>
-                                                                <span className="text-violet-500 dark:text-violet-400" style={{ fontWeight: 700 }}>{rev.comApoio} apoio</span>
+                                                                <span className="text-slate-500 dark:text-slate-400">
+                                                                    <span style={{ fontWeight: 700, color }}>{rev.comResp}</span>/{rev.totalItens} itens
+                                                                </span>
                                                                 <span className="tabular-nums" style={{ fontWeight: 900, color, minWidth: 36, textAlign: "right" }}>
-                                                                    {Math.round(pctResp)}%
+                                                                    {pct}%
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                        {/* Barra empilhada */}
-                                                        <div className="flex h-5 rounded-lg overflow-hidden gap-px">
-                                                            {/* Responsável + Apoio (completo) */}
-                                                            {rev.completo > 0 && (
-                                                                <div className="bg-emerald-400 flex items-center justify-center"
-                                                                    style={{ width: `${rev.completo / rev.totalItens * 100}%` }}
-                                                                    title={`Resp + Apoio: ${rev.completo}`}>
-                                                                    {rev.completo >= 3 && <span className="text-[9px] text-white" style={{ fontWeight: 800 }}>{rev.completo}</span>}
-                                                                </div>
-                                                            )}
-                                                            {/* Só responsável */}
-                                                            {(rev.comResp - rev.completo) > 0 && (
-                                                                <div className="bg-indigo-400 flex items-center justify-center"
-                                                                    style={{ width: `${(rev.comResp - rev.completo) / rev.totalItens * 100}%` }}
-                                                                    title={`Só responsável: ${rev.comResp - rev.completo}`}>
-                                                                    {(rev.comResp - rev.completo) >= 3 && <span className="text-[9px] text-white" style={{ fontWeight: 800 }}>{rev.comResp - rev.completo}</span>}
-                                                                </div>
-                                                            )}
-                                                            {/* Só apoio */}
-                                                            {(rev.comApoio - rev.completo) > 0 && (
-                                                                <div className="bg-violet-400 flex items-center justify-center"
-                                                                    style={{ width: `${(rev.comApoio - rev.completo) / rev.totalItens * 100}%` }}
-                                                                    title={`Só apoio: ${rev.comApoio - rev.completo}`}>
-                                                                    {(rev.comApoio - rev.completo) >= 3 && <span className="text-[9px] text-white" style={{ fontWeight: 800 }}>{rev.comApoio - rev.completo}</span>}
-                                                                </div>
-                                                            )}
-                                                            {/* Sem alocação */}
-                                                            {rev.semNenhum > 0 && (
-                                                                <div className="bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-1"
-                                                                    title={`Sem alocação: ${rev.semNenhum}`}>
-                                                                    {rev.semNenhum >= 5 && <span className="text-[9px] text-slate-400" style={{ fontWeight: 700 }}>{rev.semNenhum}</span>}
-                                                                </div>
-                                                            )}
+                                                        {/* Barra simples: com responsável / sem responsável */}
+                                                        <div className="flex h-5 rounded-lg overflow-hidden">
+                                                            <div className="flex items-center justify-center transition-all"
+                                                                style={{ width: `${pct}%`, backgroundColor: color }}>
+                                                                {rev.comResp >= 5 && (
+                                                                    <span className="text-[9px] text-white" style={{ fontWeight: 800 }}>{rev.comResp}</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                                                                {rev.semNenhum >= 5 && (
+                                                                    <span className="text-[9px] text-slate-400" style={{ fontWeight: 700 }}>{rev.semNenhum}</span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 );
@@ -3525,27 +3504,21 @@ function EquipeView({
                                                 {alocacaoStats.total > 0 ? Math.round(alocacaoStats.comResp / alocacaoStats.total * 100) : 0}% com responsável
                                             </span>
                                         </div>
-                                        {/* Barra empilhada: responsável + apoio apenas + sem nada */}
+                                        {/* Barra simples: com responsável / sem responsável */}
                                         {(() => {
-                                            const t = alocacaoStats.total || 1;
-                                            const pResp   = Math.round(alocacaoStats.completo / t * 100);
-                                            const pApoio  = Math.round((alocacaoStats.comApoio - alocacaoStats.completo) / t * 100);
-                                            const pSoloR  = Math.round((alocacaoStats.comResp - alocacaoStats.completo) / t * 100);
-                                            const pVazio  = 100 - pResp - pApoio - pSoloR;
+                                            const t    = alocacaoStats.total || 1;
+                                            const pct  = Math.round(alocacaoStats.comResp / t * 100);
+                                            const color = pct >= 80 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#ef4444";
                                             return (
-                                                <div className="flex h-4 rounded-full overflow-hidden gap-0.5">
-                                                    {pResp  > 0 && <div className="bg-emerald-400"   style={{ width: `${pResp}%`  }} title={`Completo (resp + apoio): ${pResp}%`} />}
-                                                    {pSoloR > 0 && <div className="bg-indigo-400"    style={{ width: `${pSoloR}%` }} title={`Só responsável: ${pSoloR}%`} />}
-                                                    {pApoio > 0 && <div className="bg-violet-400"    style={{ width: `${pApoio}%` }} title={`Só apoio: ${pApoio}%`} />}
-                                                    {pVazio > 0 && <div className="bg-slate-200 dark:bg-slate-700" style={{ width: `${pVazio}%` }} title={`Sem alocação: ${pVazio}%`} />}
+                                                <div className="flex h-4 rounded-full overflow-hidden">
+                                                    <div style={{ width: `${pct}%`, backgroundColor: color }} title={`Com responsável: ${alocacaoStats.comResp}`} />
+                                                    <div className="flex-1 bg-slate-200 dark:bg-slate-700" title={`Sem responsável: ${alocacaoStats.semNenhum}`} />
                                                 </div>
                                             );
                                         })()}
                                         <div className="flex flex-wrap gap-4 text-[10px] text-slate-500 dark:text-slate-400 pt-1">
-                                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block" /> Resp + Apoio ({alocacaoStats.completo})</span>
-                                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-400 inline-block" /> Só responsável ({alocacaoStats.comResp - alocacaoStats.completo})</span>
-                                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-violet-400 inline-block" /> Só apoio ({alocacaoStats.comApoio - alocacaoStats.completo})</span>
-                                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-slate-200 dark:bg-slate-700 inline-block" /> Sem alocação ({alocacaoStats.semNenhum})</span>
+                                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-400 inline-block" /> Com responsável ({alocacaoStats.comResp})</span>
+                                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-slate-200 dark:bg-slate-700 inline-block" /> Sem responsável ({alocacaoStats.semNenhum})</span>
                                         </div>
                                     </div>
 
@@ -3561,12 +3534,11 @@ function EquipeView({
                                                     <th className="px-4 py-2.5 text-left text-slate-500 dark:text-slate-400" style={{ fontWeight: 700 }}>Macro Área</th>
                                                     <th className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400 w-16" style={{ fontWeight: 700 }}>Itens</th>
                                                     <th className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400 w-24" style={{ fontWeight: 700 }}>C/ Resp.</th>
-                                                    <th className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400 w-24" style={{ fontWeight: 700 }}>C/ Apoio</th>
                                                     <th className="px-4 py-2.5 text-left text-slate-500 dark:text-slate-400 w-48" style={{ fontWeight: 700 }}>Cobertura</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-50 dark:divide-[var(--sidebar-border)]">
-                                                {alocacaoStats.porMacro.map(({ macro, total: mt, comResp: mr, comApoio: ma }) => {
+                                                {alocacaoStats.porMacro.map(({ macro, total: mt, comResp: mr }) => {
                                                     const pct = mt > 0 ? Math.round(mr / mt * 100) : 0;
                                                     const pctColor = pct >= 80 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#f43f5e";
                                                     return (
@@ -3574,7 +3546,6 @@ function EquipeView({
                                                             <td className="px-4 py-2.5 text-slate-700 dark:text-slate-200" style={{ fontWeight: 700 }}>{macro}</td>
                                                             <td className="px-4 py-2.5 text-right tabular-nums text-slate-500 dark:text-slate-400" style={{ fontWeight: 600 }}>{mt}</td>
                                                             <td className="px-4 py-2.5 text-right tabular-nums" style={{ fontWeight: 700, color: pctColor }}>{mr}/{mt}</td>
-                                                            <td className="px-4 py-2.5 text-right tabular-nums text-violet-500 dark:text-violet-400" style={{ fontWeight: 600 }}>{ma}/{mt}</td>
                                                             <td className="px-4 py-2.5">
                                                                 <div className="flex items-center gap-2">
                                                                     <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
@@ -3594,9 +3565,6 @@ function EquipeView({
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-slate-700 dark:text-slate-200" style={{ fontWeight: 800 }}>{alocacaoStats.total}</td>
                                                     <td className="px-4 py-2.5 text-right tabular-nums" style={{ fontWeight: 800, color: alocacaoStats.total > 0 ? (alocacaoStats.comResp / alocacaoStats.total >= 0.8 ? "#10b981" : "#f59e0b") : undefined }}>
                                                         {alocacaoStats.comResp}/{alocacaoStats.total}
-                                                    </td>
-                                                    <td className="px-4 py-2.5 text-right tabular-nums text-violet-500 dark:text-violet-400" style={{ fontWeight: 800 }}>
-                                                        {alocacaoStats.comApoio}/{alocacaoStats.total}
                                                     </td>
                                                     <td className="px-4 py-2.5">
                                                         <div className="flex items-center gap-2">
