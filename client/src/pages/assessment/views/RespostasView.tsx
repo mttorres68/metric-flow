@@ -5,7 +5,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { classNames, MESES, PIRAMIDE_COR } from "../constants";
-import type { Indicador, ResultadosData, RespostaResultado } from "../types";
+import type { Indicador, RespostaResultado } from "../types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -26,10 +26,9 @@ type RowState = {
 // ─────────────────────────────────────────────────────────────────────────────
 // RespostasView
 // ─────────────────────────────────────────────────────────────────────────────
-export function RespostasView({ data, indicadores, dbRevendas, isDark: _dark, cardBorder, cardShadow: _cs }: {
-    data: ResultadosData | null;
+export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBorder, cardShadow: _cs }: {
     indicadores: Indicador[];
-    dbRevendas: { id: number; nome: string; codigo: string }[];
+    dbRevendas: { id: number; nome: string; codigo: string; operacao?: number | null }[];
     isDark: boolean;
     cardBorder: string;
     cardShadow: string;
@@ -74,34 +73,26 @@ export function RespostasView({ data, indicadores, dbRevendas, isDark: _dark, ca
 
     // ── Anos disponíveis ───────────────────────────────────────────────────
     const anos = useMemo(() => {
-        const ys = new Set<number>([currentYear]);
-        data?.respostas.forEach(r => ys.add(Number(r.data.split("-")[0])));
+        const ys = new Set<number>([currentYear, currentYear - 1]);
+        dbQuery.data?.forEach(r => { if (r.ano) ys.add(r.ano); });
         return Array.from(ys).sort((a, b) => b - a);
-    }, [data, currentYear]);
+    }, [dbQuery.data, currentYear]);
 
-    const revendas = dbRevendas.length > 0
-        ? dbRevendas.map(r => r.nome)
-        : (data?.revendas ?? []);
+    const revendas = dbRevendas.map(r => r.nome);
 
-    // ── Mapa revenda → operação (derivado das respostas do JSON) ───────────
+    // ── Mapa revenda → operação (derivado do banco) ────────────────────────
     const revendaOpMap = useMemo(() => {
         const map: Record<string, number> = {};
-        data?.respostas.forEach(r => { map[r.revenda] = r.operacao; });
+        dbRevendas.forEach(r => { if (r.operacao) map[r.nome] = r.operacao; });
         return map;
-    }, [data]);
+    }, [dbRevendas]);
 
     // ── Meses com dados ────────────────────────────────────────────────────
     const mesesComDados = useMemo(() => {
         const s = new Set<number>();
-        data?.respostas.forEach(r => {
-            const [yr, mo] = r.data.split("-").map(Number);
-            if (yr !== selectedAno) return;
-            if (selectedRevenda && r.revenda !== selectedRevenda) return;
-            s.add(mo);
-        });
         dbQuery.data?.forEach(d => { if (d.mes) s.add(d.mes); });
         return s;
-    }, [data, selectedAno, selectedRevenda, dbQuery.data]);
+    }, [dbQuery.data]);
 
     // ── Lista completa de 92 indicadores para a revenda selecionada ────────
     // Fonte: assessment_indicadores.json (todos os indicadores, incluindo os
@@ -124,16 +115,6 @@ export function RespostasView({ data, indicadores, dbRevendas, isDark: _dark, ca
         return indRevenda.map(i => {
             const itemCode = i.idIndicador.split(" - ")[0].trim(); // "ADM01"
 
-            // Tenta encontrar resposta existente no JSON para o mês/revenda
-            const existing = data?.respostas.find(r =>
-                r.revenda === selectedRevenda &&
-                r.item === itemCode &&
-                Number(r.data.split("-")[0]) === selectedAno &&
-                Number(r.data.split("-")[1]) === selectedMes,
-            );
-            if (existing) return existing;
-
-            // Template zerado para meses sem dados
             return {
                 data: `${selectedAno}-${mesStr}-01`,
                 operacao,
@@ -154,7 +135,7 @@ export function RespostasView({ data, indicadores, dbRevendas, isDark: _dark, ca
                 pontosAutoavaliacao: 0,
             } as RespostaResultado;
         });
-    }, [indicadores, selectedRevenda, selectedAno, selectedMes, data, revendaOpMap]);
+    }, [indicadores, selectedRevenda, selectedAno, selectedMes, revendaOpMap]);
 
     // ── Inicializar rows (DB → JSON → vazio) ───────────────────────────────
     const selKey = `${selectedRevenda}|${selectedAno}|${selectedMes}`;
@@ -191,11 +172,12 @@ export function RespostasView({ data, indicadores, dbRevendas, isDark: _dark, ca
         setRows(next);
     }, [baseIndicadores, dbQuery.data, selKey]);
 
-    // ── Padrinhos do JSON ──────────────────────────────────────────────────
+    // ── Padrinhos do banco ─────────────────────────────────────────────────
     useEffect(() => {
-        if (!data?.padrinhos) return;
-        setPadrinhos(prev => Array.from(new Set(["Sem padrinho", ...data.padrinhos, ...prev])));
-    }, [data]);
+        if (!dbQuery.data) return;
+        const pads = dbQuery.data.map(d => d.padrinho).filter((p): p is string => !!p && p !== "Sem padrinho");
+        if (pads.length > 0) setPadrinhos(prev => Array.from(new Set(["Sem padrinho", ...pads, ...prev])));
+    }, [dbQuery.data]);
 
     // ── Limpar filtros ao mudar seleção ────────────────────────────────────
     useEffect(() => {
@@ -338,7 +320,7 @@ export function RespostasView({ data, indicadores, dbRevendas, isDark: _dark, ca
                     </select>
                 </div>
                 {dbQuery.isFetching && <span className="text-xs text-indigo-400 animate-pulse">Carregando banco…</span>}
-                {dbQuery.isError && <span className="text-xs text-amber-500">Banco indisponível — usando dados locais</span>}
+                {dbQuery.isError && <span className="text-xs text-red-500">Banco indisponível — verifique a conexão</span>}
                 <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
                     {MESES[selectedMes - 1].label}/{selectedAno}{selectedRevenda ? ` · ${selectedRevenda}` : ""}
                 </span>

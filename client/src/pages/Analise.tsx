@@ -97,7 +97,7 @@ const ALL_COLS = [
     { id: "t_menor", label: "T. Menor" },
     { id: "t_maior", label: "T. Maior" },
     { id: "t_medio", label: "T. Médio" },
-    { id: "t_total", label: "T. Total" },
+    { id: "t_total", label: "Σ TEMPO" },
     { id: "soma_percurso", label: "Σ Percurso" },
     { id: "percurso", label: "Maior Percurso" },
     { id: "ini_percurso", label: "Ini. Percurso" },
@@ -1479,7 +1479,7 @@ export default function Analise() {
                                                     {col("t_menor") && <Th title="Menor tempo de visita dentro do PDV" center>T. Menor</Th>}
                                                     {col("t_maior") && <Th title="Maior tempo de visita dentro do PDV" center>T. Maior</Th>}
                                                     {col("t_medio") && <Th title="Média do tempo de visita dentro do PDV" center>T. Médio</Th>}
-                                                    {col("t_total") && <Th title="Soma de todos os tempos de visita dentro do PDV" center>T. Total</Th>}
+                                                    {col("t_total") && <Th title="Soma de todos os tempos de visita dentro do PDV" center>Σ TEMPO</Th>}
 
                                                     {/* Percurso */}
                                                     {col("soma_percurso") && <Th title="Soma de todos os intervalos entre visitas consecutivas (≤ 60min)" center>Σ Percurso</Th>}

@@ -19,7 +19,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 import { PASTEL_DARK, PASTEL_LIGHT, PIRAMIDE_COR, classNames } from "./assessment/constants";
-import type { ClustersData, Indicador, ResultadosData } from "./assessment/types";
+import type { ClustersData, Indicador } from "./assessment/types";
 import { ClustersView } from "./assessment/views/ClustersView";
 import { EquipeView } from "./assessment/views/EquipeView";
 import { OverviewView } from "./assessment/views/OverviewView";
@@ -40,7 +40,6 @@ export default function Assessment() {
     // ─── Dados ───────────────────────────────────────────────────────────────
     const [indicadores, setIndicadores] = useState<Indicador[]>([]);
     const [clusters, setClusters] = useState<ClustersData | null>(null);
-    const [resultados, setResultados] = useState<ResultadosData | null>(null);
     const [loading, setLoading] = useState(true);
     const [errMsg, setErrMsg] = useState<string | null>(null);
 
@@ -62,13 +61,11 @@ export default function Assessment() {
                 return r.json();
             }),
             fetch("/assessment_clusters.json").then(r => r.ok ? r.json() : null).catch(() => null),
-            fetch("/assessment_resultados.json").then(r => r.ok ? r.json() : null).catch(() => null),
         ])
-            .then(([ind, cl, res]: [Indicador[], ClustersData | null, ResultadosData | null]) => {
+            .then(([ind, cl]: [Indicador[], ClustersData | null]) => {
                 if (!alive) return;
                 setIndicadores(ind);
                 setClusters(cl);
-                setResultados(res);
                 setLoading(false);
             })
             .catch(err => {
@@ -345,7 +342,7 @@ export default function Assessment() {
                     ) : view === "clusters" ? (
                         <ClustersView data={clusters} isDark={isDark} cardBorder={cardBorder} cardShadow={cardShadow} />
                     ) : view === "respostas" ? (
-                        <RespostasView data={resultados} indicadores={indicadores} dbRevendas={dbRevendasQuery.data ?? []} isDark={isDark} cardBorder={cardBorder} cardShadow={cardShadow} />
+                        <RespostasView indicadores={indicadores} dbRevendas={dbRevendasQuery.data ?? []} isDark={isDark} cardBorder={cardBorder} cardShadow={cardShadow} />
                     ) : view === "resultados" ? (
                         <ResultadosView isDark={isDark} cardBorder={cardBorder} cardShadow={cardShadow} palette={palette} />
                     ) : view === "equipe" ? (
