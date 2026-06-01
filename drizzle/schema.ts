@@ -201,3 +201,43 @@ export const assessmentRespostas = pgTable(
 
 export type AssessmentResposta = typeof assessmentRespostas.$inferSelect;
 export type InsertAssessmentResposta = typeof assessmentRespostas.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// CRM — mapeamento de papéis → membros Trello por revenda
+// ---------------------------------------------------------------------------
+export const crmMemberConfig = pgTable(
+  "crm_member_config",
+  {
+    id:               serial("id").primaryKey(),
+    revenda:          varchar("revenda", { length: 100 }).notNull(),
+    role:             varchar("role", { length: 100 }).notNull(),
+    trelloMemberId:   varchar("trelloMemberId", { length: 100 }).notNull(),
+    trelloMemberName: varchar("trelloMemberName", { length: 200 }).notNull(),
+    createdAt:        timestamp("createdAt").defaultNow().notNull(),
+    updatedAt:        timestamp("updatedAt").defaultNow().notNull(),
+  },
+  (t) => [unique("uq_crm_member_config").on(t.revenda, t.role)],
+);
+
+export type CrmMemberConfig = typeof crmMemberConfig.$inferSelect;
+export type InsertCrmMemberConfig = typeof crmMemberConfig.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// CRM — histórico de ciclos de agenda criados
+// ---------------------------------------------------------------------------
+export const crmAgendaCiclo = pgTable(
+  "crm_agenda_ciclo",
+  {
+    id:         serial("id").primaryKey(),
+    revenda:    varchar("revenda", { length: 100 }).notNull(),
+    mes:        integer("mes").notNull(),
+    ano:        integer("ano").notNull(),
+    totalCards: integer("totalCards").default(0),
+    status:     varchar("status", { length: 50 }).default("criado"),
+    criadoEm:   timestamp("criadoEm").defaultNow().notNull(),
+  },
+  (t) => [unique("uq_crm_ciclo").on(t.revenda, t.mes, t.ano)],
+);
+
+export type CrmAgendaCiclo = typeof crmAgendaCiclo.$inferSelect;
+export type InsertCrmAgendaCiclo = typeof crmAgendaCiclo.$inferInsert;

@@ -8,6 +8,7 @@ import {
   Award,
   BarChart2,
   BarChartHorizontal,
+  CalendarDays,
   CircleCheckBig,
   Home,
   LineChart,
@@ -31,6 +32,21 @@ interface SidebarProps {
   onNavigate: (page: string) => void;
 }
 
+const ROUTE_MAP: Record<string, string> = {
+  dashboard:        "/",
+  vendedores:       "/vendedores",
+  compliance:       "/compliance",
+  clientes:         "/clientes",
+  relatorio:        "/relatorio",
+  relatorio_semanal:"/relatorio-semanal",
+  rota_coaching:    "/rota-coaching",
+  analises:         "/analises",
+  trello_atraso:    "/trello-atraso",
+  agenda_gv:        "/agenda-gv",
+  whatsapp:         "/whatsapp",
+  assessment:       "/assessment",
+};
+
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "vendedores", label: "Vendedores", icon: SquareUserRound },
@@ -41,6 +57,7 @@ const navItems = [
   { id: "rota_coaching", label: "Rota Coaching", icon: Map },
   { id: "analises", label: "Análises", icon: LineChart },
   { id: "trello_atraso", label: "Trello Atraso", icon: Trello },
+  { id: "agenda_gv", label: "Agenda GV", icon: CalendarDays },
   { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
   { id: "assessment", label: "Assessment", icon: Award },
 
@@ -99,12 +116,16 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activePage === item.id;
-            const isBlocked = item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" && item.id !== "relatorio" && item.id !== "relatorio_semanal" && item.id !== "rota_coaching" && item.id !== "analises" && item.id !== "trello_atraso" && item.id !== "whatsapp" && item.id !== "assessment";
+            const isBlocked = item.id !== "dashboard" && item.id !== "vendedores" && item.id !== "compliance" && item.id !== "clientes" && item.id !== "relatorio" && item.id !== "relatorio_semanal" && item.id !== "rota_coaching" && item.id !== "analises" && item.id !== "trello_atraso" && item.id !== "agenda_gv" && item.id !== "whatsapp" && item.id !== "assessment";
 
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => onNavigate(item.id)}
+                  onClick={() => {
+                    const route = ROUTE_MAP[item.id];
+                    if (route) window.location.href = route;
+                    else onNavigate(item.id);
+                  }}
                   disabled={isBlocked}
                   className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-xl text-sm font-600 transition-all duration-200 ${
                     isBlocked 

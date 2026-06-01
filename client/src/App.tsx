@@ -16,6 +16,7 @@ import Analise from "./pages/Analise";
 import AnaliseVisitasDetalhes from "./pages/AnaliseVisitasDetalhes";
 import AnaliseForeaRaio from "./pages/AnaliseForeaRaio";
 import TrelloAtraso from "./pages/trello";
+import AgendaGV from "./pages/agenda-gv";
 import WhatsApp from "./pages/WhatsApp";
 import Assessment from "./pages/Assessment";
 // MetricFlow — Pastel Command Center — tema claro com pastéis
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/analises/vendedor/:revenda/:vendedor/:data" component={AnaliseVisitasDetalhes} />
       <Route path="/analises/foera-raio/:revenda/:data" component={AnaliseForeaRaio} />
       <Route path="/trello-atraso" component={TrelloAtraso} />
+      <Route path="/agenda-gv" component={AgendaGV} />
       <Route path="/whatsapp" component={WhatsApp} />
       <Route path="/assessment" component={Assessment} />
 

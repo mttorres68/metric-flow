@@ -12,9 +12,9 @@ export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
 export const CONFIG_PADRAO_METRICAS = {
     raioPDV:             300,      // metros — VENDEDORES_DIST_PDV no Python
     minutosCurta:        3,        // SHORT_VISIT_LIMIT
-    limiteInicioTardio:  "09:30",  // alerta de início tardio
+    limiteInicioTardio:  "08:45",  // alerta de início tardio
     alertaCurtasPerc:    10,       // alerta: % relâmpago acima disso
-    alertaCoberturaPerc: 90,       // alerta: cobertura abaixo disso
+    alertaCoberturaPerc: 100,       // alerta: cobertura abaixo disso
     alertaTardePerc:     25,       // alerta: % após 14h abaixo disso
 } as const;
 
