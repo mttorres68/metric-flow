@@ -15,7 +15,7 @@ import RelatorioSemanal from "./pages/RelatorioSemanal";
 import Analise from "./pages/Analise";
 import AnaliseVisitasDetalhes from "./pages/AnaliseVisitasDetalhes";
 import AnaliseForeaRaio from "./pages/AnaliseForeaRaio";
-import TrelloAtraso from "./pages/TrelloAtraso";
+import TrelloAtraso from "./pages/trello";
 import WhatsApp from "./pages/WhatsApp";
 import Assessment from "./pages/Assessment";
 // MetricFlow — Pastel Command Center — tema claro com pastéis
