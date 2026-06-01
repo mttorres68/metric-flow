@@ -6,6 +6,7 @@ import {
   AlertCircle,
   AlertTriangle,
   Calendar,
+  CalendarDays,
   Download,
   Loader2,
   RefreshCw,
@@ -13,6 +14,8 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { TabConfiguracoes } from "../agenda-gv/components/TabConfiguracoes";
+import { TabNovoCiclo } from "../agenda-gv/components/TabNovoCiclo";
 import { AtividadeRevendaSection } from "./components/AtividadeRevendaSection";
 import { FiltroListas } from "./components/FiltroListas";
 import { RevendaSection } from "./components/RevendaSection";
@@ -24,7 +27,8 @@ export default function TrelloAtraso() {
   const [activePage] = useState("trello_atraso");
   const [exportando, setExportando] = useState(false);
   const [listasFiltro, setListasFiltro] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<"atrasos" | "atividades">("atrasos");
+  const [activeTab, setActiveTab] = useState<"atrasos" | "atividades" | "agenda">("atrasos");
+  const [agendaSubTab, setAgendaSubTab] = useState<"ciclo" | "config">("ciclo");
   const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   const { template, saveLocal, saveToServer, isSaving, serverSynced } = useWaTemplate();
@@ -121,32 +125,30 @@ export default function TrelloAtraso() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {todasListas.length > 0 && (
+            {activeTab !== "agenda" && todasListas.length > 0 && (
               <FiltroListas
                 todasListas={todasListas}
                 selecionadas={listasFiltro}
                 onChange={setListasFiltro}
               />
             )}
-            <button
-              onClick={handleRefetch}
-              disabled={isCurrentFetching}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isCurrentFetching ? "animate-spin" : ""}`} />
-              Atualizar
-            </button>
+            {activeTab !== "agenda" && (
+              <button
+                onClick={handleRefetch}
+                disabled={isCurrentFetching}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isCurrentFetching ? "animate-spin" : ""}`} />
+                Atualizar
+              </button>
+            )}
             {activeTab === "atrasos" && (
               <button
                 onClick={handleExportarPDF}
                 disabled={!data || exportando}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition-colors disabled:opacity-50"
               >
-                {exportando ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4" />
-                )}
+                {exportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 Exportar PDF
               </button>
             )}
@@ -195,6 +197,17 @@ export default function TrelloAtraso() {
                 {totalHoje + totalAmanha}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => setActiveTab("agenda")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "agenda"
+                ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 shadow-sm"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            }`}
+          >
+            <CalendarDays className="w-4 h-4" />
+            Agenda GV
           </button>
         </div>
 
@@ -307,6 +320,40 @@ export default function TrelloAtraso() {
                 ))}
               </div>
             )}
+          </>
+        )}
+
+        {/* Aba: Agenda GV */}
+        {activeTab === "agenda" && (
+          <>
+            {/* Sub-tabs */}
+            <div className="flex gap-1 mb-5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1 w-fit shadow-sm">
+              <button
+                onClick={() => setAgendaSubTab("ciclo")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  agendaSubTab === "ciclo"
+                    ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                }`}
+              >
+                <CalendarDays className="w-4 h-4" />
+                Novo Ciclo
+              </button>
+              <button
+                onClick={() => setAgendaSubTab("config")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  agendaSubTab === "config"
+                    ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                }`}
+              >
+                <Settings2 className="w-4 h-4" />
+                Configurações
+              </button>
+            </div>
+
+            {agendaSubTab === "ciclo" && <TabNovoCiclo />}
+            {agendaSubTab === "config" && <TabConfiguracoes />}
           </>
         )}
       </main>
