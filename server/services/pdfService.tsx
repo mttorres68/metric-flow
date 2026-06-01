@@ -261,7 +261,8 @@ const s = StyleSheet.create({
   analysisText: {
     fontSize: 8.5,
     color: "#334155",
-    lineHeight: 1.6,
+    lineHeight: 1.2,
+    marginBottom: 1.5,
   },
   analysisEmpty: {
     fontSize: 8.5,
@@ -355,16 +356,25 @@ function stripHtml(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
-    .replace(/<\/li>/gi, "\n")
-    .replace(/<li>/gi, "• ")
+    .replace(/<\/li>/gi, "")   // sem newline extra — o \n vem da quebra natural
+    .replace(/<li>/gi, "\n• ")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/\n{3,}/g, "\n\n")
+    .replace(/\n{2,}/g, "\n")  // colapsa qualquer duplo-newline em simples
     .trim();
+}
+
+/** Renderiza texto de análise linha a linha para evitar espaçamento excessivo do lineHeight. */
+function renderAnalise(text: string): React.ReactNode {
+  const linhas = text.split("\n").filter(l => l.trim() !== "");
+  if (!linhas.length) return null;
+  return linhas.map((linha, i) => (
+    <Text key={i} style={s.analysisText}>{linha}</Text>
+  ));
 }
 
 function fmtDate(iso: string): string {
@@ -564,11 +574,7 @@ const PaginaVendedores = ({ d }: { d: PDFReportData }) => {
         {/* Análise do gestor */}
         <Text style={s.sectionTitle}>Análise — Vendedores</Text>
         <View style={s.analysisBox}>
-          {analise ? (
-            <Text style={s.analysisText}>{analise}</Text>
-          ) : (
-            <Text style={s.analysisEmpty}></Text>
-          )}
+          {analise ? renderAnalise(analise) : <Text style={s.analysisEmpty}></Text>}
         </View>
       </View>
 
@@ -745,11 +751,7 @@ const PaginaGAs = ({ d }: { d: PDFReportData }) => {
         {/* Análise do gestor */}
         <Text style={s.sectionTitle}>Análise — GAs</Text>
         <View style={s.analysisBox}>
-          {analise ? (
-            <Text style={s.analysisText}>{analise}</Text>
-          ) : (
-            <Text style={s.analysisEmpty}></Text>
-          )}
+          {analise ? renderAnalise(analise) : <Text style={s.analysisEmpty}></Text>}
         </View>
       </View>
 
@@ -775,7 +777,7 @@ const RelatorioRevenda = ({ d }: { d: PDFReportData }) => (
 );
 
 // ---------------------------------------------------------------------------
-// API pública
+// API pública — relatório diário
 // ---------------------------------------------------------------------------
 
 /**
@@ -785,6 +787,184 @@ const RelatorioRevenda = ({ d }: { d: PDFReportData }) => (
 export async function gerarPDFRevenda(data: PDFReportData): Promise<Buffer> {
   const element = React.createElement(
     RelatorioRevenda,
+    { d: data }
+  ) as React.ReactElement<DocumentProps>;
+  return renderToBuffer(element);
+}
+
+// ---------------------------------------------------------------------------
+// PDF de Recorrência Semanal
+// ---------------------------------------------------------------------------
+
+export interface PDFSemanalData {
+  revenda: string;
+  semanaInicio: string;
+  semanaFim: string;
+  flags: Array<{ id: string; label: string }>;
+  vendedores: Array<{
+    vendedor: number;
+    diasAtivos: number;
+    scoreCritico: number;
+    metricas: Record<string, { dias: number; recorrente: boolean }>;
+  }>;
+  insightHtml: string;
+}
+
+const FLAG_SHORT_PDF: Record<string, string> = {
+  relampagoAlto:     "Relâmp.",
+  inicioTardio:      "Iníc. T.",
+  coberturaBaixa:    "Cob.",
+  almocoExcesso:     "Almoço",
+  tardeInsuficiente: "Pós-14h",
+  tempoAtendBaixo:   "Σ Atend.",
+  fimCedo:           "Fim cedo",
+};
+
+const LEGENDA_SEMANAL = [
+  {
+    label: "Leitura da tabela",
+    desc: "Cada célula exibe Dias/Ativos: quantos dias o problema ocorreu vs. dias ativos na semana. Vermelho = recorrente; laranja = ocorreu sem recorrência; — = sem ocorrência.",
+  },
+  {
+    label: "Recorrente",
+    desc: "Flag marcada quando o problema aparece em ≥ 2 dias OU em ≥ 40% dos dias ativos do vendedor na semana.",
+  },
+  {
+    label: "Score",
+    desc: "Número de flags recorrentes do vendedor. Quanto maior, mais padrões críticos se repetiram.",
+  },
+  {
+    label: "Relâmpago alto",
+    desc: "% de visitas dentro do raio com duração < 3 min acima de 10%.",
+  },
+  {
+    label: "Início tardio",
+    desc: "Primeiro atendimento dentro do raio após 09:30.",
+  },
+  {
+    label: "Cobertura/IV baixa",
+    desc: "Clientes visitados dentro do raio / total da carteira abaixo de 90%.",
+  },
+  {
+    label: "Almoço acima do limite",
+    desc: "Mais de 4 visitas registradas na janela 12:15–13:45.",
+  },
+  {
+    label: "Pouca visita após 14h",
+    desc: "% de visitas com início após 14h abaixo de 25%.",
+  },
+  {
+    label: "Σ atendimento < 2h",
+    desc: "Soma do tempo dentro dos PDVs visitados inferior a 2 horas no dia.",
+  },
+  {
+    label: "Finaliza cedo",
+    desc: "Último atendimento dentro do raio encerrado antes das 14:00.",
+  },
+];
+
+// Layout landscape A4: 841.89pt − 56pt padding = ~786pt úteis
+const S_VW = 38;
+const S_DW = 38;
+const S_SW = 32;
+
+const PaginaRecorrencia = ({ d }: { d: PDFSemanalData }) => {
+  const vendedores = d.vendedores.filter(v => v.scoreCritico > 0);
+  const flagCount = d.flags.length;
+  const FW = (886 - S_VW - S_DW - S_SW) / Math.max(1, flagCount);
+
+  return (
+    <Page size="A4" orientation="landscape" style={s.page}>
+      <View style={s.pageHeader}>
+        <Text style={s.pageHeaderTitle}>
+          {`MetricFlow · Recorrência Semanal — ${d.revenda}`}
+        </Text>
+        <Text style={s.pageHeaderMeta}>
+          {`Semana ${fmtDate(d.semanaInicio)} a ${fmtDate(d.semanaFim)} · Gerado em ${new Date().toLocaleDateString("pt-BR")}`}
+        </Text>
+      </View>
+
+      <View style={s.content}>
+        {/* Legenda */}
+        <Text style={s.sectionTitle}>Legenda</Text>
+        {LEGENDA_SEMANAL.map((item, i) => (
+          <View key={i} style={s.legendRow}>
+            <Text style={s.legendLabel}>{item.label}</Text>
+            <Text style={s.legendDesc}>{item.desc}</Text>
+          </View>
+        ))}
+
+        {/* Tabela */}
+        <Text style={[s.sectionTitle, { marginTop: 10 }]}>Mapeamento de recorrência por vendedor</Text>
+
+        {/* Cabeçalho */}
+        <View style={[s.tblHeaderRow, { paddingVertical: 3 }]}>
+          <Text style={[s.th, { width: S_VW, textAlign: "left" }]}>Vend.</Text>
+          <Text style={[s.th, { width: S_DW }]}>Dias ativos</Text>
+          <Text style={[s.th, { width: S_SW }]}>Score</Text>
+          {d.flags.map(f => (
+            <Text key={f.id} style={[s.th, { width: FW }]}>
+              {FLAG_SHORT_PDF[f.id] ?? f.label}
+            </Text>
+          ))}
+        </View>
+
+        {/* Dados — apenas vendedores com score > 0 */}
+        {vendedores.map((v, i) => (
+          <View key={v.vendedor} style={[i % 2 === 0 ? s.tblRow : s.tblRowAlt, { paddingVertical: 2.5 }]}>
+            <Text style={[s.td, { width: S_VW, textAlign: "left" }]}>
+              {String(v.vendedor)}
+            </Text>
+            <Text style={[s.td, { width: S_DW }]}>{v.diasAtivos}</Text>
+            <Text style={[v.scoreCritico > 0 ? s.tdAlert : s.td, { width: S_SW }]}>
+              {v.scoreCritico}
+            </Text>
+            {d.flags.map(f => {
+              const m = v.metricas[f.id];
+              const isEmpty = !m || m.dias === 0;
+              const cellStyle = isEmpty
+                ? { ...s.td, color: MUTED }
+                : m.recorrente
+                  ? s.tdAlert
+                  : { ...s.td, color: COR_PARCIAL };
+              return (
+                <Text key={f.id} style={[cellStyle, { width: FW }]}>
+                  {isEmpty ? "—" : `${m.dias}/${v.diasAtivos}`}
+                </Text>
+              );
+            })}
+          </View>
+        ))}
+
+        {/* Análise inteligente */}
+        {!!d.insightHtml && (
+          <>
+            <Text style={[s.sectionTitle, { marginTop: 12 }]}>Análise inteligente</Text>
+            <View style={s.analysisBox}>
+              {renderAnalise(stripHtml(d.insightHtml))}
+            </View>
+          </>
+        )}
+      </View>
+
+      <FooterBar data={d.semanaInicio} revenda={d.revenda} />
+    </Page>
+  );
+};
+
+const RelatorioRecorrencia = ({ d }: { d: PDFSemanalData }) => (
+  <Document
+    title={`Recorrência Semanal ${d.revenda} — ${d.semanaInicio}`}
+    author="MetricFlow"
+    creator="MetricFlow"
+  >
+    <PaginaRecorrencia d={d} />
+  </Document>
+);
+
+export async function gerarPDFRecorrencia(data: PDFSemanalData): Promise<Buffer> {
+  const element = React.createElement(
+    RelatorioRecorrencia,
     { d: data }
   ) as React.ReactElement<DocumentProps>;
   return renderToBuffer(element);

@@ -21,6 +21,7 @@ import { getVisitasData, getRotaCoachingData } from "../services/dataCache";
 import { calcularMetricas } from "../services/metricsCalculator";
 import {
   gerarPDFRevenda,
+  gerarPDFRecorrencia,
   type CoachingKPIs,
   type CoachingRecord,
   type VendedorRow,
@@ -553,5 +554,117 @@ relatorioRouter.post("/gerar-unificado", async (req: Request, res: Response) => 
   } catch (err) {
     console.error("[relatorio] erro ao gerar PDF unificado:", err);
     res.status(500).json({ error: "Erro interno ao gerar PDF unificado.", detalhes: String(err) });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/relatorio/gerar-semanal
+// Body: { revenda, semanaInicio, semanaFim, mapaJson, insightHtml? }
+// Gera um PDF da aba de Recorrência Semanal para uma revenda.
+// ---------------------------------------------------------------------------
+relatorioRouter.post("/gerar-semanal", async (req: Request, res: Response) => {
+  try {
+    const { revenda, semanaInicio, semanaFim, mapaJson, insightHtml } = req.body as {
+      revenda: string;
+      semanaInicio: string;
+      semanaFim: string;
+      mapaJson: string;
+      insightHtml?: string;
+    };
+
+    if (!revenda || !semanaInicio || !semanaFim || !mapaJson) {
+      res.status(400).json({ error: "Campos obrigatórios: revenda, semanaInicio, semanaFim, mapaJson" });
+      return;
+    }
+
+    const vendedores = JSON.parse(mapaJson);
+
+    // Flags visíveis no relatório (ociosidadeAlta oculta temporariamente)
+    const flags = [
+      { id: "relampagoAlto",    label: "Relâmpago alto" },
+      { id: "inicioTardio",     label: "Início tardio" },
+      { id: "coberturaBaixa",   label: "Cobertura/IV baixa" },
+      { id: "almocoExcesso",    label: "Almoço acima do limite" },
+      { id: "tardeInsuficiente",label: "Pouca visita após 14h" },
+      { id: "tempoAtendBaixo",  label: "Σ atend. < 2h" },
+      { id: "fimCedo",          label: "Finaliza cedo" },
+    ];
+
+    const buffer = await gerarPDFRecorrencia({
+      revenda,
+      semanaInicio,
+      semanaFim,
+      flags,
+      vendedores,
+      insightHtml: insightHtml ?? "",
+    });
+
+    const slug = revenda.replace(/[^a-zA-Z0-9]/g, "_");
+    const filename = `${slug}_recorrencia_${semanaInicio}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", buffer.length);
+    console.log(`[relatorio] PDF semanal gerado: ${filename} (${buffer.length} bytes)`);
+    res.send(buffer);
+  } catch (err) {
+    console.error("[relatorio] erro ao gerar PDF semanal:", err);
+    res.status(500).json({ error: "Erro ao gerar PDF semanal", detalhes: String(err) });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/relatorio/gerar-semanal-unificado
+// Body: { semanaInicio, semanaFim, revendas: Array<{ revenda, mapaJson, insightHtml? }> }
+// Gera um único PDF com uma página por revenda, em ordem.
+// ---------------------------------------------------------------------------
+relatorioRouter.post("/gerar-semanal-unificado", async (req: Request, res: Response) => {
+  try {
+    const { semanaInicio, semanaFim, revendas: revendasPayload } = req.body as {
+      semanaInicio: string;
+      semanaFim: string;
+      revendas: Array<{ revenda: string; mapaJson: string; insightHtml?: string }>;
+    };
+
+    if (!semanaInicio || !semanaFim || !Array.isArray(revendasPayload) || revendasPayload.length === 0) {
+      res.status(400).json({ error: "Campos obrigatórios: semanaInicio, semanaFim, revendas[]" });
+      return;
+    }
+
+    const flags = [
+      { id: "relampagoAlto",    label: "Relâmpago alto" },
+      { id: "inicioTardio",     label: "Início tardio" },
+      { id: "coberturaBaixa",   label: "Cobertura/IV baixa" },
+      { id: "almocoExcesso",    label: "Almoço acima do limite" },
+      { id: "tardeInsuficiente",label: "Pouca visita após 14h" },
+      { id: "tempoAtendBaixo",  label: "Σ atend. < 2h" },
+      { id: "fimCedo",          label: "Finaliza cedo" },
+    ];
+
+    const merged = await PDFDocument.create();
+
+    for (const { revenda, mapaJson, insightHtml } of revendasPayload) {
+      try {
+        const vendedores = JSON.parse(mapaJson ?? "[]");
+        const buf = await gerarPDFRecorrencia({
+          revenda, semanaInicio, semanaFim, flags, vendedores, insightHtml: insightHtml ?? "",
+        });
+        const doc = await PDFDocument.load(buf);
+        const pages = await merged.copyPages(doc, doc.getPageIndices());
+        pages.forEach(p => merged.addPage(p));
+      } catch (e) {
+        console.error(`[relatorio] erro ao gerar PDF semanal para ${revenda}:`, e);
+      }
+    }
+
+    const mergedBuffer = Buffer.from(await merged.save());
+    const filename = `recorrencia_semanal_${semanaInicio}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", mergedBuffer.length);
+    console.log(`[relatorio] PDF semanal unificado: ${filename} (${revendasPayload.length} revendas, ${mergedBuffer.length} bytes)`);
+    res.send(mergedBuffer);
+  } catch (err) {
+    console.error("[relatorio] erro ao gerar PDF semanal unificado:", err);
+    res.status(500).json({ error: "Erro ao gerar PDF semanal unificado", detalhes: String(err) });
   }
 });

@@ -50,6 +50,29 @@ export type Analise = typeof analises.$inferSelect;
 export type InsertAnalise = typeof analises.$inferInsert;
 
 // ---------------------------------------------------------------------------
+// Recorrência semanal — mapeamento + insight inteligente por revenda/semana
+// (módulo Análise → aba "Recorrência semanal").
+// mapaJson guarda o RecorrenciaVendedor[] estruturado; insightHtml o texto LLM.
+// ---------------------------------------------------------------------------
+export const analiseRecorrencia = pgTable(
+  "analise_recorrencia",
+  {
+    id: serial("id").primaryKey(),
+    revenda: varchar("revenda", { length: 120 }).notNull(),
+    semanaInicio: varchar("semanaInicio", { length: 10 }).notNull(), // YYYY-MM-DD
+    semanaFim: varchar("semanaFim", { length: 10 }).notNull(),
+    mapaJson: text("mapaJson").notNull().default(""),
+    insightHtml: text("insightHtml").notNull().default(""),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  (t) => [unique("uq_analise_recorrencia").on(t.revenda, t.semanaInicio)],
+);
+
+export type AnaliseRecorrencia = typeof analiseRecorrencia.$inferSelect;
+export type InsertAnaliseRecorrencia = typeof analiseRecorrencia.$inferInsert;
+
+// ---------------------------------------------------------------------------
 // Revendas — as 5 unidades do grupo
 // ---------------------------------------------------------------------------
 export const revendas = pgTable("revendas", {

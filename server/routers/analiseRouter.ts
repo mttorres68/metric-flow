@@ -10,9 +10,14 @@
  */
 
 import { z } from "zod";
+import { and, eq } from "drizzle-orm";
 import { publicProcedure, router } from "../_core/trpc";
 import { getVisitasData } from "../services/dataCache";
 import type { ProcessedVisita } from "../services/xlsxService";
+import { getDb } from "../db";
+import { analiseRecorrencia } from "../../drizzle/schema";
+import { ENV } from "../_core/env";
+import { CONFIG_PADRAO_METRICAS, CONFIG_RECORRENCIA } from "@shared/const";
 
 // ─── Helpers de tempo ────────────────────────────────────────────────────────
 
@@ -92,7 +97,7 @@ export interface AnaliseVendedor {
 
 // ─── Cálculo por vendedor/dia ─────────────────────────────────────────────────
 
-function calcularVendedorDia(
+export function calcularVendedorDia(
     visitas: ProcessedVisita[],
     vendedor: number,
     data: string,
@@ -185,7 +190,6 @@ function calcularVendedorDia(
 
     // ── Maior Percurso ────────────────────────────────────────────────────────
     // Ordena visitas por hora de início, calcula gaps entre Hora_Fin e próximo Ini
-    // Descarta gaps > 60 min (intervalo real já considerado no Tempo Ñ Atend)
     const visitasOrd = [...dentroRaio]
         .map(v => ({ ini: hmsToMin(v.horaInicio), fim: hmsToMin(v.horaFim), v }))
         .filter(x => x.ini !== null && x.fim !== null)
@@ -214,8 +218,11 @@ function calcularVendedorDia(
         : 0;
 
     // ── Tempo Não-Atendimento ────────────────────────────────────────────────
-    // Do primeiro ao último atendimento dentro do raio, descontando tempo em visita
-    // Trava após 17:00 (TRAVA_H)
+    // Jornada (primeiro PDV dentro do raio → 17:00 ou último PDV) menos Σ tempos em visita.
+    // Limitações conhecidas — métrica oculta na UI enquanto não forem corrigidas:
+    //   • Almoço não descontado: ~60 min inflam o valor todo dia
+    //   • Jornada parte do primeiro PDV, ignorando o deslocamento da base até ele
+    //   • PDVs revisitados contam tempo apenas do primeiro registro (unicos)
     let tempo_nao_atend: number | null = null;
     if (inicio_min !== null && fim_min !== null && tempo_total !== null) {
         const fim_efetivo = Math.min(fim_min, TRAVA_H);
@@ -270,6 +277,135 @@ function calcularVendedorDia(
     };
 }
 
+// ─── Agregação do período (compartilhada por getDados e recorrência) ───────────
+// Agrupa por chave composta `revenda__vendedor__data` (ids de vendedor podem
+// repetir entre revendas) e calcula o ranking crítico por relâmpago % também
+// com chave composta, evitando colisão entre revendas.
+
+function calcularAnalisePeriodo(visitas: ProcessedVisita[]): AnaliseVendedor[] {
+    const visitasPorChave: Record<string, ProcessedVisita[]> = {};
+    for (const v of visitas) {
+        const c = `${v.revenda}__${v.vendedor}__${v.data}`;
+        (visitasPorChave[c] ??= []).push(v);
+    }
+
+    const preLista = Object.entries(visitasPorChave).map(([chave, lista]) => {
+        const [, vStr, data] = chave.split("__");
+        return calcularVendedorDia(lista, parseInt(vStr, 10), data, 0, 0);
+    });
+
+    // Ranking por relâmpago % DESC — posição 0 = pior (chave composta com revenda)
+    const sorted = [...preLista].sort((a, b) => b.relampago_pct - a.relampago_pct);
+    const rankMap = new Map(sorted.map((r, i) => [`${r.revenda}__${r.vendedor}__${r.data}`, i]));
+
+    return preLista.map(pre => ({
+        ...pre,
+        ranking_critico: (rankMap.get(`${pre.revenda}__${pre.vendedor}__${pre.data}`) ?? 0) + 1,
+    }));
+}
+
+// ─── Recorrência semanal ──────────────────────────────────────────────────────
+
+export const FLAGS_RECORRENCIA = [
+    { id: "relampagoAlto", label: "Relâmpago alto" },
+    { id: "inicioTardio", label: "Início tardio" },
+    { id: "coberturaBaixa", label: "Cobertura/IV baixa" },
+    { id: "ociosidadeAlta", label: "Ociosidade / percurso alto" },
+    { id: "almocoExcesso", label: "Almoço acima do limite" },
+    { id: "tardeInsuficiente", label: "Pouca visita após 14h" },
+    { id: "tempoAtendBaixo", label: "Σ atendimento < 2h" },
+    { id: "fimCedo", label: "Finaliza cedo" },
+] as const;
+
+export type FlagId = typeof FLAGS_RECORRENCIA[number]["id"];
+
+export interface MetricaRecorrencia {
+    dias: number;
+    datas: string[];
+    recorrente: boolean;
+}
+
+export interface RecorrenciaVendedor {
+    revenda: string;
+    vendedor: number;
+    diasAtivos: number;
+    metricas: Record<FlagId, MetricaRecorrencia>;
+    scoreCritico: number;
+}
+
+/** Marca recorrência: >= minDias dias com problema OU >= minPerc dos dias ativos. */
+export function isRecorrente(dias: number, diasAtivos: number): boolean {
+    return diasAtivos > 0 && (
+        dias >= CONFIG_RECORRENCIA.minDias || dias / diasAtivos >= CONFIG_RECORRENCIA.minPerc
+    );
+}
+
+// Avalia uma flag para uma linha-dia (assume dia ativo).
+export function avaliarFlag(id: FlagId, r: AnaliseVendedor): boolean {
+    switch (id) {
+        case "relampagoAlto":
+            return r.relampago_pct > CONFIG_PADRAO_METRICAS.alertaCurtasPerc;
+        case "inicioTardio":
+            return r.inicio !== null && r.inicio.substring(0, 5) > CONFIG_PADRAO_METRICAS.limiteInicioTardio;
+        case "coberturaBaixa":
+            return r.visitas_pct < CONFIG_PADRAO_METRICAS.alertaCoberturaPerc;
+        case "ociosidadeAlta":
+            return (r.tempo_nao_atend !== null && r.tempo_nao_atend > CONFIG_RECORRENCIA.ociosidadeMin)
+                || (r.maior_percurso !== null && r.maior_percurso > CONFIG_RECORRENCIA.percursoMax);
+        case "almocoExcesso":
+            return r.almoco > CONFIG_RECORRENCIA.almocoMax;
+        case "tardeInsuficiente":
+            return r.apos14h_pct < CONFIG_PADRAO_METRICAS.alertaTardePerc;
+        case "tempoAtendBaixo":
+            return r.tempo_total !== null && r.tempo_total < CONFIG_RECORRENCIA.tempoAtendMin;
+        case "fimCedo":
+            return r.fim !== null && r.fim.substring(0, 5) < CONFIG_RECORRENCIA.fimCedo;
+    }
+}
+
+// Computa o mapa de recorrência por revenda a partir das visitas já filtradas.
+export function computarRecorrenciaPeriodo(visitas: ProcessedVisita[]): Record<string, RecorrenciaVendedor[]> {
+    const analise = calcularAnalisePeriodo(visitas);
+
+    // Agrupa por chave composta revenda|vendedor
+    const porChave = new Map<string, AnaliseVendedor[]>();
+    for (const r of analise) {
+        const k = `${r.revenda}|${r.vendedor}`;
+        if (!porChave.has(k)) porChave.set(k, []);
+        porChave.get(k)!.push(r);
+    }
+
+    const porRevenda: Record<string, RecorrenciaVendedor[]> = {};
+    for (const [k, linhas] of porChave) {
+        const [revenda, vStr] = k.split("|");
+        const vendedor = parseInt(vStr, 10);
+        const ativos = linhas.filter(l => l.visitas_total_dentro_raio > 0);
+        const diasAtivos = ativos.length;
+
+        const metricas = {} as Record<FlagId, MetricaRecorrencia>;
+        for (const f of FLAGS_RECORRENCIA) {
+            const datas = ativos.filter(l => avaliarFlag(f.id, l)).map(l => l.data).sort();
+            const dias = datas.length;
+            const recorrente = isRecorrente(dias, diasAtivos);
+            metricas[f.id] = { dias, datas, recorrente };
+        }
+
+        // Flags ocultas na UI não contam no score para evitar divergência visual
+        const scoreCritico = FLAGS_RECORRENCIA.reduce(
+            (s, f) => f.id === "ociosidadeAlta" ? s : s + (metricas[f.id].recorrente ? 1 : 0), 0
+        );
+
+        (porRevenda[revenda] ??= []).push({ revenda, vendedor, diasAtivos, metricas, scoreCritico });
+    }
+
+    // Ordena cada revenda por scoreCritico DESC, depois vendedor ASC
+    for (const rev of Object.keys(porRevenda)) {
+        porRevenda[rev].sort((a, b) => b.scoreCritico - a.scoreCritico || a.vendedor - b.vendedor);
+    }
+
+    return porRevenda;
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 export const analiseRouter = router({
@@ -291,38 +427,7 @@ export const analiseRouter = router({
             if (input.dataInicio) visitas = visitas.filter(v => v.data >= input.dataInicio!);
             if (input.dataFim) visitas = visitas.filter(v => v.data <= input.dataFim!);
 
-            // Agrupa por vendedor+data
-            const chaves = new Set(visitas.map(v => `${v.revenda}__${v.vendedor}__${v.data}`));
-            const visitasPorChave: Record<string, ProcessedVisita[]> = {};
-            for (const v of visitas) {
-                const c = `${v.revenda}__${v.vendedor}__${v.data}`;
-                if (!visitasPorChave[c]) {
-                    visitasPorChave[c] = [];
-                }
-                visitasPorChave[c].push(v);
-            }
-
-            // Calcula para cada par e coleta ranking (por relâmpago %)
-            const resultados: AnaliseVendedor[] = [];
-
-            // Primeiro passo: calcula sem ranking para ordenar
-            const preLista = Array.from(chaves).map(chave => {
-                const [revenda, vStr, data] = chave.split("__");
-                const vendedor = parseInt(vStr, 10);
-                // Passa apenas as visitas relevantes para este vendedor/dia
-                return calcularVendedorDia(visitasPorChave[chave], vendedor, data, 0, 0);
-            });
-
-            // Ranking: ordena por relâmpago % DESC — posição 0 = pior
-            const sorted = [...preLista].sort((a, b) => b.relampago_pct - a.relampago_pct);
-            const rankMap = new Map(sorted.map((r, i) => [`${r.vendedor}__${r.data}`, i]));
-
-            // Recalcula com ranking correto
-            for (const pre of preLista) {
-                const rankPos = rankMap.get(`${pre.vendedor}__${pre.data}`) ?? 0;
-                const final = { ...pre, ranking_critico: rankPos + 1 };
-                resultados.push(final);
-            }
+            const resultados = calcularAnalisePeriodo(visitas);
 
             // Ordena por revenda → vendedor → data
             resultados.sort((a, b) =>
@@ -336,6 +441,183 @@ export const analiseRouter = router({
             const revendasDisp = [...new Set(visitas.map(v => v.revenda))].sort();
 
             return { dados: resultados, datas: datasDisponiveis, revendas: revendasDisp };
+        }),
+
+    // Mapa de recorrência da semana, por revenda → vendedor
+    getRecorrenciaSemanal: publicProcedure
+        .input(z.object({
+            dataInicio: z.string(),
+            dataFim: z.string(),
+            revenda: z.string().optional(),
+            vendedor: z.number().optional(),
+        }))
+        .query(async ({ input }) => {
+            let visitas = await getVisitasData();
+
+            if (input.revenda) visitas = visitas.filter(v => v.revenda === input.revenda);
+            if (input.vendedor) visitas = visitas.filter(v => v.vendedor === input.vendedor);
+            visitas = visitas.filter(v => v.data >= input.dataInicio && v.data <= input.dataFim);
+
+            const porRevenda = computarRecorrenciaPeriodo(visitas);
+
+            const datas = [...new Set(visitas.map(v => v.data))].sort();
+            const revendas = [...new Set(visitas.map(v => v.revenda))].sort();
+
+            return {
+                porRevenda,
+                flags: FLAGS_RECORRENCIA,
+                semana: { inicio: input.dataInicio, fim: input.dataFim },
+                datas,
+                revendas,
+            };
+        }),
+
+    // Gera o texto de "análise inteligente" (LLM Claude) para uma revenda na semana.
+    gerarInsightRecorrencia: publicProcedure
+        .input(z.object({
+            revenda: z.string(),
+            dataInicio: z.string(),
+            dataFim: z.string(),
+        }))
+        .mutation(async ({ input }) => {
+            let visitas = await getVisitasData();
+            visitas = visitas.filter(v =>
+                v.revenda === input.revenda &&
+                v.data >= input.dataInicio &&
+                v.data <= input.dataFim
+            );
+
+            const listaCompleta = computarRecorrenciaPeriodo(visitas)[input.revenda] ?? [];
+            const lista = listaCompleta.filter(v => v.scoreCritico > 0);
+
+            if (lista.length === 0) {
+                return { html: "<p>Sem padrões recorrentes identificados para esta revenda no período selecionado.</p>" };
+            }
+
+            const linhasTexto = lista.map(v => {
+                const recorrentes = FLAGS_RECORRENCIA
+                    .filter(f => f.id !== "ociosidadeAlta" && v.metricas[f.id].recorrente)
+                    .map(f => `${f.label} (${v.metricas[f.id].dias}/${v.diasAtivos} dias)`);
+                return `- Vendedor ${v.vendedor} [${v.diasAtivos} dias ativos]: ${recorrentes.length ? recorrentes.join("; ") : "sem padrões recorrentes"}`;
+            }).join("\n");
+
+            if (!ENV.anthropicApiKey) {
+                throw new Error(
+                    "ANTHROPIC_API_KEY não configurada. Adicione ao .env:\n" +
+                    "ANTHROPIC_API_KEY=sk-ant-..."
+                );
+            }
+
+            const modelo = process.env.LLM_MODEL_INSIGHT ?? "claude-sonnet-4-6";
+            const sistema =
+                "Você é um analista de força de vendas. Recebe o mapeamento semanal de recorrências " +
+                "de vendedores de uma revenda e deve escrever uma análise objetiva em português do Brasil.\n\n" +
+                "REGRAS DE FORMATAÇÃO — siga exatamente:\n" +
+                "• Use APENAS estas tags HTML: <p>, <ul>, <li>, <strong>\n" +
+                "• PROIBIDO: <table>, <style>, <script>, <h1>, <h2>, <div>, <span>, <br>, " +
+                "atributos class=, style=, id= ou qualquer outro atributo HTML\n" +
+                "• NÃO inclua boilerplate (<html>, <head>, <body>)\n" +
+                "• Responda SOMENTE com o fragmento HTML da análise, sem texto fora das tags\n\n" +
+                "ESTRUTURA (três partes obrigatórias):\n" +
+                "1) <p><strong>Destaques gerais</strong></p> — resumo dos padrões da semana\n" +
+                "2) <p><strong>Vendedores críticos</strong></p> + <ul><li>...</li></ul> por vendedor\n" +
+                "3) <p><strong>Plano de ação</strong></p> — ações práticas e diretas\n\n" +
+                "Seja conciso. NÃO invente dados além dos fornecidos.";
+
+            const resp = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "content-type": "application/json",
+                    "x-api-key": ENV.anthropicApiKey,
+                    "anthropic-version": "2023-06-01",
+                },
+                body: JSON.stringify({
+                    model: modelo,
+                    max_tokens: 1024,
+                    system: sistema,
+                    messages: [
+                        {
+                            role: "user",
+                            content:
+                                `Revenda: ${input.revenda}\n` +
+                                `Semana: ${input.dataInicio} a ${input.dataFim}\n\n` +
+                                `Recorrências por vendedor:\n${linhasTexto}`,
+                        },
+                    ],
+                }),
+            });
+
+            if (!resp.ok) {
+                const err = await resp.text();
+                throw new Error(`Anthropic API error ${resp.status}: ${err}`);
+            }
+
+            const body = await resp.json() as { content: Array<{ type: string; text: string }> };
+            const raw = body.content
+                .filter(b => b.type === "text")
+                .map(b => b.text)
+                .join("");
+
+            // Mantém apenas tags seguras do prompt — remove qualquer tag inesperada
+            const html = raw.replace(/<(?!\/?(?:p|ul|li|strong|br)\b)[^>]+>/gi, "");
+
+            return { html };
+        }),
+
+    // Persistência do mapeamento + insight (upsert por revenda + semana)
+    salvarRecorrencia: publicProcedure
+        .input(z.object({
+            revenda: z.string(),
+            semanaInicio: z.string(),
+            semanaFim: z.string(),
+            mapaJson: z.string(),
+            insightHtml: z.string(),
+        }))
+        .mutation(async ({ input }) => {
+            const db = await getDb();
+            if (!db) throw new Error("Banco de dados indisponível.");
+
+            const existing = await db
+                .select({ id: analiseRecorrencia.id })
+                .from(analiseRecorrencia)
+                .where(and(
+                    eq(analiseRecorrencia.revenda, input.revenda),
+                    eq(analiseRecorrencia.semanaInicio, input.semanaInicio),
+                ))
+                .limit(1);
+
+            if (existing.length > 0) {
+                await db.update(analiseRecorrencia)
+                    .set({
+                        semanaFim: input.semanaFim,
+                        mapaJson: input.mapaJson,
+                        insightHtml: input.insightHtml,
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(analiseRecorrencia.id, existing[0].id));
+            } else {
+                await db.insert(analiseRecorrencia).values({
+                    revenda: input.revenda,
+                    semanaInicio: input.semanaInicio,
+                    semanaFim: input.semanaFim,
+                    mapaJson: input.mapaJson,
+                    insightHtml: input.insightHtml,
+                });
+            }
+
+            return { ok: true } as const;
+        }),
+
+    // Lista o que já foi salvo para uma semana (todas as revendas)
+    listarRecorrenciaPorSemana: publicProcedure
+        .input(z.object({ semanaInicio: z.string() }))
+        .query(async ({ input }) => {
+            const db = await getDb();
+            if (!db) return [];
+            return db
+                .select()
+                .from(analiseRecorrencia)
+                .where(eq(analiseRecorrencia.semanaInicio, input.semanaInicio));
         }),
 
     getVisitasDoDia: publicProcedure
