@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import { loadGoogleSheetsData, processarVisitas, ProcessedVisita, getDbStatus }
     from "../services/xlsxService";
+import { loadFromDatabase } from "../services/pgDataService";
+import { loadRotaCoachingFromDatabase } from "../services/pgRotaCoachingService";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Índice — construído uma vez no load, queries O(1) em vez de O(n)
@@ -20,6 +22,9 @@ export interface VisitasIndex {
 
 let cachedIndex: VisitasIndex | null = null;
 let cachedFileMtime = 0;
+let cachedAt = 0;
+// TTL do cache quando fonte é PostgreSQL (padrão: 5 min)
+const PG_CACHE_TTL_MS = parseInt(process.env.PG_CACHE_TTL_MS ?? "300000", 10);
 let loadingPromise: Promise<VisitasIndex> | null = null;
 
 let cachedRotaCoaching: any[] | null = null;
@@ -85,9 +90,13 @@ function buildIndex(visitas: ProcessedVisita[]): VisitasIndex {
 export async function getVisitasIndex(): Promise<VisitasIndex> {
     const mtime = getSourceMtime();
 
-    if (cachedIndex && mtime === cachedFileMtime) {
+    const cacheValido = process.env.DATABASE_URL
+        ? cachedIndex !== null && Date.now() - cachedAt < PG_CACHE_TTL_MS
+        : cachedIndex !== null && mtime === cachedFileMtime;
+
+    if (cacheValido) {
         console.log("[Cache] Usando índice em cache");
-        return cachedIndex;
+        return cachedIndex!;
     }
 
     // Anti-stampede: reutiliza a Promise de carregamento em andamento
@@ -99,11 +108,17 @@ export async function getVisitasIndex(): Promise<VisitasIndex> {
     console.log("[Cache] Arquivo atualizado — reconstruindo índice...");
 
     loadingPromise = (async () => {
-        const rawData = await loadGoogleSheetsData();
-        const visitas = processarVisitas(rawData);
+        let visitas: ProcessedVisita[];
+        if (process.env.DATABASE_URL) {
+            visitas = await loadFromDatabase();
+        } else {
+            const rawData = await loadGoogleSheetsData();
+            visitas = processarVisitas(rawData);
+        }
         const index = buildIndex(visitas);
         cachedIndex = index;
         cachedFileMtime = mtime;
+        cachedAt = Date.now();
         console.log(
             `[Cache] ✓ Índice pronto: ${visitas.length} visitas | ` +
             `${index.byData.size} datas | ${index.byRevenda.size} revendas | ` +
@@ -140,6 +155,21 @@ export async function getRotaCoachingData(): Promise<any[]> {
         return cachedRotaCoaching;
     }
 
+    if (process.env.DATABASE_URL) {
+        console.log("[Cache] Carregando Rota Coaching do PostgreSQL...");
+        try {
+            const data = await loadRotaCoachingFromDatabase();
+            cachedRotaCoaching = data;
+            lastRotaCacheTime = now;
+            console.log(`[Cache] ✓ ${data.length} rota coaching do banco`);
+            return data;
+        } catch (error) {
+            console.error("[Cache] Erro ao carregar Rota Coaching do banco:", error);
+            if (cachedRotaCoaching) return cachedRotaCoaching;
+            throw error;
+        }
+    }
+
     console.log("[Cache] Carregando rota_coaching_all.json do disco...");
     try {
         const filePath = process.env.COACHING_DATA_PATH
@@ -148,12 +178,12 @@ export async function getRotaCoachingData(): Promise<any[]> {
         const data = JSON.parse(rawContent);
         cachedRotaCoaching = data;
         lastRotaCacheTime = now;
-        console.log(`[Cache] ✓ ${data.length} rota coaching processadas`);
+        console.log(`[Cache] ✓ ${data.length} rota coaching do arquivo`);
         return data;
     } catch (error) {
         console.error("[Cache] Erro ao carregar rota coaching:", error);
         if (cachedRotaCoaching) {
-            console.log("[Cache] Usando cache expirado de Rota Coaching como fallback");
+            console.log("[Cache] Usando cache expirado como fallback");
             return cachedRotaCoaching;
         }
         throw error;
