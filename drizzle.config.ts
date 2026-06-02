@@ -12,4 +12,6 @@ export default defineConfig({
   dbCredentials: {
     url: connectionString,
   },
+  // crm_config existe no banco mas não está no schema (tabela legada de config)
+  tablesFilter: ["!crm_config"],
 });

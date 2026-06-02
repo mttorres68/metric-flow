@@ -1,10 +1,14 @@
 import {
   boolean,
+  date,
   integer,
+  jsonb,
+  numeric,
   pgEnum,
   pgTable,
   serial,
   text,
+  time,
   timestamp,
   unique,
   varchar,
@@ -241,3 +245,131 @@ export const crmAgendaCiclo = pgTable(
 
 export type CrmAgendaCiclo = typeof crmAgendaCiclo.$inferSelect;
 export type InsertCrmAgendaCiclo = typeof crmAgendaCiclo.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Rota Coaching — resultado do processamento por GA + vendedor + dia
+// Arrays de clientes e geo_detalhes armazenados como JSONB (não filtrados no banco).
+// UNIQUE: (data, revenda, gaId, vendedorId) — vendedorId '' quando ausente.
+// ---------------------------------------------------------------------------
+export const rotaCoaching = pgTable(
+  "rota_coaching",
+  {
+    id: serial("id").primaryKey(),
+    data: date("data").notNull(),
+    revenda: varchar("revenda", { length: 50 }).notNull(),
+    gaId: varchar("gaId", { length: 20 }).notNull(),
+    /** Código do vendedor ou '' quando não há vendedor associado */
+    vendedorId: varchar("vendedorId", { length: 20 }).notNull().default(""),
+    atividade: varchar("atividade", { length: 100 }),
+    tipoAtividade: varchar("tipoAtividade", { length: 30 }),
+    fonte: varchar("fonte", { length: 10 }),
+    agendado: boolean("agendado").default(true),
+    // KPIs numéricos
+    pdvsProgramados: integer("pdvsProgramados").default(0),
+    pdvsVisitados: integer("pdvsVisitados").default(0),
+    visitasGa: integer("visitasGa").default(0),
+    pctConformidade: numeric("pctConformidade", { precision: 5, scale: 2 }),
+    pctVisitados: numeric("pctVisitados", { precision: 5, scale: 2 }),
+    pctGeoConfirmado: numeric("pctGeoConfirmado", { precision: 5, scale: 2 }),
+    // Status
+    status: varchar("status", { length: 10 }),
+    statusPy: varchar("statusPy", { length: 20 }),
+    gaFezCoaching: boolean("gaFezCoaching"),
+    mesmoVendedor: boolean("mesmoVendedor"),
+    vendedorAgenda: varchar("vendedorAgenda", { length: 20 }),
+    vendedorNoApp: varchar("vendedorNoApp", { length: 20 }),
+    // Arrays e objetos complexos como JSONB
+    clientesVendedor: jsonb("clientesVendedor"),
+    clientesGa: jsonb("clientesGa"),
+    clientesComuns: jsonb("clientesComuns"),
+    clientesSoVend: jsonb("clientesSoVend"),
+    clientesSoGa: jsonb("clientesSoGa"),
+    clientesDentroRaio: jsonb("clientesDentroRaio"),
+    clientesForaRaio: jsonb("clientesForaRaio"),
+    clientesSemCoords: jsonb("clientesSemCoords"),
+    geoDetalhes: jsonb("geoDetalhes"),
+    criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+  },
+  (t) => [unique("uq_rota_coaching").on(t.data, t.revenda, t.gaId, t.vendedorId)],
+);
+
+export type RotaCoaching = typeof rotaCoaching.$inferSelect;
+export type InsertRotaCoaching = typeof rotaCoaching.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// PathTracker — lookup de PDVs / clientes visitados
+// ---------------------------------------------------------------------------
+export const pathtrackerClientes = pgTable("pathtracker_clientes", {
+  id: serial("id").primaryKey(),
+  codigoCliente: integer("codigoCliente").notNull().unique(),
+  razaoSocial: varchar("razaoSocial", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PathtrackerCliente = typeof pathtrackerClientes.$inferSelect;
+export type InsertPathtrackerCliente = typeof pathtrackerClientes.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// PathTracker — hierarquia (gerentes, supervisores, vendedores) por revenda
+// ---------------------------------------------------------------------------
+export const nivelHierarquiaEnum = pgEnum("mf_pt_nivel", ["gerente", "supervisor", "vendedor"]);
+
+export const pathtrackerHierarquia = pgTable(
+  "pathtracker_hierarquia",
+  {
+    id: serial("id").primaryKey(),
+    revendaId: integer("revendaId").notNull().references(() => revendas.id),
+    codigo: integer("codigo").notNull(),
+    nivel: nivelHierarquiaEnum("nivel").notNull(),
+    /** Login do usuário no portal PathTracker (associado ao vendedor) */
+    user: varchar("user", { length: 50 }),
+    ativo: boolean("ativo").notNull().default(true),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => [unique("uq_pt_hierarquia").on(t.revendaId, t.codigo, t.nivel)],
+);
+
+export type PathtrackerHierarquia = typeof pathtrackerHierarquia.$inferSelect;
+export type InsertPathtrackerHierarquia = typeof pathtrackerHierarquia.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// PathTracker — visitas de vendedores a PDVs (fato principal, ~206k registros)
+// Campos "ND" do JSON são armazenados como NULL.
+// Valor Ped. numérico vai em valorPedido; textos livres em obsPedido.
+// ---------------------------------------------------------------------------
+export const pathtrackerVisitas = pgTable(
+  "pathtracker_visitas",
+  {
+    id: serial("id").primaryKey(),
+    revendaId: integer("revendaId").notNull().references(() => revendas.id),
+    clienteId: integer("clienteId").notNull().references(() => pathtrackerClientes.id),
+    vendedorId: integer("vendedorId").notNull().references(() => pathtrackerHierarquia.id),
+    supervisorId: integer("supervisorId").references(() => pathtrackerHierarquia.id),
+    gerenteId: integer("gerenteId").references(() => pathtrackerHierarquia.id),
+    data: date("data").notNull(),
+    dataColeta: timestamp("dataColeta"),
+    sequenciaErp: integer("sequenciaErp"),
+    sequenciaPt: integer("sequenciaPt"),
+    distanciaPdv: numeric("distanciaPdv", { precision: 8, scale: 2 }),
+    distanciaRota: numeric("distanciaRota", { precision: 8, scale: 2 }),
+    velocidadeMedia: numeric("velocidadeMedia", { precision: 8, scale: 2 }),
+    tempoPercorrido: varchar("tempoPercorrido", { length: 10 }),
+    horaInicio: time("horaInicio"),
+    horaFim: time("horaFim"),
+    tempoVisita: varchar("tempoVisita", { length: 10 }),
+    valorPedido: numeric("valorPedido", { precision: 10, scale: 2 }),
+    /** Preenchido quando Valor Ped. não é numérico (ex: "COMPROU EM ADEGA") */
+    obsPedido: text("obsPedido"),
+    tipoCobranca: varchar("tipoCobranca", { length: 20 }),
+    statusVisita: varchar("statusVisita", { length: 20 }),
+    latPdv: numeric("latPdv", { precision: 10, scale: 6 }),
+    lonPdv: numeric("lonPdv", { precision: 10, scale: 6 }),
+    latVendedor: numeric("latVendedor", { precision: 10, scale: 6 }),
+    lonVendedor: numeric("lonVendedor", { precision: 10, scale: 6 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => [unique("uq_pt_visita").on(t.revendaId, t.data, t.vendedorId, t.clienteId)],
+);
+
+export type PathtrackerVisita = typeof pathtrackerVisitas.$inferSelect;
+export type InsertPathtrackerVisita = typeof pathtrackerVisitas.$inferInsert;
