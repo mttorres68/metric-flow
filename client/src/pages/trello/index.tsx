@@ -10,6 +10,7 @@ import {
   Download,
   Loader2,
   RefreshCw,
+  Send,
   Settings2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -20,6 +21,7 @@ import { AtividadeRevendaSection } from "./components/AtividadeRevendaSection";
 import { FiltroListas } from "./components/FiltroListas";
 import { RevendaSection } from "./components/RevendaSection";
 import { TemplateConfigModal } from "./components/TemplateConfigModal";
+import { WhatsAppBulkModal } from "./components/WhatsAppBulkModal";
 import { exportarPDF } from "./lib/pdf";
 
 export default function TrelloAtraso() {
@@ -29,6 +31,7 @@ export default function TrelloAtraso() {
   const [listasFiltro, setListasFiltro] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<"atrasos" | "atividades" | "agenda">("atrasos");
   const [agendaSubTab, setAgendaSubTab] = useState<"ciclo" | "config">("ciclo");
+  const [showBulkWaModal, setShowBulkWaModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   const { template, saveLocal, saveToServer, isSaving, serverSynced } = useWaTemplate();
@@ -153,13 +156,23 @@ export default function TrelloAtraso() {
               </button>
             )}
             {activeTab === "atividades" && (
-              <button
-                onClick={() => setShowTemplateModal(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                <Settings2 className="w-4 h-4" />
-                Modelo de mensagem
-              </button>
+              <>
+                <button
+                  onClick={() => setShowBulkWaModal(true)}
+                  disabled={!atividadesData}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-green-500 hover:bg-green-600 transition-colors disabled:opacity-50"
+                >
+                  <Send className="w-4 h-4" />
+                  WhatsApp
+                </button>
+                <button
+                  onClick={() => setShowTemplateModal(true)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <Settings2 className="w-4 h-4" />
+                  Modelo de mensagem
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -366,6 +379,14 @@ export default function TrelloAtraso() {
           isSaving={isSaving}
           serverSynced={serverSynced}
           onClose={() => setShowTemplateModal(false)}
+        />
+      )}
+
+      {showBulkWaModal && atividadesData && (
+        <WhatsAppBulkModal
+          atividadesData={atividadesData}
+          template={template}
+          onClose={() => setShowBulkWaModal(false)}
         />
       )}
     </div>
