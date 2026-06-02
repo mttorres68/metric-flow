@@ -327,6 +327,7 @@ function useFiltroPersistido() {
 const REVENDA_ALIASES: Record<string, string> = {
     "duttra floriano": "Duttra FL",
     "duttra fl": "Duttra FL",
+    "Duttra FL": "Duttra FL",
     "duttra ma": "Duttra MA",
     "duttra srn": "Duttra SR",
     "duttra sr": "Duttra SR",
@@ -985,6 +986,10 @@ export default function Analise() {
         },
         onError: (e) => toast.error(`Falha no pipeline: ${e.message}`),
     });
+    const refreshCacheMutation = trpc.dashboard.refreshData.useMutation({
+        onSuccess: () => refetch(),
+        onError: () => refetch(), // mesmo com erro, tenta re-buscar
+    });
 
     const { data: result, isLoading, error, refetch } = trpc.analise.getDados.useQuery(
         {
@@ -1034,10 +1039,14 @@ export default function Analise() {
     // Mapeamento: nome da visita (DB) → nome curto do coaching JSON (mesmo do backend)
     const REVENDA_COACHING_MAP: Record<string, string> = {
         "duttra floriano": "duttra fl",
+        "duttra fl": "duttra fl",
         "duttra ma": "duttra ma",
-        "duttra srn": "duttra sr",
+        "duttra srn": "duttra srn",
+        "duttra sr": "duttra srn",
         "forte aracati": "forte ar",
+        "forte ar": "forte ar",
         "forte quixada": "forte qx",
+        "forte qx": "forte qx",
     };
 
     // Helper: lê análise de GAs do localStorage (gerida pelo RotaCoaching.tsx)
@@ -1290,10 +1299,11 @@ export default function Analise() {
                             }
                         </button>
                         <button
-                            onClick={() => refetch()}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/30"
+                            onClick={() => refreshCacheMutation.mutate()}
+                            disabled={refreshCacheMutation.isPending}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 disabled:opacity-50"
                         >
-                            <RefreshCw size={12} /> Atualizar
+                            <RefreshCw size={12} className={refreshCacheMutation.isPending ? "animate-spin" : ""} /> Atualizar
                         </button>
                         <button
                             onClick={() => setHeaderExpanded(e => !e)}
