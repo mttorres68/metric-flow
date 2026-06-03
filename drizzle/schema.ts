@@ -290,7 +290,7 @@ export const rotaCoaching = pgTable(
     geoDetalhes: jsonb("geoDetalhes"),
     criadoEm: timestamp("criadoEm").defaultNow().notNull(),
   },
-  (t) => [unique("uq_rota_coaching").on(t.data, t.revenda, t.gaId, t.vendedorId)],
+  (t) => [unique("uq_rota_coaching").on(t.data, t.revenda, t.gaId, t.vendedorId, t.tipoAtividade)],
 );
 
 export type RotaCoaching = typeof rotaCoaching.$inferSelect;
