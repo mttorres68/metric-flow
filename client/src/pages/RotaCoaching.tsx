@@ -59,6 +59,10 @@ export default function RotaCoaching() {
             .catch(e => { setErro(e.message); setLoading(false); });
     };
 
+    const refreshCacheMutation = trpc.dashboard.refreshData.useMutation({
+        onSettled: () => carregarDados(),
+    });
+
     useEffect(() => { carregarDados(); }, []);
 
     // ── Dados derivados ──────────────────────────────────────────────────────────
@@ -194,10 +198,11 @@ export default function RotaCoaching() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button onClick={carregarDados}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all"
+                        <button onClick={() => refreshCacheMutation.mutate()}
+                            disabled={refreshCacheMutation.isPending}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all disabled:opacity-50"
                             style={{ fontWeight: 600 }}>
-                            <RefreshCw className="w-3.5 h-3.5" /> Atualizar
+                            <RefreshCw className={`w-3.5 h-3.5 ${refreshCacheMutation.isPending ? "animate-spin" : ""}`} /> Atualizar
                         </button>
                         {aba === "coaching" && (
                             <button
