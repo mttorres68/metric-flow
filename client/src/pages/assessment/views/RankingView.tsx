@@ -26,24 +26,20 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
             sim: number;
             parcial: number;
             nao: number;
-            ptPossivel: number;
-            ptAutoav: number;
-            ptEvid: number;
+            evidSim: number;
         };
         const map = new Map<string, Stats>();
 
         for (const r of respostas) {
             if (!map.has(r.revenda)) {
-                map.set(r.revenda, { revenda: r.revenda, totalItens: 0, sim: 0, parcial: 0, nao: 0, ptPossivel: 0, ptAutoav: 0, ptEvid: 0 });
+                map.set(r.revenda, { revenda: r.revenda, totalItens: 0, sim: 0, parcial: 0, nao: 0, evidSim: 0 });
             }
             const s = map.get(r.revenda)!;
             s.totalItens++;
-            if (r.statusFinal === "Sim")     s.sim++;
+            if (r.statusFinal === "Sim")          s.sim++;
             else if (r.statusFinal === "Parcial") s.parcial++;
             else if (r.statusFinal === "Não")     s.nao++;
-            s.ptPossivel += r.pontoPossivel ?? 0;
-            s.ptAutoav   += r.pontosAutoavaliacao ?? 0;
-            s.ptEvid     += r.pontosEvidencia ?? 0;
+            if (r.evidencia === "Sim")            s.evidSim++;
         }
 
         // Garante que todas as revendas aparecem, mesmo sem respostas
@@ -55,9 +51,11 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
 
         return Array.from(map.values())
             .sort((a, b) => {
-                const pctA = a.ptPossivel > 0 ? a.ptAutoav / a.ptPossivel : 0;
-                const pctB = b.ptPossivel > 0 ? b.ptAutoav / b.ptPossivel : 0;
-                return pctB - pctA;
+                const simA  = a.totalItens > 0 ? a.sim     / a.totalItens : 0;
+                const simB  = b.totalItens > 0 ? b.sim     / b.totalItens : 0;
+                const evA   = a.totalItens > 0 ? a.evidSim / a.totalItens : 0;
+                const evB   = b.totalItens > 0 ? b.evidSim / b.totalItens : 0;
+                return (evB - evA) || (simB - simA);
             });
     }, [allQuery.data, revendasQ.data]);
 
@@ -108,8 +106,8 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                     {/* Pódio — top 3 em destaque */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {ranking.slice(0, 3).map((r, idx) => {
-                            const pctAutoav = r.ptPossivel > 0 ? Math.round(r.ptAutoav / r.ptPossivel * 100) : 0;
-                            const pctEvid   = r.ptPossivel > 0 ? Math.round(r.ptEvid   / r.ptPossivel * 100) : 0;
+                            const pctAutoav = r.totalItens > 0 ? Math.round(r.sim     / r.totalItens * 100) : 0;
+                            const pctEvid   = r.totalItens > 0 ? Math.round(r.evidSim / r.totalItens * 100) : 0;
                             const col = POSITION_COLORS[idx];
                             return (
                                 <div key={r.revenda}
@@ -134,8 +132,8 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                                     <div className="space-y-1.5 mb-4">
                                         <div>
                                             <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400 mb-0.5">
-                                                <span style={{ fontWeight: 600 }}>Autoavaliação</span>
-                                                <span style={{ fontWeight: 700 }}>{r.ptAutoav}/{r.ptPossivel} pts</span>
+                                                <span style={{ fontWeight: 600 }}>Autoavaliação (Sim)</span>
+                                                <span style={{ fontWeight: 700 }}>{r.sim}/{r.totalItens} respostas</span>
                                             </div>
                                             <div className="h-2.5 rounded-full bg-slate-200/70 dark:bg-slate-700 overflow-hidden">
                                                 <div className="h-full rounded-full transition-all" style={{ width: `${pctAutoav}%`, backgroundColor: pctColor(pctAutoav) }} />
@@ -143,8 +141,8 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                                         </div>
                                         <div>
                                             <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400 mb-0.5">
-                                                <span style={{ fontWeight: 600 }}>Evidência</span>
-                                                <span style={{ fontWeight: 700 }}>{r.ptEvid}/{r.ptPossivel} pts</span>
+                                                <span style={{ fontWeight: 600 }}>Evidência (Sim)</span>
+                                                <span style={{ fontWeight: 700 }}>{r.evidSim}/{r.totalItens} respostas</span>
                                             </div>
                                             <div className="h-2.5 rounded-full bg-slate-200/70 dark:bg-slate-700 overflow-hidden">
                                                 <div className="h-full rounded-full bg-indigo-400 transition-all" style={{ width: `${pctEvid}%` }} />
@@ -192,8 +190,8 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                                 <tbody className="divide-y divide-slate-50 dark:divide-[var(--sidebar-border)]">
                                     {ranking.slice(3).map((r, i) => {
                                         const pos = i + 4;
-                                        const pctAutoav = r.ptPossivel > 0 ? Math.round(r.ptAutoav / r.ptPossivel * 100) : 0;
-                                        const pctEvid   = r.ptPossivel > 0 ? Math.round(r.ptEvid   / r.ptPossivel * 100) : 0;
+                                        const pctAutoav = r.totalItens > 0 ? Math.round(r.sim     / r.totalItens * 100) : 0;
+                                        const pctEvid   = r.totalItens > 0 ? Math.round(r.evidSim / r.totalItens * 100) : 0;
                                         const col = DEFAULT_COLOR;
                                         return (
                                             <tr key={r.revenda} className="hover:bg-slate-50 dark:hover:bg-[var(--accent)]/50 transition-colors">
@@ -227,8 +225,8 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                         style={{ border: cardBorder, boxShadow: cardShadow }}>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mb-3" style={{ fontWeight: 700 }}>Comparativo geral — Autoavaliação vs Evidência</p>
                         {ranking.filter(r => r.totalItens > 0).map((r, idx) => {
-                            const pctAutoav = r.ptPossivel > 0 ? Math.round(r.ptAutoav / r.ptPossivel * 100) : 0;
-                            const pctEvid   = r.ptPossivel > 0 ? Math.round(r.ptEvid   / r.ptPossivel * 100) : 0;
+                            const pctAutoav = r.totalItens > 0 ? Math.round(r.sim     / r.totalItens * 100) : 0;
+                            const pctEvid   = r.totalItens > 0 ? Math.round(r.evidSim / r.totalItens * 100) : 0;
                             return (
                                 <div key={r.revenda} className="grid grid-cols-[24px_140px_1fr] items-center gap-3">
                                     <span className="text-[10px] text-slate-400 tabular-nums text-right" style={{ fontWeight: 700 }}>#{idx + 1}</span>
