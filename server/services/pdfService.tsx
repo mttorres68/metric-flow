@@ -36,6 +36,10 @@ export interface VendedorRow {
   totalCarteira: number;
   percCurtas: number;
   curtasCount: number;
+  // Denominador do relâmpago = visitas brutas dentro do raio (espelha
+  // visitas_total_dentro_raio da tela de Análise). Mantido separado de
+  // visitasBrutasRaio para não alterar o denominador da coluna "Após 14h".
+  relampDenom: number;
 }
 
 export interface CoachingRecord {
@@ -474,7 +478,7 @@ const PaginaVendedores = ({ d }: { d: PDFReportData }) => {
   const somaVisT = rows.reduce((a, r) => a + r.totalCarteira, 0);
   const percVisG = somaVisT > 0 ? (somaVis / somaVisT) * 100 : 0;
   const somaRelamp = rows.reduce((a, r) => a + r.curtasCount, 0);
-  const somaRelampT = rows.reduce((a, r) => a + r.visitasUnicasRaio, 0);
+  const somaRelampT = rows.reduce((a, r) => a + r.relampDenom, 0);
   const percRelampG = somaRelampT > 0 ? (somaRelamp / somaRelampT) * 100 : 0;
 
   const analise = stripHtml(d.analiseVendedores);
@@ -540,7 +544,7 @@ const PaginaVendedores = ({ d }: { d: PDFReportData }) => {
                     {fmtPct(v.percCobertura)} ({v.visitasUnicasRaio}/{v.totalCarteira})
                   </Text>
                   <Text style={[relampAlerta ? s.tdAlert : s.td, { width: CV.relamp }]}>
-                    {fmtPct(v.percCurtas)} ({v.curtasCount}/{v.visitasUnicasRaio})
+                    {fmtPct(v.percCurtas)} ({v.curtasCount}/{v.relampDenom})
                   </Text>
                 </View>
               );

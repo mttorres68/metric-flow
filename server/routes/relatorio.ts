@@ -19,6 +19,7 @@ import { PDFDocument } from "pdf-lib";
 import { and, eq } from "drizzle-orm";
 import { getVisitasData, getRotaCoachingData } from "../services/dataCache";
 import { calcularMetricas } from "../services/metricsCalculator";
+import { calcularVendedorDia } from "../routers/analiseRouter";
 import {
   gerarPDFRevenda,
   gerarPDFRecorrencia,
@@ -276,6 +277,10 @@ async function gerarPDFsParaData(
         const hor = horariosPorVendedor.get(cod);
         const hrInicio = (hor && isValidTime(hor.ini)) ? hor.ini : (v.hrInicio ?? "ND");
         const hrFim    = (hor && isValidTime(hor.fim)) ? hor.fim : (v.hrFim    ?? "ND");
+        // Relâmpago: usa a MESMA métrica da tela de Análise (calcularVendedorDia)
+        // para garantir consistência — dedup mantendo a última visita do PDV e
+        // denominador = visitas brutas dentro do raio (visitas_total_dentro_raio).
+        const rel = calcularVendedorDia(visitasRevenda, cod, data, 0, 0);
         return {
           vendedor: v.vendedor, hrInicio, hrFim,
           visitasAlmoco:     v.visitasAlmoco     ?? 0,
@@ -285,8 +290,9 @@ async function gerarPDFsParaData(
           percCobertura:     v.percCobertura     ?? 0,
           visitasUnicasRaio: v.visitasUnicasRaio ?? 0,
           totalCarteira:     v.totalCarteira     ?? 0,
-          percCurtas:        v.percCurtas        ?? 0,
-          curtasCount:       v.curtasCount       ?? 0,
+          percCurtas:        rel.relampago_pct,
+          curtasCount:       rel.relampago,
+          relampDenom:       rel.visitas_total_dentro_raio,
         };
       });
 
