@@ -1576,7 +1576,7 @@ export default function Analise() {
                                                             {col("data") && <Td mono className="text-slate-500 dark:text-slate-400">{r.data}</Td>}
 
                                                             {/* Horários */}
-                                                            {col("inicio") && <Td center mono className={r.inicio && r.inicio > "09:30" ? "text-amber-700 dark:text-amber-400 font-bold" : "text-slate-600 dark:text-slate-300"}>{r.inicio ?? "—"}</Td>}
+                                                            {col("inicio") && <Td center mono className={r.inicio && r.inicio > "08:45" ? "text-amber-700 dark:text-amber-400 font-bold" : "text-slate-600 dark:text-slate-300"}>{r.inicio ?? "—"}</Td>}
                                                             {col("fim") && <Td center mono className="text-slate-600 dark:text-slate-300">{r.fim ?? "—"}</Td>}
                                                             {col("almoco") && (
                                                                 <Td center>

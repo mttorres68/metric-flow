@@ -1,14 +1,24 @@
-import { Fragment, useState, useMemo } from "react";
+import { Fragment, useState, useMemo, useRef, useCallback, useEffect } from "react";
 import {
     Users, UserCheck, UserPlus, Phone, Briefcase, BarChart2,
     Download, CheckCircle2, X, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import { trpc } from "@/lib/trpc";
 import { exportarPdfAlocacao } from "@/lib/pdfExport";
 import { classNames, corRevenda, pctColor, PIRAMIDE_COR } from "../constants";
 import type { Indicador } from "../types";
 import { KpiCard } from "../components/KpiCard";
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+function setColWidths(ws: XLSX.WorkSheet, rows: Record<string, unknown>[]) {
+    if (!rows.length) return;
+    const keys = Object.keys(rows[0]);
+    ws["!cols"] = keys.map(k => ({
+        wch: Math.min(60, Math.max(k.length, ...rows.map(r => String(r[k] ?? "").length)) + 2),
+    }));
+}
 
 // ─── Tipos locais ─────────────────────────────────────────────────────────────
 type ItemSemResp = { item: string; macroArea: string; microArea: string; descricao: string };
@@ -276,6 +286,92 @@ export function EquipeView({
         undefined,
         { enabled: revendaId === null && subTab === "visao-geral" },
     );
+
+    // ── Queries e estado para export Excel ────────────────────────────────
+    const colaborsTodosQ = trpc.assessment.listColaboradores.useQuery({});
+    const [showExportMenu, setShowExportMenu] = useState(false);
+    const [exporting, setExporting] = useState(false);
+    const exportMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!showExportMenu) return;
+        const handler = (e: MouseEvent) => {
+            if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node))
+                setShowExportMenu(false);
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [showExportMenu]);
+
+    const colaborAllMap = useMemo(() => {
+        const m: Record<number, string> = {};
+        colaborsTodosQ.data?.forEach(c => { m[c.id] = c.nome; });
+        return m;
+    }, [colaborsTodosQ.data]);
+
+    const exportarRevenda = useCallback(async () => {
+        if (!revendaId || !revendaNome) return;
+        setExporting(true);
+        try {
+            const exportRows: Record<string, unknown>[] = itensList.map(i => {
+                const resp = respMap.get(i.item);
+                return {
+                    "ID": `${revendaId}-${i.item}`,
+                    "Revenda": revendaNome,
+                    "Item": i.item,
+                    "Macro Área": i.macroArea,
+                    "Micro Área": i.microArea,
+                    "Descrição": i.descricao,
+                    "Responsável": resp?.responsavelId ? (colaborAllMap[resp.responsavelId] ?? "") : "",
+                    "Apoio": resp?.apoioId ? (colaborAllMap[resp.apoioId] ?? "") : "",
+                };
+            });
+            const ws = XLSX.utils.json_to_sheet(exportRows);
+            setColWidths(ws, exportRows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, revendaNome.slice(0, 31));
+            XLSX.writeFile(wb, `Responsabilidades_${revendaNome.replace(/\s+/g, "_")}.xlsx`);
+        } finally {
+            setExporting(false);
+            setShowExportMenu(false);
+        }
+    }, [revendaId, revendaNome, itensList, respMap, colaborAllMap]);
+
+    const exportarTodas = useCallback(async () => {
+        setExporting(true);
+        try {
+            const { data: allRespons } = await allRespQ.refetch();
+            const revendasDB = revendasQ.data ?? [];
+            const allRows: Record<string, unknown>[] = [];
+            for (const rev of revendasDB) {
+                const revRespons: Record<string, { responsavelId: number | null; apoioId: number | null }> = {};
+                (allRespons ?? []).filter(r => r.revendaId === rev.id).forEach(r => {
+                    revRespons[r.item] = { responsavelId: r.responsavelId ?? null, apoioId: r.apoioId ?? null };
+                });
+                for (const i of itensList) {
+                    const resp = revRespons[i.item];
+                    allRows.push({
+                        "ID": `${rev.id}-${i.item}`,
+                        "Revenda": rev.nome,
+                        "Item": i.item,
+                        "Macro Área": i.macroArea,
+                        "Micro Área": i.microArea,
+                        "Descrição": i.descricao,
+                        "Responsável": resp?.responsavelId ? (colaborAllMap[resp.responsavelId] ?? "") : "",
+                        "Apoio": resp?.apoioId ? (colaborAllMap[resp.apoioId] ?? "") : "",
+                    });
+                }
+            }
+            const ws = XLSX.utils.json_to_sheet(allRows);
+            setColWidths(ws, allRows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Todas as Revendas");
+            XLSX.writeFile(wb, `Responsabilidades_Todas.xlsx`);
+        } finally {
+            setExporting(false);
+            setShowExportMenu(false);
+        }
+    }, [allRespQ, revendasQ.data, itensList, colaborAllMap]);
 
     const allAlocStats = useMemo(() => {
         const revendasDB = revendasQ.data ?? [];
@@ -703,7 +799,7 @@ export function EquipeView({
                                         </p>
                                     )}
                                 </div>
-                                {/* Seletor de período para ver status */}
+                                {/* Seletor de período para ver status + export */}
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-xs text-slate-400 dark:text-slate-500" style={{ fontWeight: 600 }}>Status de:</span>
                                     <select
@@ -722,6 +818,44 @@ export function EquipeView({
                                             <option key={y} value={y}>{y}</option>
                                         ))}
                                     </select>
+                                    {/* ── Export Excel ── */}
+                                    <div className="relative" ref={exportMenuRef}>
+                                        <button
+                                            onClick={() => setShowExportMenu(v => !v)}
+                                            disabled={exporting}
+                                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                                            style={{ fontWeight: 700 }}>
+                                            {exporting
+                                                ? <div className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                                                : <Download className="w-3.5 h-3.5" />}
+                                            Excel
+                                        </button>
+                                        {showExportMenu && (
+                                            <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-[var(--card)] rounded-xl shadow-lg border border-slate-200 dark:border-[var(--border)] z-50 overflow-hidden">
+                                                <button
+                                                    onClick={exportarRevenda}
+                                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs hover:bg-slate-50 dark:hover:bg-[var(--accent)] transition-colors text-left"
+                                                    style={{ fontWeight: 600 }}>
+                                                    <Download className="w-3.5 h-3.5 shrink-0 text-indigo-500" />
+                                                    <div>
+                                                        <p className="text-slate-700 dark:text-slate-200">Revenda selecionada</p>
+                                                        <p className="text-slate-400 dark:text-slate-500" style={{ fontWeight: 400 }}>{revendaNome}</p>
+                                                    </div>
+                                                </button>
+                                                <div className="border-t border-slate-100 dark:border-[var(--sidebar-border)]" />
+                                                <button
+                                                    onClick={exportarTodas}
+                                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs hover:bg-slate-50 dark:hover:bg-[var(--accent)] transition-colors text-left"
+                                                    style={{ fontWeight: 600 }}>
+                                                    <Download className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
+                                                    <div>
+                                                        <p className="text-slate-700 dark:text-slate-200">Todas as revendas</p>
+                                                        <p className="text-slate-400 dark:text-slate-500" style={{ fontWeight: 400 }}>Em um único arquivo</p>
+                                                    </div>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <div className="overflow-auto max-h-[70vh]">

@@ -45,17 +45,15 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
         // Garante que todas as revendas aparecem, mesmo sem respostas
         for (const rev of revendas) {
             if (!map.has(rev.nome)) {
-                map.set(rev.nome, { revenda: rev.nome, totalItens: 0, sim: 0, parcial: 0, nao: 0, ptPossivel: 0, ptAutoav: 0, ptEvid: 0 });
+                map.set(rev.nome, { revenda: rev.nome, totalItens: 0, sim: 0, parcial: 0, nao: 0, evidSim: 0 });
             }
         }
 
         return Array.from(map.values())
             .sort((a, b) => {
-                const simA  = a.totalItens > 0 ? a.sim     / a.totalItens : 0;
-                const simB  = b.totalItens > 0 ? b.sim     / b.totalItens : 0;
-                const evA   = a.totalItens > 0 ? a.evidSim / a.totalItens : 0;
-                const evB   = b.totalItens > 0 ? b.evidSim / b.totalItens : 0;
-                return (evB - evA) || (simB - simA);
+                const pctA = a.totalItens > 0 ? a.sim / a.totalItens : 0;
+                const pctB = b.totalItens > 0 ? b.sim / b.totalItens : 0;
+                return pctB - pctA;
             });
     }, [allQuery.data, revendasQ.data]);
 
@@ -71,7 +69,7 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                         Ranking de Revendas
                     </h2>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                        Classificação por score de autoavaliação — {mesLabel}/{selectedAno}
+                        Classificação por score de evidência — {mesLabel}/{selectedAno}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -106,8 +104,7 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                     {/* Pódio — top 3 em destaque */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {ranking.slice(0, 3).map((r, idx) => {
-                            const pctAutoav = r.totalItens > 0 ? Math.round(r.sim     / r.totalItens * 100) : 0;
-                            const pctEvid   = r.totalItens > 0 ? Math.round(r.evidSim / r.totalItens * 100) : 0;
+                            const pct = r.totalItens > 0 ? Math.round(r.sim / r.totalItens * 100) : 0;
                             const col = POSITION_COLORS[idx];
                             return (
                                 <div key={r.revenda}
@@ -118,8 +115,8 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                                         <span className={`text-xs px-2.5 py-1 rounded-full ${col.badge}`} style={{ fontWeight: 800 }}>
                                             {MEDAL[idx] ?? `#${idx + 1}`} {idx + 1}º
                                         </span>
-                                        <span className="text-3xl font-black tabular-nums" style={{ color: pctColor(pctAutoav) }}>
-                                            {pctAutoav}%
+                                        <span className="text-3xl font-black tabular-nums" style={{ color: pctColor(pct) }}>
+                                            {pct}%
                                         </span>
                                     </div>
 
@@ -128,24 +125,15 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                                         {r.revenda}
                                     </p>
 
-                                    {/* Barra dupla autoav / evidência */}
+                                    {/* Barra evidência */}
                                     <div className="space-y-1.5 mb-4">
                                         <div>
                                             <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400 mb-0.5">
-                                                <span style={{ fontWeight: 600 }}>Autoavaliação (Sim)</span>
+                                                <span style={{ fontWeight: 600 }}>Evidência (Sim)</span>
                                                 <span style={{ fontWeight: 700 }}>{r.sim}/{r.totalItens} respostas</span>
                                             </div>
                                             <div className="h-2.5 rounded-full bg-slate-200/70 dark:bg-slate-700 overflow-hidden">
-                                                <div className="h-full rounded-full transition-all" style={{ width: `${pctAutoav}%`, backgroundColor: pctColor(pctAutoav) }} />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400 mb-0.5">
-                                                <span style={{ fontWeight: 600 }}>Evidência (Sim)</span>
-                                                <span style={{ fontWeight: 700 }}>{r.evidSim}/{r.totalItens} respostas</span>
-                                            </div>
-                                            <div className="h-2.5 rounded-full bg-slate-200/70 dark:bg-slate-700 overflow-hidden">
-                                                <div className="h-full rounded-full bg-indigo-400 transition-all" style={{ width: `${pctEvid}%` }} />
+                                                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: pctColor(pct) }} />
                                             </div>
                                         </div>
                                     </div>
@@ -179,7 +167,6 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                                     <tr>
                                         <th className="px-4 py-2.5 text-left text-slate-500 dark:text-slate-400 w-12" style={{ fontWeight: 700 }}>#</th>
                                         <th className="px-4 py-2.5 text-left text-slate-500 dark:text-slate-400" style={{ fontWeight: 700 }}>Revenda</th>
-                                        <th className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400 w-28" style={{ fontWeight: 700 }}>Autoavaliação</th>
                                         <th className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400 w-28" style={{ fontWeight: 700 }}>Evidência</th>
                                         <th className="px-4 py-2.5 text-left text-slate-500 dark:text-slate-400 w-48" style={{ fontWeight: 700 }}>Score</th>
                                         <th className="px-4 py-2.5 text-center text-slate-500 dark:text-slate-400 w-16" style={{ fontWeight: 700 }}>Sim</th>
@@ -190,8 +177,7 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                                 <tbody className="divide-y divide-slate-50 dark:divide-[var(--sidebar-border)]">
                                     {ranking.slice(3).map((r, i) => {
                                         const pos = i + 4;
-                                        const pctAutoav = r.totalItens > 0 ? Math.round(r.sim     / r.totalItens * 100) : 0;
-                                        const pctEvid   = r.totalItens > 0 ? Math.round(r.evidSim / r.totalItens * 100) : 0;
+                                        const pct = r.totalItens > 0 ? Math.round(r.sim / r.totalItens * 100) : 0;
                                         const col = DEFAULT_COLOR;
                                         return (
                                             <tr key={r.revenda} className="hover:bg-slate-50 dark:hover:bg-[var(--accent)]/50 transition-colors">
@@ -199,14 +185,13 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                                                     <span className={`text-[10px] px-2 py-0.5 rounded-full ${col.badge}`} style={{ fontWeight: 800 }}>#{pos}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-slate-800 dark:text-slate-100" style={{ fontWeight: 700 }}>{r.revenda}</td>
-                                                <td className="px-4 py-3 text-right tabular-nums" style={{ fontWeight: 700, color: pctColor(pctAutoav) }}>{pctAutoav}%</td>
-                                                <td className="px-4 py-3 text-right tabular-nums text-indigo-500 dark:text-indigo-400" style={{ fontWeight: 700 }}>{pctEvid}%</td>
+                                                <td className="px-4 py-3 text-right tabular-nums" style={{ fontWeight: 700, color: pctColor(pct) }}>{pct}%</td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-2">
                                                         <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
-                                                            <div className="h-full rounded-full transition-all" style={{ width: `${pctAutoav}%`, backgroundColor: pctColor(pctAutoav) }} />
+                                                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: pctColor(pct) }} />
                                                         </div>
-                                                        <span className="text-[10px] w-7 text-right tabular-nums" style={{ fontWeight: 700, color: pctColor(pctAutoav) }}>{pctAutoav}%</span>
+                                                        <span className="text-[10px] w-7 text-right tabular-nums" style={{ fontWeight: 700, color: pctColor(pct) }}>{pct}%</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-center text-emerald-600 dark:text-emerald-400 tabular-nums" style={{ fontWeight: 700 }}>{r.sim}</td>
@@ -223,35 +208,22 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                     {/* Barra comparativa horizontal */}
                     <div className="bg-white dark:bg-[var(--card)] rounded-2xl p-5 space-y-3"
                         style={{ border: cardBorder, boxShadow: cardShadow }}>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3" style={{ fontWeight: 700 }}>Comparativo geral — Autoavaliação vs Evidência</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3" style={{ fontWeight: 700 }}>Comparativo geral — Evidência</p>
                         {ranking.filter(r => r.totalItens > 0).map((r, idx) => {
-                            const pctAutoav = r.totalItens > 0 ? Math.round(r.sim     / r.totalItens * 100) : 0;
-                            const pctEvid   = r.totalItens > 0 ? Math.round(r.evidSim / r.totalItens * 100) : 0;
+                            const pct = r.totalItens > 0 ? Math.round(r.sim / r.totalItens * 100) : 0;
                             return (
                                 <div key={r.revenda} className="grid grid-cols-[24px_140px_1fr] items-center gap-3">
                                     <span className="text-[10px] text-slate-400 tabular-nums text-right" style={{ fontWeight: 700 }}>#{idx + 1}</span>
                                     <span className="text-xs text-slate-700 dark:text-slate-200 truncate" style={{ fontWeight: 700 }}>{r.revenda}</span>
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
-                                                <div className="h-full rounded-full transition-all" style={{ width: `${pctAutoav}%`, backgroundColor: pctColor(pctAutoav) }} />
-                                            </div>
-                                            <span className="text-[10px] w-8 text-right tabular-nums" style={{ fontWeight: 700, color: pctColor(pctAutoav) }}>{pctAutoav}%</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: pctColor(pct) }} />
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
-                                                <div className="h-full rounded-full bg-indigo-400 transition-all" style={{ width: `${pctEvid}%` }} />
-                                            </div>
-                                            <span className="text-[10px] w-8 text-right tabular-nums text-indigo-400" style={{ fontWeight: 600 }}>{pctEvid}%</span>
-                                        </div>
+                                        <span className="text-[10px] w-8 text-right tabular-nums" style={{ fontWeight: 700, color: pctColor(pct) }}>{pct}%</span>
                                     </div>
                                 </div>
                             );
                         })}
-                        <div className="flex items-center gap-4 text-[10px] text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-[var(--sidebar-border)]">
-                            <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm bg-emerald-400 inline-block" /> Autoavaliação</span>
-                            <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded-sm bg-indigo-400 inline-block" /> Evidência</span>
-                        </div>
                     </div>
                 </>
             )}
