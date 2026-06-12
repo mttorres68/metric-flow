@@ -24,28 +24,24 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
             revenda: string;
             totalItens: number;
             sim: number;
-            parcial: number;
-            nao: number;
             evidSim: number;
         };
         const map = new Map<string, Stats>();
 
         for (const r of respostas) {
             if (!map.has(r.revenda)) {
-                map.set(r.revenda, { revenda: r.revenda, totalItens: 0, sim: 0, parcial: 0, nao: 0, evidSim: 0 });
+                map.set(r.revenda, { revenda: r.revenda, totalItens: 0, sim: 0, evidSim: 0 });
             }
             const s = map.get(r.revenda)!;
             s.totalItens++;
-            if (r.statusFinal === "Sim")          s.sim++;
-            else if (r.statusFinal === "Parcial") s.parcial++;
-            else if (r.statusFinal === "Não")     s.nao++;
-            if (r.evidencia === "Sim")            s.evidSim++;
+            if (r.statusFinal === "Sim") s.sim++;
+            if (r.evidencia === "Sim")   s.evidSim++;
         }
 
         // Garante que todas as revendas aparecem, mesmo sem respostas
         for (const rev of revendas) {
             if (!map.has(rev.nome)) {
-                map.set(rev.nome, { revenda: rev.nome, totalItens: 0, sim: 0, parcial: 0, nao: 0, evidSim: 0 });
+                map.set(rev.nome, { revenda: rev.nome, totalItens: 0, sim: 0, evidSim: 0 });
             }
         }
 
@@ -138,16 +134,13 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                                         </div>
                                     </div>
 
-                                    {/* Pills Sim/Parcial/Não */}
+                                    {/* Pills Sim / Restante */}
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" style={{ fontWeight: 700 }}>
                                             <CheckCircle2 className="w-2.5 h-2.5" /> {r.sim} Sim
                                         </span>
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400" style={{ fontWeight: 700 }}>
-                                            {r.parcial} Parcial
-                                        </span>
                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400" style={{ fontWeight: 700 }}>
-                                            {r.nao} Não
+                                            {r.totalItens - r.sim} Restante
                                         </span>
                                         <span className="ml-auto text-[10px] text-slate-400 tabular-nums" style={{ fontWeight: 600 }}>
                                             {r.totalItens} itens
@@ -170,8 +163,7 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                                         <th className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400 w-28" style={{ fontWeight: 700 }}>Evidência</th>
                                         <th className="px-4 py-2.5 text-left text-slate-500 dark:text-slate-400 w-48" style={{ fontWeight: 700 }}>Score</th>
                                         <th className="px-4 py-2.5 text-center text-slate-500 dark:text-slate-400 w-16" style={{ fontWeight: 700 }}>Sim</th>
-                                        <th className="px-4 py-2.5 text-center text-slate-500 dark:text-slate-400 w-20" style={{ fontWeight: 700 }}>Parcial</th>
-                                        <th className="px-4 py-2.5 text-center text-slate-500 dark:text-slate-400 w-16" style={{ fontWeight: 700 }}>Não</th>
+                                        <th className="px-4 py-2.5 text-center text-slate-500 dark:text-slate-400 w-24" style={{ fontWeight: 700 }}>Restante</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50 dark:divide-[var(--sidebar-border)]">
@@ -195,8 +187,7 @@ export function RankingView({ isDark: _isDark, cardBorder, cardShadow }: {
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-center text-emerald-600 dark:text-emerald-400 tabular-nums" style={{ fontWeight: 700 }}>{r.sim}</td>
-                                                <td className="px-4 py-3 text-center text-amber-600 dark:text-amber-400 tabular-nums" style={{ fontWeight: 700 }}>{r.parcial}</td>
-                                                <td className="px-4 py-3 text-center text-rose-600 dark:text-rose-400 tabular-nums" style={{ fontWeight: 700 }}>{r.nao}</td>
+                                                <td className="px-4 py-3 text-center text-rose-600 dark:text-rose-400 tabular-nums" style={{ fontWeight: 700 }}>{r.totalItens - r.sim}</td>
                                             </tr>
                                         );
                                     })}

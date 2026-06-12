@@ -18,8 +18,8 @@ import JSZip from "jszip";
 import { PDFDocument } from "pdf-lib";
 import { and, eq } from "drizzle-orm";
 import { getVisitasData, getRotaCoachingData } from "../services/dataCache";
-import { calcularMetricas } from "../services/metricsCalculator";
-import { calcularVendedorDia } from "../routers/analiseRouter";
+import { calcularAnalisePeriodo } from "../services/analise";
+import { getConfigMetricas } from "../services/configService";
 import {
   gerarPDFRevenda,
   gerarPDFRecorrencia,
@@ -146,19 +146,11 @@ async function gerarPDFsParaData(
   const zip = new JSZip();
   const erros: string[] = [];
 
-  function parseHMS(t: string): number {
-    if (!t || t === "ND") return -1;
-    const p = t.split(":").map(Number);
-    return (p[0] || 0) * 3600 + (p[1] || 0) * 60 + (p[2] || 0);
-  }
-  function isValidTime(t: string): boolean {
-    return !!t && t !== "ND" && /^\d{1,2}:\d{2}/.test(t);
-  }
+  const cfgMetricas = await getConfigMetricas();
 
   for (const revenda of revendas) {
     try {
       const visitasRevenda = visitasData.filter((v) => v.revenda === revenda);
-      const metrics = calcularMetricas(visitasRevenda);
 
       // Matching canônico coaching
       const nomeCoaching = REVENDA_COACHING_MAP[revenda.toLowerCase()];
@@ -241,60 +233,24 @@ async function gerarPDFsParaData(
         }
       }
 
-      // Horários com segundos por vendedor — apenas visitas dentro do raio de 300m (ou AC),
-      // espelhando a lógica do analiseRouter para garantir consistência com a tela de Análise.
-      const RAIO_PDF = 300;
-      function parseDistPVLocal(s: string): number | string {
-        if (!s || s === "ND") return 9999;
-        if (s === "AC") return "AC";
-        const clean = s.replace(/\./g, "").replace(",", ".").replace(/[^0-9.\-]/g, "");
-        return parseFloat(clean) || 9999;
-      }
-      const visitasDentroRaio = visitasRevenda.filter((v) => {
-        const dist = parseDistPVLocal(v.distPV ?? "");
-        return dist === "AC" || (typeof dist === "number" && dist <= RAIO_PDF);
-      });
-
-      const horariosPorVendedor = new Map<number, { ini: string; fim: string }>();
-      for (const v of visitasDentroRaio) {
-        const validIni = isValidTime(v.horaInicio);
-        const validFim = isValidTime(v.horaFim);
-        if (!validIni && !validFim) continue;
-        const cur = horariosPorVendedor.get(v.vendedor);
-        if (!cur) {
-          horariosPorVendedor.set(v.vendedor, {
-            ini: validIni ? v.horaInicio : "ND",
-            fim: validFim ? v.horaFim    : "ND",
-          });
-        } else {
-          if (validIni && (cur.ini === "ND" || parseHMS(v.horaInicio) < parseHMS(cur.ini))) cur.ini = v.horaInicio;
-          if (validFim && (cur.fim === "ND" || parseHMS(v.horaFim)    > parseHMS(cur.fim))) cur.fim = v.horaFim;
-        }
-      }
-
-      const vendedoresRows: VendedorRow[] = (metrics.graficos.vendedores as any[]).map((v) => {
-        const cod = Number(String(v.vendedor).replace(/\D/g, ""));
-        const hor = horariosPorVendedor.get(cod);
-        const hrInicio = (hor && isValidTime(hor.ini)) ? hor.ini : (v.hrInicio ?? "ND");
-        const hrFim    = (hor && isValidTime(hor.fim)) ? hor.fim : (v.hrFim    ?? "ND");
-        // Relâmpago: usa a MESMA métrica da tela de Análise (calcularVendedorDia)
-        // para garantir consistência — dedup mantendo a última visita do PDV e
-        // denominador = visitas brutas dentro do raio (visitas_total_dentro_raio).
-        const rel = calcularVendedorDia(visitasRevenda, cod, data, 0, 0);
-        return {
-          vendedor: v.vendedor, hrInicio, hrFim,
-          visitasAlmoco:     v.visitasAlmoco     ?? 0,
-          percTarde:         v.percTarde         ?? 0,
-          visitasTarde:      v.visitasTarde      ?? 0,
-          visitasBrutasRaio: v.visitasBrutasRaio ?? 0,
-          percCobertura:     v.percCobertura     ?? 0,
-          visitasUnicasRaio: v.visitasUnicasRaio ?? 0,
-          totalCarteira:     v.totalCarteira     ?? 0,
+      const analisesPorVendedor = calcularAnalisePeriodo(visitasRevenda, cfgMetricas.diaria);
+      const vendedoresRows: VendedorRow[] = analisesPorVendedor
+        .sort((a, b) => a.vendedor - b.vendedor)
+        .map((rel) => ({
+          vendedor:          String(rel.vendedor),
+          hrInicio:          rel.inicio ?? "ND",
+          hrFim:             rel.fim    ?? "ND",
+          visitasAlmoco:     rel.almoco,
+          percTarde:         rel.apos14h_pct,
+          visitasTarde:      rel.apos14h,
+          visitasBrutasRaio: rel.visitas_total_dentro_raio,
+          percCobertura:     rel.visitas_pct,
+          visitasUnicasRaio: rel.visitas,
+          totalCarteira:     rel.visitas_total,
           percCurtas:        rel.relampago_pct,
           curtasCount:       rel.relampago,
           relampDenom:       rel.visitas_total_dentro_raio,
-        };
-      });
+        }));
 
       const clientesForaRaio = calcularClientesForaRaio(visitasRevenda);
 

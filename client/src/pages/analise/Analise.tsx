@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
     AlertTriangle, BarChart3, Clock, RefreshCw, TrendingDown, TrendingUp, X, FileText,
-    Printer, MessageCircle, Loader2, Play, WifiOff, ChevronDown, ChevronUp, CalendarDays,
+    Printer, MessageCircle, Loader2, Play, WifiOff, ChevronDown, ChevronUp,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import { trpc } from "@/lib/trpc";
@@ -15,7 +15,6 @@ import { ColumnsSelector } from "./components/ColumnsSelector";
 import { FilterSelect, FilterDate } from "./components/FilterControls";
 import { EnviarWAModal } from "./components/EnviarWAModal";
 import { DiariaView } from "./views/DiariaView";
-import { RecorrenciaSemanal } from "./views/RecorrenciaSemanal";
 
 import { useColumnVisibility } from "./lib/hooks/useColumnVisibility";
 import { useFiltroPersistido } from "./lib/hooks/useFiltroPersistido";
@@ -27,7 +26,7 @@ import { buildMensagensHTML } from "./lib/mensagens";
 import type { AcaoTipo, AcaoVendState } from "./lib/types";
 
 export default function Analise() {
-    const [activePage, setActivePage] = useState("analises");
+    const activePage = "analise_diaria";
     const { filtros, setFiltro, setFiltrosMulti, resetFiltros, temFiltro } = useFiltroPersistido();
     const { isCollapsed } = useSidebarCollapse();
     const { getAnalise, setAnalise, analisesDoPeríodo } = useAnalisesRevenda(
@@ -45,7 +44,6 @@ export default function Analise() {
     const [downloadingUnified, setDownloadingUnified] = useState(false);
     const [waModalOpen, setWaModalOpen] = useState(false);
     const [headerExpanded, setHeaderExpanded] = useState(true);
-    const [viewMode, setViewMode] = useState<"diaria" | "semanal">("diaria");
     const [checkboxState, setCheckboxState] = useState<Record<string, Record<string, AcaoVendState>>>({});
     const editorRefs = useRef<Map<string, EditorAnaliseHandle>>(new Map());
 
@@ -236,15 +234,7 @@ export default function Analise() {
     }), [dados]);
 
     const handleNavigate = (page: string) => {
-        const rotas: Record<string, string> = {
-            dashboard: "/", vendedores: "/vendedores",
-            compliance: "/compliance", clientes: "/clientes", relatorio: "/relatorio",
-            relatorio_semanal: "/relatorio-semanal", rota_coaching: "/rota-coaching", analises: "/analises",
-            trello_atraso: "/trello-atraso", whatsapp: "/whatsapp", assessment: "/assessment",
-        };
-        if (rotas[page]) { window.location.href = rotas[page]; return; }
-        if (page !== "analises") toast.info(`Módulo "${page}" em breve`);
-        else setActivePage(page);
+        toast.info(`Módulo "${page}" em breve`);
     };
 
     return (
@@ -428,54 +418,26 @@ export default function Analise() {
                 )}
 
                 {/* ── Conteúdo principal ── */}
-                <div className="flex-1 min-h-0 flex flex-col">
-                    <div className="px-6 pt-3 pb-1 shrink-0">
-                        <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
-                            <button
-                                onClick={() => setViewMode("diaria")}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors ${viewMode === "diaria" ? "bg-indigo-500 text-white" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50"}`}
-                            >
-                                <BarChart3 size={12} /> Diária
-                            </button>
-                            <button
-                                onClick={() => setViewMode("semanal")}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors ${viewMode === "semanal" ? "bg-indigo-500 text-white" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50"}`}
-                            >
-                                <CalendarDays size={12} /> Recorrência semanal
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="flex-1 min-h-0 overflow-auto">
-                        {viewMode === "semanal" ? (
-                            <RecorrenciaSemanal
-                                dataInicio={filtros.dataInicio || ""}
-                                dataFim={filtros.dataFim || ""}
-                                revendaFiltro={filtros.revenda}
-                                setAnalise={setAnalise}
-                            />
-                        ) : (
-                            <DiariaView
-                                isLoading={isLoading}
-                                error={error}
-                                revendasOrdenadas={revendasOrdenadas}
-                                groupedData={groupedData}
-                                col={col}
-                                sortBy={sortBy}
-                                sortDir={sortDir}
-                                onToggleSort={toggleSort}
-                                checkboxState={checkboxState}
-                                onToggleCheck={toggleCheck}
-                                getAnalise={getAnalise}
-                                onSetAnalise={setAnalise}
-                                downloadPDF={downloadPDF}
-                                downloadingPDF={downloadingPDF}
-                                editorRefs={editorRefs}
-                                dataInicio={filtros.dataInicio || ""}
-                                isDark={isDark}
-                            />
-                        )}
-                    </div>
+                <div className="flex-1 min-h-0 overflow-auto">
+                    <DiariaView
+                        isLoading={isLoading}
+                        error={error}
+                        revendasOrdenadas={revendasOrdenadas}
+                        groupedData={groupedData}
+                        col={col}
+                        sortBy={sortBy}
+                        sortDir={sortDir}
+                        onToggleSort={toggleSort}
+                        checkboxState={checkboxState}
+                        onToggleCheck={toggleCheck}
+                        getAnalise={getAnalise}
+                        onSetAnalise={setAnalise}
+                        downloadPDF={downloadPDF}
+                        downloadingPDF={downloadingPDF}
+                        editorRefs={editorRefs}
+                        dataInicio={filtros.dataInicio || ""}
+                        isDark={isDark}
+                    />
                 </div>
             </div>
 

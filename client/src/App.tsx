@@ -13,6 +13,7 @@ import Relatorio from "./pages/Relatorio";
 import RotaCoaching from "./pages/RotaCoaching";
 import RelatorioSemanal from "./pages/RelatorioSemanal";
 import Analise from "./pages/Analise";
+import AnaliseSemanal from "./pages/analise/AnaliseSemanal";
 import AnaliseVisitasDetalhes from "./pages/AnaliseVisitasDetalhes";
 import AnaliseForeaRaio from "./pages/AnaliseForeaRaio";
 import TrelloAtraso from "./pages/trello";
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/rota-coaching" component={RotaCoaching} />
       <Route path="/relatorio-semanal" component={RelatorioSemanal} />
       <Route path="/analises" component={Analise} />
+      <Route path="/analises/semanal" component={AnaliseSemanal} />
       <Route path="/analises/vendedor/:revenda/:vendedor/:data" component={AnaliseVisitasDetalhes} />
       <Route path="/analises/foera-raio/:revenda/:data" component={AnaliseForeaRaio} />
       <Route path="/trello-atraso" component={TrelloAtraso} />

@@ -261,7 +261,7 @@ export const rotaCoaching = pgTable(
     /** Código do vendedor ou '' quando não há vendedor associado */
     vendedorId: varchar("vendedorId", { length: 20 }).notNull().default(""),
     atividade: varchar("atividade", { length: 100 }),
-    tipoAtividade: varchar("tipoAtividade", { length: 30 }),
+    tipoAtividade: varchar("tipoAtividade", { length: 30 }).notNull().default(""),
     fonte: varchar("fonte", { length: 10 }),
     agendado: boolean("agendado").default(true),
     // KPIs numéricos
@@ -295,6 +295,39 @@ export const rotaCoaching = pgTable(
 
 export type RotaCoaching = typeof rotaCoaching.$inferSelect;
 export type InsertRotaCoaching = typeof rotaCoaching.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Configuração de métricas — thresholds das flags de análise/recorrência.
+// Tabela single-row (id=1 sempre); gerenciada via modal de config na UI.
+// Os valores aqui sobrepõem os defaults de shared/const.ts em runtime.
+// ---------------------------------------------------------------------------
+export const metricasConfig = pgTable("metricas_config", {
+  id:                   serial("id").primaryKey(),
+  // ── Parâmetros base (compartilhados) ─────────────────────────────────────
+  raioPDV:              integer("raioPDV").notNull().default(300),
+  minutosCurta:         integer("minutosCurta").notNull().default(3),
+  // ── Análise Diária — thresholds de alerta ────────────────────────────────
+  limiteInicioTardio:   varchar("limiteInicioTardio",    { length: 5 }).notNull().default("08:45"),
+  alertaCurtasPerc:     integer("alertaCurtasPerc").notNull().default(10),
+  alertaCoberturaPerc:  integer("alertaCoberturaPerc").notNull().default(100),
+  alertaTardePerc:      integer("alertaTardePerc").notNull().default(25),
+  // ── Recorrência Semanal — thresholds das flags ────────────────────────────
+  recLimiteInicioTardio:   varchar("recLimiteInicioTardio", { length: 5 }).notNull().default("09:30"),
+  recAlertaCurtasPerc:     integer("recAlertaCurtasPerc").notNull().default(10),
+  recAlertaCoberturaPerc:  integer("recAlertaCoberturaPerc").notNull().default(100),
+  recAlertaTardePerc:      integer("recAlertaTardePerc").notNull().default(25),
+  recorrenciaMinDias:      integer("recorrenciaMinDias").notNull().default(2),
+  recorrenciaMinPerc:      numeric("recorrenciaMinPerc", { precision: 4, scale: 2 }).notNull().default("0.40"),
+  ociosidadeMin:           integer("ociosidadeMin").notNull().default(120),
+  percursoMax:             integer("percursoMax").notNull().default(30),
+  almocoMax:               integer("almocoMax").notNull().default(4),
+  tempoAtendMin:           integer("tempoAtendMin").notNull().default(120),
+  fimCedo:                 varchar("fimCedo", { length: 5 }).notNull().default("14:00"),
+  updatedAt:               timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type MetricasConfig = typeof metricasConfig.$inferSelect;
+export type InsertMetricasConfig = typeof metricasConfig.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // PathTracker — lookup de PDVs / clientes visitados
@@ -368,7 +401,17 @@ export const pathtrackerVisitas = pgTable(
     lonVendedor: numeric("lonVendedor", { precision: 10, scale: 6 }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
-  (t) => [unique("uq_pt_visita").on(t.revendaId, t.data, t.vendedorId, t.clienteId)],
+  // Chave natural inclui horaInicio E sequenciaPt para preservar múltiplas visitas
+  // do mesmo vendedor ao mesmo PDV no mesmo dia. Nenhuma das duas isolada basta:
+  //  - visita física + emissão remota à noite → mesma Seq. PT, horaInicio diferente
+  //  - registros duplicados de uma mesma parada → mesmo horaInicio, Seq. PT diferente
+  // As duas juntas são únicas em toda a tabela. nullsNotDistinct: clientes
+  // não-visitados têm ambos NULL e ainda precisam ser únicos por (rev,data,vend,cli).
+  (t) => [
+    unique("uq_pt_visita")
+      .on(t.revendaId, t.data, t.vendedorId, t.clienteId, t.horaInicio, t.sequenciaPt)
+      .nullsNotDistinct(),
+  ],
 );
 
 export type PathtrackerVisita = typeof pathtrackerVisitas.$inferSelect;

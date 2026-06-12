@@ -66,10 +66,23 @@ export default function AnaliseVisitasDetalhes() {
 
     const fmtBRL = (val: number) => val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+    const parseDist = (s: string): number => {
+        if (!s || s === "ND") return NaN;
+        if (s === "AC") return 299;
+        let clean: string;
+        if (s.includes(",") && s.includes(".")) {
+            clean = s.replace(/\./g, "").replace(",", ".");
+        } else if (s.includes(",")) {
+            clean = s.replace(",", ".");
+        } else {
+            clean = s;
+        }
+        return parseFloat(clean.replace(/[^0-9.\-]/g, ""));
+    };
+
     const fmtDist = (s: string) => {
         if (!s || s === "ND") return "—";
-        const clean = s.replace(/\./g, "").replace(",", ".").replace(/[^0-9.\-]/g, "");
-        const d = parseFloat(clean);
+        const d = parseDist(s);
         if (isNaN(d)) return "—";
         if (d >= 1000) return `${(d / 1000).toFixed(1)} km`;
         return `${d.toFixed(0)} m`;
@@ -226,7 +239,7 @@ export default function AnaliseVisitasDetalhes() {
                                             // Calcula raio
                                             let indRaio = null;
                                             if (v.distPV && v.distPV !== "ND") {
-                                                const d = parseFloat(v.distPV.replace(/\./g, "").replace(",", ".").replace(/[^0-9.\-]/g, ""));
+                                                const d = parseDist(v.distPV);
                                                 if (!isNaN(d)) indRaio = d <= 300;
                                             }
 

@@ -108,7 +108,7 @@ export function exportarPDF(
           <td><strong>${r.gaId || "-"}</strong></td>
           <td>${colAtividade}</td>
           <td class="text-center">${colCodeVend}</td>
-          <td class="text-center" style="font-weight: bold; color: ${(colVisGa ?? 0) > 0 ? "#0055cc" : "#333"}">${colVisGa ?? ""}</td>
+          <td class="text-center" style="font-weight: bold; color: ${(Number(colVisGa) || 0) > 0 ? "#0055cc" : "#333"}">${colVisGa ?? ""}</td>
           <td class="text-center">${colIdApp}</td>
           <td class="text-center">${colProg ?? ""}</td>
           <td class="text-center" style="${redWarning}">${colVisVend ?? ""}</td>
