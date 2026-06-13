@@ -14,6 +14,7 @@ import {
   Settings2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import { toast } from "sonner";
 import { TabConfiguracoes } from "../agenda-gv/components/TabConfiguracoes";
 import { TabNovoCiclo } from "../agenda-gv/components/TabNovoCiclo";
@@ -28,24 +29,52 @@ export default function TrelloAtraso() {
   const { isCollapsed } = useSidebarCollapse();
   const [activePage] = useState("trello_atraso");
   const [exportando, setExportando] = useState(false);
-  const [listasFiltro, setListasFiltro] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<"atrasos" | "atividades" | "agenda">("atrasos");
   const [agendaSubTab, setAgendaSubTab] = useState<"ciclo" | "config">("ciclo");
   const [showBulkWaModal, setShowBulkWaModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
 
+  const search = useSearch();
+  const [, setLocation] = useLocation();
+
+  // URL é a fonte de verdade para filtro e tab
+  const listasFiltro = useMemo(() => {
+    const raw = new URLSearchParams(search).get("listas");
+    return raw ? raw.split(",").filter(Boolean) : [];
+  }, [search]);
+
+  const activeTab = useMemo<"atrasos" | "atividades" | "agenda">(() => {
+    const tab = new URLSearchParams(search).get("tab");
+    return tab === "atividades" || tab === "agenda" ? tab : "atrasos";
+  }, [search]);
+
+  function setListasFiltro(listas: string[]) {
+    const p = new URLSearchParams(search);
+    if (listas.length > 0) p.set("listas", listas.join(","));
+    else p.delete("listas");
+    setLocation(`/trello-atraso?${p.toString()}`, { replace: true });
+  }
+
+  function setActiveTab(tab: "atrasos" | "atividades" | "agenda") {
+    const p = new URLSearchParams(search);
+    p.set("tab", tab);
+    setLocation(`/trello-atraso?${p.toString()}`, { replace: true });
+  }
+
   const { template, saveLocal, saveToServer, isSaving, serverSynced } = useWaTemplate();
 
-  const { data, isLoading, isError, error, refetch, isFetching } =
-    trpc.trello.getCardsAtraso.useQuery(
-      { listasPermitidas: listasFiltro.length > 0 ? listasFiltro : undefined },
-      { staleTime: 5 * 60 * 1000 }
-    );
+  // Busca todos os dados sem filtro — filtro aplicado client-side
+  const { data: dataCompleta, isLoading, isError, error, refetch, isFetching } =
+    trpc.trello.getCardsAtraso.useQuery(undefined, { staleTime: 10 * 60 * 1000 });
 
-  const { data: dataCompleta } = trpc.trello.getCardsAtraso.useQuery(
-    undefined,
-    { staleTime: 10 * 60 * 1000 }
-  );
+  const {
+    data: atividadesDataCompleta,
+    isLoading: atividadesLoading,
+    isError: atividadesError,
+    error: atividadesErrorMsg,
+    refetch: atividadesRefetch,
+    isFetching: atividadesFetching,
+  } = trpc.trello.getAtividadesDia.useQuery(undefined, { staleTime: 10 * 60 * 1000 });
+
   const todasListas = useMemo(() => {
     if (!dataCompleta) return [];
     const set = new Set<string>();
@@ -53,17 +82,25 @@ export default function TrelloAtraso() {
     return Array.from(set).sort();
   }, [dataCompleta]);
 
-  const {
-    data: atividadesData,
-    isLoading: atividadesLoading,
-    isError: atividadesError,
-    error: atividadesErrorMsg,
-    refetch: atividadesRefetch,
-    isFetching: atividadesFetching,
-  } = trpc.trello.getAtividadesDia.useQuery(
-    { listasPermitidas: listasFiltro.length > 0 ? listasFiltro : undefined },
-    { staleTime: 5 * 60 * 1000 }
-  );
+  // Filtragem client-side — nenhuma nova request ao mudar filtro
+  const data = useMemo(() => {
+    if (!dataCompleta) return undefined;
+    if (listasFiltro.length === 0) return dataCompleta;
+    return dataCompleta.map((revenda) => {
+      const cards = revenda.cards.filter((card) => listasFiltro.includes(card.lista));
+      return { ...revenda, cards, totalAtraso: cards.length };
+    });
+  }, [dataCompleta, listasFiltro]);
+
+  const atividadesData = useMemo(() => {
+    if (!atividadesDataCompleta) return undefined;
+    if (listasFiltro.length === 0) return atividadesDataCompleta;
+    return atividadesDataCompleta.map((revenda) => ({
+      ...revenda,
+      hoje: revenda.hoje.filter((card) => listasFiltro.includes(card.lista)),
+      amanha: revenda.amanha.filter((card) => listasFiltro.includes(card.lista)),
+    }));
+  }, [atividadesDataCompleta, listasFiltro]);
 
   const totalAtraso = data?.reduce((s, r) => s + r.totalAtraso, 0) ?? 0;
   const revendasComAtraso = data?.filter((r) => r.totalAtraso > 0).length ?? 0;
