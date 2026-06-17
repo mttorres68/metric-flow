@@ -3,17 +3,23 @@
  * Retorna o mesmo shape que o rota_coaching_all.json esperava,
  * preservando compatibilidade com RotaCoaching.tsx sem mudanças no frontend.
  */
-import { desc } from "drizzle-orm";
+import { and, desc, gte, lte } from "drizzle-orm";
 import { getDb } from "../db";
 import { rotaCoaching } from "../../drizzle/schema";
 
-export async function loadRotaCoachingFromDatabase(): Promise<any[]> {
+export async function loadRotaCoachingFromDatabase(dateStart?: string, dateEnd?: string): Promise<any[]> {
     const db = await getDb();
     if (!db) throw new Error("[pgRotaCoachingService] Banco não disponível");
+
+    const conds = [
+        dateStart ? gte(rotaCoaching.data, dateStart) : undefined,
+        dateEnd ? lte(rotaCoaching.data, dateEnd) : undefined,
+    ].filter(Boolean) as any[];
 
     const rows = await db
         .select()
         .from(rotaCoaching)
+        .where(conds.length ? and(...conds) : undefined)
         .orderBy(desc(rotaCoaching.data));
 
     // Mapeia de volta ao shape que o frontend espera (campos do JSON original)
@@ -40,6 +46,9 @@ export async function loadRotaCoachingFromDatabase(): Promise<any[]> {
         conformidade_pct: r.pctConformidade != null ? parseFloat(String(r.pctConformidade)) : null,
         pctGA: r.pctConformidade != null ? parseFloat(String(r.pctConformidade)) : null,
         pctV: r.pctVisitados != null ? parseFloat(String(r.pctVisitados)) : null,
+        pctCob: r.pctCobertura != null ? parseFloat(String(r.pctCobertura)) : null,
+        setor_agendado: r.setorAgendado ?? "",
+        setores_app: r.setoresApp ?? [],
         pct_geo_confirmado: r.pctGeoConfirmado != null ? parseFloat(String(r.pctGeoConfirmado)) : null,
         // Status
         status: r.status,

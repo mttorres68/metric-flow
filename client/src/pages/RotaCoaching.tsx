@@ -16,6 +16,7 @@ import { FrotaInfleet } from "@/components/rota-coaching/FrotaInfleet";
 import { RotaFiltros } from "@/components/rota-coaching/RotaFiltros";
 import { RotaGraficos } from "@/components/rota-coaching/RotaGraficos";
 import { RotaRow, loadFilters, FILTER_KEY, periodoIntervalo, todayIso } from "@/components/rota-coaching/types";
+import { calcularKpisRota, formatarTaxa } from "@shared/rotaKpis";
 import { Car, Printer, RefreshCw, Route } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { toast } from "sonner";
@@ -54,7 +55,7 @@ export default function RotaCoaching() {
     // ── Carrega dados ────────────────────────────────────────────────────────────
     const carregarDados = () => {
         setLoading(true); setErro(null);
-        utils.rotaCoaching.getAll.fetch()
+        utils.rotaCoaching.getAll.fetch({ dateStart, dateEnd })
             .then((d: RotaRow[]) => { setAllData(d.filter(r => r.gaId && r.gaId !== "-")); setLoading(false); })
             .catch(e => { setErro(e.message); setLoading(false); });
     };
@@ -63,7 +64,8 @@ export default function RotaCoaching() {
         onSettled: () => carregarDados(),
     });
 
-    useEffect(() => { carregarDados(); }, []);
+    // Recarrega quando o período muda — filtro aplicado no servidor
+    useEffect(() => { carregarDados(); }, [dateStart, dateEnd]);
 
     // ── Dados derivados ──────────────────────────────────────────────────────────
     const baseFiltrado = useMemo(() => {
@@ -87,31 +89,29 @@ export default function RotaCoaching() {
         [...new Set(allData.filter(r => r.data >= dateStart && r.data <= dateEnd && r.gaId !== "-").map(r => r.gaId))].sort(),
         [allData, dateStart, dateEnd]);
 
-    const kpis = useMemo(() => {
-        const ok = baseFiltrado.filter(r => r.status === "ok").length;
-        const par = baseFiltrado.filter(r => r.status === "partial").length;
-        const ag = baseFiltrado.filter(r => r.agendado).length;
-        return {
-            revendas: [...new Set(baseFiltrado.filter(r => r.rev).map(r => r.rev))].length,
-            ok, par,
-            nok: baseFiltrado.filter(r => r.status === "nok").length,
-            taxa: ag ? Math.round(((ok + par * 0.5) / ag) * 100) + "%" : "—",
-        };
-    }, [baseFiltrado]);
+    // KPIs unificados (mesma regra do PDF: dedup por GA/dia/revenda + taxa ponderada)
+    const kpisCalc = useMemo(() => calcularKpisRota(baseFiltrado), [baseFiltrado]);
+    const kpis = useMemo(() => ({
+        revendas: kpisCalc.revendas,
+        ok: kpisCalc.ok,
+        par: kpisCalc.parcial,
+        nok: kpisCalc.nok,
+        taxa: formatarTaxa(kpisCalc.taxa),
+    }), [kpisCalc]);
 
     const dadosGA = useMemo(() => {
         const m: Record<string, { ga: string; visitas: number; prog: number }> = {};
-        for (const r of baseFiltrado.filter(r => r.agendado)) {
+        for (const r of kpisCalc.registros) {
             if (!m[r.gaId]) m[r.gaId] = { ga: r.gaId, visitas: 0, prog: 0 };
             m[r.gaId].visitas += r.gaVis || 0;
             m[r.gaId].prog += r.pdvsProg || 0;
         }
         return Object.values(m).sort((a, b) => b.visitas - a.visitas);
-    }, [baseFiltrado]);
+    }, [kpisCalc]);
 
     const dadosRevenda = useMemo(() => {
         const m: Record<string, { rev: string; Completo: number; Parcial: number; "Não Realizado": number }> = {};
-        for (const r of baseFiltrado.filter(r => r.agendado)) {
+        for (const r of kpisCalc.registros) {
             if (!r.rev) continue;
             if (!m[r.rev]) m[r.rev] = { rev: r.rev, Completo: 0, Parcial: 0, "Não Realizado": 0 };
             if (r.status === "ok") m[r.rev].Completo++;
@@ -119,7 +119,7 @@ export default function RotaCoaching() {
             else if (r.status === "nok") m[r.rev]["Não Realizado"]++;
         }
         return Object.values(m).sort((a, b) => a.rev.localeCompare(b.rev));
-    }, [baseFiltrado]);
+    }, [kpisCalc]);
 
     // ── Análises GA ──────────────────────────────────────────────────────────────
     const { getAnalise, setAnalise, analisesDodia } = useAnalisesGA(dateStart);
@@ -268,7 +268,7 @@ export default function RotaCoaching() {
                             {erro && (
                                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-2xl p-6 text-center">
                                     <p className="text-red-600 dark:text-red-400 text-sm" style={{ fontWeight: 600 }}>⚠️ {erro}</p>
-                                    <p className="text-red-400 dark:text-red-500 text-xs mt-1">Mova o arquivo rota_coaching_all.json para a pasta public do projeto.</p>
+                                    <p className="text-red-400 dark:text-red-500 text-xs mt-1">Verifique a conexão com o banco e se o processamento de rota coaching já rodou para esta data.</p>
                                 </div>
                             )}
 

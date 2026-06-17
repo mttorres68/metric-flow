@@ -15,6 +15,13 @@ export interface RotaRow {
     gaVis: number;
     pctGA: number;
     pctV: number;
+    /** Cobertura: |GA ∩ visitados válidos| / pdvsVis (regra 12/06/2026) */
+    pctCob?: number | null;
+    /** Setor declarado na agenda do GA */
+    setor_agendado?: string;
+    /** Todos os setores que o GA registrou no app no dia */
+    setores_app?: string[];
+    vendedor_agenda?: string;
     atividade?: string;
     vendedor_no_app?: string;
     clientes_comuns?: string[];
@@ -74,7 +81,11 @@ export function fmtMin(min: number): string {
 }
 
 export function todayIso(): string {
-    return new Date().toISOString().slice(0, 10);
+    // Fuso fixo de Fortaleza — toISOString() (UTC) virava "amanhã" após as 21h BRT
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Fortaleza",
+        year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date());
 }
 
 export function periodoIntervalo(start: string, end: string) {

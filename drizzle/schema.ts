@@ -271,6 +271,12 @@ export const rotaCoaching = pgTable(
     pctConformidade: numeric("pctConformidade", { precision: 5, scale: 2 }),
     pctVisitados: numeric("pctVisitados", { precision: 5, scale: 2 }),
     pctGeoConfirmado: numeric("pctGeoConfirmado", { precision: 5, scale: 2 }),
+    /** Cobertura: |GA ∩ visitados válidos| / pdvsVisitados (regra 12/06/2026) */
+    pctCobertura: numeric("pctCobertura", { precision: 5, scale: 2 }),
+    /** Setor declarado na agenda (preenchido mesmo na linha de outro vendedor visto no app) */
+    setorAgendado: varchar("setorAgendado", { length: 20 }),
+    /** Todos os setores que o GA registrou no app no dia (caso multi-setor) */
+    setoresApp: jsonb("setoresApp"),
     // Status
     status: varchar("status", { length: 10 }),
     statusPy: varchar("statusPy", { length: 20 }),
@@ -306,6 +312,8 @@ export const metricasConfig = pgTable("metricas_config", {
   // ── Parâmetros base (compartilhados) ─────────────────────────────────────
   raioPDV:              integer("raioPDV").notNull().default(300),
   minutosCurta:         integer("minutosCurta").notNull().default(3),
+  janelaInicioVisitas:  varchar("janelaInicioVisitas", { length: 5 }).notNull().default("07:00"),
+  janelaFimVisitas:     varchar("janelaFimVisitas",    { length: 5 }).notNull().default("17:00"),
   // ── Análise Diária — thresholds de alerta ────────────────────────────────
   limiteInicioTardio:   varchar("limiteInicioTardio",    { length: 5 }).notNull().default("08:45"),
   alertaCurtasPerc:     integer("alertaCurtasPerc").notNull().default(10),

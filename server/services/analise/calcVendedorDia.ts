@@ -17,7 +17,19 @@ export function calcularVendedorDia(
     const revenda = all[0]?.revenda ?? "";
 
     const carteira = new Set(all.map(v => v.codCliente)).size;
-    const comVisita = all.filter(v => v.horaInicio && v.horaInicio !== "ND");
+
+    // Janela de horário configurável — visitas fora do intervalo são desconsideradas
+    const janelaIni = hmsToMin(cfg.janelaInicioVisitas ?? "07:00");
+    const janelaFim = hmsToMin(cfg.janelaFimVisitas    ?? "17:00");
+
+    const comVisita = all.filter(v => {
+        if (!v.horaInicio || v.horaInicio === "ND") return false;
+        const ini = hmsToMin(v.horaInicio);
+        if (ini === null) return false;
+        if (janelaIni !== null && ini < janelaIni) return false;
+        if (janelaFim !== null && ini > janelaFim) return false;
+        return true;
+    });
     const semVisita = all.filter(v => !v.horaInicio || v.horaInicio === "ND");
 
     const dentroRaio = comVisita.filter(v => parseDistPV(v.distPV) <= cfg.raioPDV);

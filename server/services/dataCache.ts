@@ -147,12 +147,19 @@ export async function getVisitasData(): Promise<ProcessedVisita[]> {
     return (await getVisitasIndex()).visitas;
 }
 
-export async function getRotaCoachingData(): Promise<any[]> {
+/** Filtra por período (YYYY-MM-DD, inclusivo). Sem filtro → retorna tudo. */
+function filtrarPorPeriodo(data: any[], dateStart?: string, dateEnd?: string): any[] {
+    if (!dateStart && !dateEnd) return data;
+    return data.filter(r =>
+        (!dateStart || r.data >= dateStart) && (!dateEnd || r.data <= dateEnd));
+}
+
+export async function getRotaCoachingData(dateStart?: string, dateEnd?: string): Promise<any[]> {
     const now = Date.now();
 
     if (cachedRotaCoaching && now - lastRotaCacheTime < ROTA_CACHE_DURATION_MS) {
         console.log("[Cache] Usando dados Rota Coaching em cache");
-        return cachedRotaCoaching;
+        return filtrarPorPeriodo(cachedRotaCoaching, dateStart, dateEnd);
     }
 
     if (process.env.DATABASE_URL) {
@@ -162,10 +169,10 @@ export async function getRotaCoachingData(): Promise<any[]> {
             cachedRotaCoaching = data;
             lastRotaCacheTime = now;
             console.log(`[Cache] ✓ ${data.length} rota coaching do banco`);
-            return data;
+            return filtrarPorPeriodo(data, dateStart, dateEnd);
         } catch (error) {
             console.error("[Cache] Erro ao carregar Rota Coaching do banco:", error);
-            if (cachedRotaCoaching) return cachedRotaCoaching;
+            if (cachedRotaCoaching) return filtrarPorPeriodo(cachedRotaCoaching, dateStart, dateEnd);
             throw error;
         }
     }
@@ -179,12 +186,12 @@ export async function getRotaCoachingData(): Promise<any[]> {
         cachedRotaCoaching = data;
         lastRotaCacheTime = now;
         console.log(`[Cache] ✓ ${data.length} rota coaching do arquivo`);
-        return data;
+        return filtrarPorPeriodo(data, dateStart, dateEnd);
     } catch (error) {
         console.error("[Cache] Erro ao carregar rota coaching:", error);
         if (cachedRotaCoaching) {
             console.log("[Cache] Usando cache expirado como fallback");
-            return cachedRotaCoaching;
+            return filtrarPorPeriodo(cachedRotaCoaching, dateStart, dateEnd);
         }
         throw error;
     }

@@ -30,6 +30,7 @@ import {
 } from "../services/pdfService";
 import { getDb } from "../db";
 import { analises } from "../../drizzle/schema";
+import { calcularKpisRota, dedupRotaPorGA } from "@shared/rotaKpis";
 
 export const relatorioRouter = Router();
 
@@ -163,26 +164,15 @@ async function gerarPDFsParaData(
         return matchRevenda && r.data === data;
       });
 
-      // Deduplica por GA: quando um GA acompanhou múltiplos vendedores no dia,
-      // mantém apenas a entrada com mais visitas do vendedor (pdvsVis).
-      const byGa: Record<string, any> = {};
-      for (const r of registrosData) {
-        const key = String(r.gaId ?? r.ga ?? "");
-        if (!byGa[key] || (Number(r.pdvsVis ?? 0) > Number(byGa[key].pdvsVis ?? 0))) {
-          byGa[key] = r;
-        }
-      }
-      const agendados = Object.values(byGa);
-
-      const okCount      = agendados.filter((r) => ["ok"].includes(String(r.status ?? "").toLowerCase())).length;
-      const parcialCount = agendados.filter((r) => ["partial", "parcial"].includes(String(r.status ?? "").toLowerCase())).length;
-      const nokCount     = agendados.filter((r) => ["nok"].includes(String(r.status ?? "").toLowerCase())).length;
-      const total = okCount + parcialCount + nokCount;
-      const taxa  = total > 0 ? Math.round(((okCount + parcialCount * 0.5) / total) * 1000) / 10 : 0;
+      // KPIs unificados (shared/rotaKpis): dedup por GA/dia/revenda + taxa ponderada —
+      // mesma regra usada pelo dashboard e pelo PDF cliente.
+      const k = calcularKpisRota(registrosData);
+      // Tabela do PDF mantém também linhas não agendadas (exibidas com colunas vazias).
+      const linhasTabela = dedupRotaPorGA(registrosData);
 
       const coachingKPIs: CoachingKPIs = {
-        ok: okCount, parcial: parcialCount, nok: nokCount, total, taxa,
-        registros: agendados.map((r): CoachingRecord => {
+        ok: k.ok, parcial: k.parcial, nok: k.nok, total: k.total, taxa: k.taxa ?? 0,
+        registros: linhasTabela.map((r): CoachingRecord => {
           const vendIdValido = r.vendId && r.vendId !== "-" ? String(r.vendId) : "";
           const codVendedor = String(r.vendedor_agenda || r.vendedor_no_app || vendIdValido || "").trim() || undefined;
           const atividade = String(r.atividade || "").trim() || undefined;

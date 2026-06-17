@@ -12,6 +12,8 @@ const inputSchema = z.object({
     // ── Parâmetros base ──────────────────────────────────────────────────────
     raioPDV:                z.number().int().min(1).max(1000),
     minutosCurta:           z.number().int().min(1).max(30),
+    janelaInicioVisitas:    z.string().regex(timeRegex),
+    janelaFimVisitas:       z.string().regex(timeRegex),
     // ── Análise Diária ───────────────────────────────────────────────────────
     limiteInicioTardio:     z.string().regex(timeRegex),
     alertaCurtasPerc:       z.number().int().min(0).max(100),

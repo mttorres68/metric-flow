@@ -25,14 +25,14 @@ export function ConformidadeTabela({ tabelaFiltrada, expandedRows, toggleRow, ma
                     <thead>
                         <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-[var(--border)]">
                             <th className="w-10 px-4 py-3" />
-                            {["Revenda", "GA", "Vendedor", "Prog / Vis / GA", "Conformidade", "Status"].map(h => (
+                            {["Revenda", "GA", "Setor (agenda → app)", "Prog / Vis / GA", "Conformidade", "Cobertura", "Status"].map(h => (
                                 <th key={h} className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest text-left" style={{ fontWeight: 700 }}>{h}</th>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
                         {tabelaFiltrada.length === 0 ? (
-                            <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-400 dark:text-slate-500">Nenhum dado encontrado.</td></tr>
+                            <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-400 dark:text-slate-500">Nenhum dado encontrado.</td></tr>
                         ) : tabelaFiltrada.map((row, idx) => {
                             const sc = STATUS_COLORS[row.status];
                             const isExp = expandedRows.has(idx);
@@ -50,7 +50,23 @@ export function ConformidadeTabela({ tabelaFiltrada, expandedRows, toggleRow, ma
                                             <Badge variant="outline" className={sc.bg}>{row.rev || "—"}</Badge>
                                         </td>
                                         <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300 font-mono">{row.gaId}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300 font-mono">{row.vendId}</td>
+                                        <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300 font-mono">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span>{row.setor_agendado || row.vendId || "—"}</span>
+                                                {row.vendedor_no_app && row.setor_agendado && row.vendedor_no_app !== row.setor_agendado && (
+                                                    <span className="px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/25 border border-amber-200 dark:border-amber-800/50 text-amber-700 dark:text-amber-400 text-[10px]"
+                                                        title="Setor registrado no app difere do agendado">
+                                                        ⚠ app: {row.vendedor_no_app}
+                                                    </span>
+                                                )}
+                                                {(row.setores_app?.length ?? 0) > 1 && (
+                                                    <span className="px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/25 border border-indigo-200 dark:border-indigo-800/50 text-indigo-600 dark:text-indigo-400 text-[10px]"
+                                                        title={`GA registrou visitas com: ${row.setores_app!.join(", ")}`}>
+                                                        {row.setores_app!.length} setores
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
                                         <td className="px-4 py-3 text-xs text-center font-mono">
                                             <span className="text-slate-400 dark:text-slate-500">{row.pdvsProg}</span> /
                                             <span className="text-indigo-600 dark:text-indigo-400 mx-0.5">{row.pdvsVis}</span> /
@@ -61,6 +77,12 @@ export function ConformidadeTabela({ tabelaFiltrada, expandedRows, toggleRow, ma
                                                 {row.agendado ? `${row.pctGA}%` : "—"}
                                             </span>
                                         </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <span className="text-sm tabular-nums text-slate-500 dark:text-slate-400" style={{ fontWeight: 700 }}
+                                                title="Cobertura: PDVs visitados pelo vendedor que o GA acompanhou">
+                                                {row.agendado && row.pctCob != null ? `${row.pctCob}%` : "—"}
+                                            </span>
+                                        </td>
                                         <td className="px-4 py-3">
                                             <span className={`text-xs font-semibold ${sc.bg.split(' ').find(c => c.startsWith('text-'))}`}>{sc.label}</span>
                                         </td>
@@ -68,7 +90,7 @@ export function ConformidadeTabela({ tabelaFiltrada, expandedRows, toggleRow, ma
 
                                     {isExp && (
                                         <tr className="border-b border-slate-100 dark:border-[var(--border)]">
-                                            <td colSpan={7} className="bg-slate-50/60 dark:bg-slate-800/40 px-6 py-4">
+                                            <td colSpan={8} className="bg-slate-50/60 dark:bg-slate-800/40 px-6 py-4">
                                                 <RowDetalhe row={row} idx={idx} mapRowKey={mapRowKey} setMapRowKey={setMapRowKey} />
                                             </td>
                                         </tr>

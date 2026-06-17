@@ -71,6 +71,8 @@ function injectSliderCSS() {
 export interface ConfigMetricas {
     raioPDV: number;
     minutosCurta: number;
+    janelaInicioVisitas: string;
+    janelaFimVisitas: string;
     limiteInicioTardio: string;
     alertaCurtasPerc: number;
     alertaCoberturaPerc: number;
@@ -315,6 +317,25 @@ export function ConfigPanel({ config, onApply, onReset, isDirty }: ConfigPanelPr
                                 accent="#6366f1"
                                 onChange={(v) => set({ raioPDV: v })}
                                 formatValue={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}km` : `${v}m`}
+                            />
+                        </div>
+                    </section>
+
+                    <section>
+                        <SectionTitle color="#0ea5e9" label="Janela de Visitas" />
+                        <p className="text-xs text-slate-400 mt-2 mb-4 leading-relaxed">
+                            Visitas que iniciam fora desse intervalo são desconsideradas em todas as métricas (diária e semanal).
+                        </p>
+                        <div className="space-y-4">
+                            <TimeInput
+                                label="Início da janela"
+                                value={draft.janelaInicioVisitas}
+                                onChange={(v) => set({ janelaInicioVisitas: v })}
+                            />
+                            <TimeInput
+                                label="Fim da janela"
+                                value={draft.janelaFimVisitas}
+                                onChange={(v) => set({ janelaFimVisitas: v })}
                             />
                         </div>
                     </section>

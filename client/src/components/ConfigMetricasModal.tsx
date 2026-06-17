@@ -8,6 +8,8 @@ import { CONFIG_METRICAS_DEFAULT } from "@shared/const";
 interface FormState {
     raioPDV: number;
     minutosCurta: number;
+    janelaInicioVisitas: string;
+    janelaFimVisitas: string;
     // Diária
     limiteInicioTardio: string;
     alertaCurtasPerc: number;
@@ -30,6 +32,8 @@ interface FormState {
 const DEFAULT_FORM: FormState = {
     raioPDV:                CONFIG_METRICAS_DEFAULT.diaria.raioPDV,
     minutosCurta:           CONFIG_METRICAS_DEFAULT.diaria.minutosCurta,
+    janelaInicioVisitas:    CONFIG_METRICAS_DEFAULT.diaria.janelaInicioVisitas,
+    janelaFimVisitas:       CONFIG_METRICAS_DEFAULT.diaria.janelaFimVisitas,
     limiteInicioTardio:     CONFIG_METRICAS_DEFAULT.diaria.limiteInicioTardio,
     alertaCurtasPerc:       CONFIG_METRICAS_DEFAULT.diaria.alertaCurtasPerc,
     alertaCoberturaPerc:    CONFIG_METRICAS_DEFAULT.diaria.alertaCoberturaPerc,
@@ -69,6 +73,14 @@ const SECOES: { title: string; color: string; fields: FieldDef[] }[] = [
         ],
     },
     {
+        title: "Janela de Visitas",
+        color: "sky",
+        fields: [
+            { key: "janelaInicioVisitas", label: "Início da janela", hint: "Visitas que iniciam antes deste horário são ignoradas em todas as métricas", type: "time" },
+            { key: "janelaFimVisitas",    label: "Fim da janela",    hint: "Visitas que iniciam após este horário são ignoradas em todas as métricas",   type: "time" },
+        ],
+    },
+    {
         title: "Análise Diária",
         color: "indigo",
         fields: [
@@ -99,11 +111,13 @@ const SECOES: { title: string; color: string; fields: FieldDef[] }[] = [
 
 const SECTION_COLORS: Record<string, string> = {
     slate:  "bg-slate-50  dark:bg-slate-800/30 border-slate-200  dark:border-slate-700",
+    sky:    "bg-sky-50    dark:bg-sky-900/20    border-sky-200    dark:border-sky-800/50",
     indigo: "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800/50",
     violet: "bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800/50",
 };
 const SECTION_TITLE_COLORS: Record<string, string> = {
     slate:  "text-slate-500  dark:text-slate-400",
+    sky:    "text-sky-600    dark:text-sky-400",
     indigo: "text-indigo-600 dark:text-indigo-400",
     violet: "text-violet-600 dark:text-violet-400",
 };
@@ -123,6 +137,8 @@ export function ConfigMetricasModal({ open, onClose }: Props) {
         setForm({
             raioPDV:                saved.diaria.raioPDV,
             minutosCurta:           saved.diaria.minutosCurta,
+            janelaInicioVisitas:    saved.diaria.janelaInicioVisitas,
+            janelaFimVisitas:       saved.diaria.janelaFimVisitas,
             limiteInicioTardio:     saved.diaria.limiteInicioTardio,
             alertaCurtasPerc:       saved.diaria.alertaCurtasPerc,
             alertaCoberturaPerc:    saved.diaria.alertaCoberturaPerc,

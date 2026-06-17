@@ -10,6 +10,8 @@ export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
 export interface ConfigCalcBase {
     raioPDV: number;      // metros — raio para considerar visita dentro do PDV
     minutosCurta: number; // duração < X min = relâmpago
+    janelaInicioVisitas: string; // "HH:MM" — visitas que iniciam antes disso são ignoradas
+    janelaFimVisitas:    string; // "HH:MM" — visitas que iniciam após disso são ignoradas
 }
 
 // ---------------------------------------------------------------------------
@@ -54,16 +56,20 @@ export interface ConfigMetricas {
 // ---------------------------------------------------------------------------
 export const CONFIG_METRICAS_DEFAULT: ConfigMetricas = {
     diaria: {
-        raioPDV:             300,
-        minutosCurta:        3,
-        limiteInicioTardio:  "08:45",
-        alertaCurtasPerc:    10,
-        alertaCoberturaPerc: 100,
-        alertaTardePerc:     25,
+        raioPDV:                300,
+        minutosCurta:           3,
+        janelaInicioVisitas:    "07:00",
+        janelaFimVisitas:       "17:00",
+        limiteInicioTardio:     "08:45",
+        alertaCurtasPerc:       10,
+        alertaCoberturaPerc:    100,
+        alertaTardePerc:        25,
     },
     recorrencia: {
-        raioPDV:             300,
-        minutosCurta:        3,
+        raioPDV:                300,
+        minutosCurta:           3,
+        janelaInicioVisitas:    "07:00",
+        janelaFimVisitas:       "17:00",
         limiteInicioTardio:  "09:30", // mais tolerante que a análise diária
         alertaCurtasPerc:    10,
         alertaCoberturaPerc: 100,

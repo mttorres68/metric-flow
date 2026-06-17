@@ -6,6 +6,8 @@
  * usando @media print para gerar o PDF.
  */
 
+import { dedupRotaPorGA } from "@shared/rotaKpis";
+
 export interface RotaPdfRow {
   rev?: string;
   gaId?: string;
@@ -65,22 +67,10 @@ export function exportarPDF(
     {} as Record<string, RotaPdfRow[]>
   );
 
+  // Dedup unificado (shared/rotaKpis) — mesma regra do dashboard e do PDF servidor
   const groupedData: Record<string, RotaPdfRow[]> = {};
   for (const [rev, rows] of Object.entries(rawGrouped)) {
-    // Agrupa por gaId+data e mantém o de maior pdvsVis
-    const byGaDay: Record<string, RotaPdfRow[]> = {};
-    rows.forEach(r => {
-      const key = `${r.gaId || ""}__${r.data || ""}`;
-      if (!byGaDay[key]) byGaDay[key] = [];
-      byGaDay[key].push(r);
-    });
-    groupedData[rev] = Object.values(byGaDay).map(entries =>
-      entries.length === 1
-        ? entries[0]
-        : entries.reduce((best, cur) =>
-            (cur.pdvsVis ?? 0) >= (best.pdvsVis ?? 0) ? cur : best
-          )
-    );
+    groupedData[rev] = dedupRotaPorGA(rows);
   }
 
   let tablesHtml = "";

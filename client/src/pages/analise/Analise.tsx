@@ -12,7 +12,7 @@ import { generateWordReport } from "@/lib/wordGenerator";
 import { useTheme } from "@/contexts/ThemeContext";
 
 import { ColumnsSelector } from "./components/ColumnsSelector";
-import { FilterSelect, FilterDate } from "./components/FilterControls";
+import { FilterSelect, DateNavFilter } from "./components/FilterControls";
 import { EnviarWAModal } from "./components/EnviarWAModal";
 import { DiariaView } from "./views/DiariaView";
 
@@ -381,8 +381,11 @@ export default function Analise() {
                                 placeholder="Todos"
                                 options={vendedoresList.map(v => ({ value: String(v.id), label: v.nome }))}
                             />
-                            <FilterDate label="Data Início" value={filtros.dataInicio ?? ""} onChange={v => setFiltro("dataInicio", v || undefined)} />
-                            <FilterDate label="Data Fim" value={filtros.dataFim ?? ""} onChange={v => setFiltro("dataFim", v || undefined)} />
+                            <DateNavFilter
+                                dataInicio={filtros.dataInicio ?? ""}
+                                dataFim={filtros.dataFim ?? ""}
+                                onChange={(inicio, fim) => setFiltrosMulti({ dataInicio: inicio || undefined, dataFim: fim || undefined })}
+                            />
                             {temFiltro && (
                                 <button onClick={resetFiltros}
                                     className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all font-semibold">
@@ -398,7 +401,7 @@ export default function Analise() {
                                 { label: "Vendedores", value: totais.vendedores, color: "text-slate-700 dark:text-slate-200", icon: <BarChart3 size={16} className="text-indigo-400" /> },
                                 { label: "PDVs Visitados", value: totais.pdvs, sub: totais.pdvs_total, color: "text-slate-700 dark:text-slate-200", icon: <TrendingUp size={16} className="text-green-400" /> },
                                 { label: "Pedidos Heishop", value: totais.heishop, color: "text-amber-600", icon: <AlertTriangle size={16} className="text-amber-400" /> },
-                                { label: "Relâmpago médio", value: pct(totais.relampago_avg), color: totais.relampago_avg > 20 ? "text-red-600" : "text-green-600", icon: <TrendingDown size={16} className="text-red-400" /> },
+                                { label: "Relâmpago médio", value: pct(totais.relampago_avg), color: totais.relampago_avg > 10 ? "text-red-600" : "text-green-600", icon: <TrendingDown size={16} className="text-red-400" /> },
                                 { label: "IV médio", value: pct(totais.iv_avg), color: "text-indigo-600", icon: <Clock size={16} className="text-indigo-400" /> },
                             ].map(k => (
                                 <div key={k.label} className="bg-white dark:bg-[var(--card)] rounded-xl border border-slate-100 dark:border-[var(--border)] px-4 py-3 flex items-center gap-3"
