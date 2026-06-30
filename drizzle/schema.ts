@@ -338,6 +338,29 @@ export type MetricasConfig = typeof metricasConfig.$inferSelect;
 export type InsertMetricasConfig = typeof metricasConfig.$inferInsert;
 
 // ---------------------------------------------------------------------------
+// Análise Diária — flags de ocorrência por vendedor × dia
+// Persistidas ao marcar "Desl." (início tardio) ou "Prob." (pathtracker).
+// ---------------------------------------------------------------------------
+export const analiseFlagsDiarias = pgTable(
+  "analise_flags_diarias",
+  {
+    id: serial("id").primaryKey(),
+    revenda: varchar("revenda", { length: 120 }).notNull(),
+    vendedor: varchar("vendedor", { length: 20 }).notNull(),
+    data: varchar("data", { length: 10 }).notNull(), // YYYY-MM-DD
+    deslocamento: boolean("deslocamento").notNull().default(false),
+    problema: boolean("problema").notNull().default(false),
+    naoIniciouRota: boolean("naoIniciouRota").notNull().default(false),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  (t) => [unique("uq_analise_flag_diaria").on(t.revenda, t.vendedor, t.data)],
+);
+
+export type AnaliseFlagDiaria = typeof analiseFlagsDiarias.$inferSelect;
+export type InsertAnaliseFlagDiaria = typeof analiseFlagsDiarias.$inferInsert;
+
+// ---------------------------------------------------------------------------
 // PathTracker — lookup de PDVs / clientes visitados
 // ---------------------------------------------------------------------------
 export const pathtrackerClientes = pgTable("pathtracker_clientes", {
@@ -391,9 +414,9 @@ export const pathtrackerVisitas = pgTable(
     dataColeta: timestamp("dataColeta"),
     sequenciaErp: integer("sequenciaErp"),
     sequenciaPt: integer("sequenciaPt"),
-    distanciaPdv: numeric("distanciaPdv", { precision: 8, scale: 2 }),
-    distanciaRota: numeric("distanciaRota", { precision: 8, scale: 2 }),
-    velocidadeMedia: numeric("velocidadeMedia", { precision: 8, scale: 2 }),
+    distanciaPdv: numeric("distanciaPdv", { precision: 12, scale: 2 }),
+    distanciaRota: numeric("distanciaRota", { precision: 12, scale: 2 }),
+    velocidadeMedia: numeric("velocidadeMedia", { precision: 12, scale: 2 }),
     tempoPercorrido: varchar("tempoPercorrido", { length: 10 }),
     horaInicio: time("horaInicio"),
     horaFim: time("horaFim"),
@@ -424,3 +447,46 @@ export const pathtrackerVisitas = pgTable(
 
 export type PathtrackerVisita = typeof pathtrackerVisitas.$inferSelect;
 export type InsertPathtrackerVisita = typeof pathtrackerVisitas.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Agenda GA — códigos disponíveis por revenda (tabela de referência)
+// Cada revenda tem vários codes (ex: FL004, FL005, FLGV).
+// ---------------------------------------------------------------------------
+export const gasCode = pgTable(
+  "gas_code",
+  {
+    id: serial("id").primaryKey(),
+    revenda: varchar("revenda", { length: 120 }).notNull(),
+    code: varchar("code", { length: 20 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => [unique("uq_gas_code").on(t.revenda, t.code)],
+);
+
+export type GasCode = typeof gasCode.$inferSelect;
+export type InsertGasCode = typeof gasCode.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Agenda GA — entradas de agenda semanal por code × dia
+// Geradas pelo form: uma linha por dia útil (Seg–Sab) por code × semana.
+// ---------------------------------------------------------------------------
+export const agendaGa = pgTable(
+  "agenda_ga",
+  {
+    id: serial("id").primaryKey(),
+    revenda: varchar("revenda", { length: 120 }).notNull(),
+    semanaInicio: varchar("semanaInicio", { length: 10 }).notNull(), // YYYY-MM-DD (segunda-feira)
+    code: varchar("code", { length: 20 }).notNull(),
+    data: varchar("data", { length: 10 }).notNull(), // YYYY-MM-DD
+    diaSemana: varchar("diaSemana", { length: 10 }).notNull(), // Seg, Ter, Qua, Qui, Sex, Sab
+    atividade: varchar("atividade", { length: 100 }).notNull().default("Outra Atividade"),
+    vendedor: varchar("vendedor", { length: 100 }),
+    descricao: text("descricao"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  (t) => [unique("uq_agenda_ga").on(t.semanaInicio, t.code, t.data)],
+);
+
+export type AgendaGa = typeof agendaGa.$inferSelect;
+export type InsertAgendaGa = typeof agendaGa.$inferInsert;

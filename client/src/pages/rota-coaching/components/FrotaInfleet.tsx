@@ -1,4 +1,4 @@
-import { fmtMin } from "./types";
+import { fmtMin } from "../lib/types";
 import React from "react";
 
 interface Veiculo {

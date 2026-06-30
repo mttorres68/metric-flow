@@ -30,6 +30,28 @@ export const automacaoRouter = router({
     }
   }),
 
+  /** Executa apenas o rota_coaching.py para uma data (sem baixar PathTracker) */
+  runRotaCoaching: publicProcedure
+    .input(z.object({
+      data: z.string(), // yyyy-mm-dd
+    }))
+    .mutation(async ({ input }) => {
+      const url = getApiUrl();
+      const res = await fetch(`${url}/rota-coaching/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: input.data }),
+        signal: AbortSignal.timeout(3 * 60 * 1000), // 3 min timeout
+      });
+
+      const resultado = await res.json() as Record<string, unknown>;
+      if (!res.ok) {
+        const msg = (resultado.erro ?? resultado.error ?? "Erro desconhecido") as string;
+        throw new Error(msg);
+      }
+      return resultado;
+    }),
+
   /** Executa o pipeline para uma data ou intervalo */
   run: publicProcedure
     .input(z.object({

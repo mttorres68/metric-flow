@@ -1,5 +1,5 @@
 import { MapPin } from "lucide-react";
-import { MapPonto, RotaRow } from "./types";
+import { MapPonto, RotaRow } from "../lib/types";
 import { RotaMap } from "./RotaMap";
 
 interface Props {

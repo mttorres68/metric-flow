@@ -194,6 +194,15 @@ export function DiariaView({
                                                             />
                                                             <span className="text-[10px] text-red-700 dark:text-red-400">Prob.</span>
                                                         </label>
+                                                        <label className="flex items-center gap-1 cursor-pointer select-none whitespace-nowrap">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="accent-slate-500 w-3 h-3 shrink-0"
+                                                                checked={!!(checkboxState[rev]?.[String(r.vendedor)]?.nao_iniciou_rota)}
+                                                                onChange={() => onToggleCheck(rev, r.vendedor, "nao_iniciou_rota")}
+                                                            />
+                                                            <span className="text-[10px] text-slate-600 dark:text-slate-400">ÑIR</span>
+                                                        </label>
                                                     </div>
                                                 </Td>
                                                 {col("data") && <Td mono className="text-slate-500 dark:text-slate-400">{r.data}</Td>}

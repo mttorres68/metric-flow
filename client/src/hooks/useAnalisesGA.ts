@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { useCallback, useEffect, useState } from "react";
-import { ANALISES_GA_KEY } from "@/components/rota-coaching/types";
+import { ANALISES_GA_KEY } from "@/pages/rota-coaching/lib/types";
 
 function carregarAnalisesGA(): Record<string, string> {
     try { return JSON.parse(localStorage.getItem(ANALISES_GA_KEY) || "{}"); }

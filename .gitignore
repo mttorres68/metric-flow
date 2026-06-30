@@ -124,3 +124,5 @@ Analise_Clusters_Assessment.docx
 evolution-api/* 
 
 metricflow_backup_*.sql
+.env
+

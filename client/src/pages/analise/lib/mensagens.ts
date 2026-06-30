@@ -6,12 +6,11 @@ function listSetores(codigos: string[]): string {
 }
 
 export function buildMensagensHTML(vendState: Record<string, AcaoVendState>): string {
-    const problemas = Object.entries(vendState)
-        .filter(([, v]) => v.problema).map(([k]) => k)
-        .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
-    const deslocamentos = Object.entries(vendState)
-        .filter(([, v]) => v.deslocamento).map(([k]) => k)
-        .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
+    const sort = (arr: string[]) => arr.sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
+
+    const problemas      = sort(Object.entries(vendState).filter(([, v]) => v.problema).map(([k]) => k));
+    const deslocamentos  = sort(Object.entries(vendState).filter(([, v]) => v.deslocamento).map(([k]) => k));
+    const naoIniciou     = sort(Object.entries(vendState).filter(([, v]) => v.nao_iniciou_rota).map(([k]) => k));
 
     const msgs: string[] = [];
 
@@ -24,6 +23,11 @@ export function buildMensagensHTML(vendState: Record<string, AcaoVendState>): st
         msgs.push(`<p>O setor ${deslocamentos[0]} realizou deslocamento extenso até o primeiro PDV.</p>`);
     else if (deslocamentos.length > 1)
         msgs.push(`<p>Os setores ${listSetores(deslocamentos)} realizaram deslocamento extenso até o primeiro PDV.</p>`);
+
+    if (naoIniciou.length === 1)
+        msgs.push(`<p>O setor ${naoIniciou[0]} não iniciou rota.</p>`);
+    else if (naoIniciou.length > 1)
+        msgs.push(`<p>Os setores ${listSetores(naoIniciou)} não iniciaram rota.</p>`);
 
     return msgs.join("");
 }

@@ -47,17 +47,42 @@ export default function Analise() {
     const [checkboxState, setCheckboxState] = useState<Record<string, Record<string, AcaoVendState>>>({});
     const editorRefs = useRef<Map<string, EditorAnaliseHandle>>(new Map());
 
+    const salvarFlagMutation = trpc.analise.salvarFlag.useMutation();
+
+    const { data: flagsCarregadas } = trpc.analise.listarFlagsDia.useQuery(
+        { data: filtros.dataInicio ?? "", revenda: filtros.revenda },
+        { enabled: !!filtros.dataInicio, staleTime: 60_000 },
+    );
+
+    useEffect(() => {
+        if (!flagsCarregadas) return;
+        const novo: Record<string, Record<string, AcaoVendState>> = {};
+        for (const f of flagsCarregadas) {
+            novo[f.revenda] ??= {};
+            novo[f.revenda][f.vendedor] = { deslocamento: f.deslocamento, problema: f.problema, nao_iniciou_rota: f.naoIniciouRota };
+        }
+        setCheckboxState(novo);
+    }, [flagsCarregadas]);
+
     const toggleCheck = useCallback((rev: string, vendedor: string | number, tipo: AcaoTipo) => {
         const prevRevState = checkboxState[rev] ?? {};
-        const prevVend = prevRevState[String(vendedor)] ?? { deslocamento: false, problema: false };
-        const newRevState = {
-            ...prevRevState,
-            [String(vendedor)]: { ...prevVend, [tipo]: !prevVend[tipo] },
-        };
+        const prevVend = prevRevState[String(vendedor)] ?? { deslocamento: false, problema: false, nao_iniciou_rota: false };
+        const novoVend = { ...prevVend, [tipo]: !prevVend[tipo] };
+        const newRevState = { ...prevRevState, [String(vendedor)]: novoVend };
         setCheckboxState(prev => ({ ...prev, [rev]: newRevState }));
         const mensagens = buildMensagensHTML(newRevState);
         editorRefs.current.get(rev)?.setGeneratedContent(mensagens);
-    }, [checkboxState]);
+        if (filtros.dataInicio) {
+            salvarFlagMutation.mutate({
+                revenda: rev,
+                vendedor: String(vendedor),
+                data: filtros.dataInicio,
+                deslocamento: novoVend.deslocamento,
+                problema: novoVend.problema,
+                naoIniciouRota: novoVend.nao_iniciou_rota,
+            });
+        }
+    }, [checkboxState, filtros.dataInicio, salvarFlagMutation]);
 
     useEffect(() => {
         const revenda = sessionStorage.getItem(SCROLL_TO_REVENDA_KEY);

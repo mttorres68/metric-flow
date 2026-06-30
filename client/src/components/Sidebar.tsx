@@ -24,6 +24,7 @@ import {
   Sun,
   Trello,
   TrendingUp,
+  Trophy,
   UsersRound,
 } from "lucide-react";
 import { useState } from "react";
@@ -63,7 +64,16 @@ const navItems: NavItemDef[] = [
   { id: "clientes",         label: "Clientes",      icon: UsersRound,        route: "/clientes" },
   { id: "relatorio",        label: "Relatórios",    icon: BarChart2,         route: "/relatorio" },
   { id: "relatorio_semanal",label: "Rel. Semanal",  icon: BarChartHorizontal,route: "/relatorio-semanal" },
-  { id: "rota_coaching",    label: "Rota Coaching", icon: Map,               route: "/rota-coaching" },
+  {
+    id: "rota_coaching",
+    label: "Rota Coaching",
+    icon: Map,
+    children: [
+      { id: "rota_coaching",       label: "Rota Coaching", route: "/rota-coaching" },
+      { id: "app_campeao",         label: "App Campeão",   route: "/rota-coaching/app-campeao" },
+      { id: "agenda_ga_coaching",  label: "Agenda GA",     route: "/rota-coaching/agenda-ga" },
+    ],
+  },
   {
     id: "analises",
     label: "Análise",

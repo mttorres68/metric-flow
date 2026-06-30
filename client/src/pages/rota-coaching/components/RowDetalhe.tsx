@@ -1,4 +1,4 @@
-import { RotaRow } from "./types";
+import { RotaRow } from "../lib/types";
 import { GeoDetalhesTabela } from "./GeoDetalhesTabela";
 
 interface Props {

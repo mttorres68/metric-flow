@@ -10,7 +10,9 @@ import VendedorDetalhes from "./pages/VendedorDetalhes";
 import Compliance from "./pages/Compliance";
 import Clientes from "./pages/Clientes";
 import Relatorio from "./pages/Relatorio";
-import RotaCoaching from "./pages/RotaCoaching";
+import RotaCoaching from "./pages/rota-coaching/RotaCoaching";
+import AppCampeao from "./pages/rota-coaching/AppCampeao";
+import AgendaGA from "./pages/rota-coaching/AgendaGA";
 import RelatorioSemanal from "./pages/RelatorioSemanal";
 import Analise from "./pages/Analise";
 import AnaliseSemanal from "./pages/analise/AnaliseSemanal";
@@ -34,6 +36,8 @@ function Router() {
       <Route path="/clientes" component={Clientes} />
       <Route path="/relatorio" component={Relatorio} />
       <Route path="/rota-coaching" component={RotaCoaching} />
+      <Route path="/rota-coaching/app-campeao" component={AppCampeao} />
+      <Route path="/rota-coaching/agenda-ga" component={AgendaGA} />
       <Route path="/relatorio-semanal" component={RelatorioSemanal} />
       <Route path="/analises" component={Analise} />
       <Route path="/analises/semanal" component={AnaliseSemanal} />

@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { RotaRow, STATUS_COLORS } from "./types";
+import { RotaRow, STATUS_COLORS } from "../lib/types";
 import { RowDetalhe } from "./RowDetalhe";
 
 interface Props {
@@ -73,14 +73,14 @@ export function ConformidadeTabela({ tabelaFiltrada, expandedRows, toggleRow, ma
                                             <span className={pc}>{row.gaVis}</span>
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            <span className={`text-xl tabular-nums ${row.agendado ? pc : "text-slate-300 dark:text-slate-600"}`} style={{ fontWeight: 800 }}>
-                                                {row.agendado ? `${row.pctGA}%` : "—"}
+                                            <span className={`text-xl tabular-nums ${row.pctGA != null ? pc : "text-slate-300 dark:text-slate-600"}`} style={{ fontWeight: 800 }}>
+                                                {row.pctGA != null ? `${row.pctGA}%` : "—"}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <span className="text-sm tabular-nums text-slate-500 dark:text-slate-400" style={{ fontWeight: 700 }}
                                                 title="Cobertura: PDVs visitados pelo vendedor que o GA acompanhou">
-                                                {row.agendado && row.pctCob != null ? `${row.pctCob}%` : "—"}
+                                                {row.pctCob != null ? `${row.pctCob}%` : "—"}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">

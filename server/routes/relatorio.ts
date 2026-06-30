@@ -158,10 +158,11 @@ async function gerarPDFsParaData(
       const registrosData = (coachingAll as any[]).filter((r) => {
         if (!r?.revenda || !r?.data) return false;
         const nomeR = String(r.revenda).toLowerCase();
-        const matchRevenda = nomeCoaching
-          ? nomeR === nomeCoaching
-          : nomeR === revenda.toLowerCase();
-        return matchRevenda && r.data === data;
+        const alvo = nomeCoaching ?? revenda.toLowerCase();
+        // Aceita prefixo: "duttra fl" bate "duttra flo", "duttra fl", etc.
+        const matchRevenda = nomeR === alvo || nomeR.startsWith(alvo) || alvo.startsWith(nomeR);
+        const dataR = String(r.data).substring(0, 10);
+        return matchRevenda && dataR === data;
       });
 
       // KPIs unificados (shared/rotaKpis): dedup por GA/dia/revenda + taxa ponderada —

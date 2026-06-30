@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPonto } from "./types";
+import { MapPonto } from "../lib/types";
 
 export function RotaMap({ pontos, gaId }: { pontos: MapPonto[]; gaId: string }) {
     const mapRef = React.useRef<HTMLDivElement>(null);

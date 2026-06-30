@@ -31,7 +31,7 @@ export async function loadRotaCoachingFromDatabase(dateStart?: string, dateEnd?:
         gaId: r.gaId,
         vendedor_agenda: r.vendedorAgenda ?? r.vendedorId,
         vendId: r.vendedorId,
-        data: r.data,
+        data: (() => { const d = r.data as unknown; return d instanceof Date ? d.toISOString().substring(0, 10) : String(d ?? "").substring(0, 10); })(),
         atividade: r.atividade,
         tipo_atividade: r.tipoAtividade,
         fonte: r.fonte,

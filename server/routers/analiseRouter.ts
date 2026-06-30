@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { publicProcedure, router } from "../_core/trpc";
 import { getVisitasData } from "../services/dataCache";
 import { getDb } from "../db";
-import { analiseRecorrencia } from "../../drizzle/schema";
+import { analiseRecorrencia, analiseFlagsDiarias } from "../../drizzle/schema";
 import { ENV } from "../_core/env";
 import { getConfigMetricas } from "../services/configService";
 import {
@@ -102,17 +102,15 @@ export const analiseRouter = router({
             const modelo  = process.env.LLM_MODEL_INSIGHT ?? "claude-sonnet-4-6";
             const sistema =
                 "Você é um analista de força de vendas. Recebe o mapeamento semanal de recorrências " +
-                "de vendedores de uma revenda e deve escrever uma análise objetiva em português do Brasil.\n\n" +
+                "de setores de uma revenda e deve escrever uma análise objetiva em português do Brasil.\n\n" +
                 "REGRAS DE FORMATAÇÃO — siga exatamente:\n" +
                 "• Use APENAS estas tags HTML: <p>, <ul>, <li>, <strong>\n" +
                 "• PROIBIDO: <table>, <style>, <script>, <h1>, <h2>, <div>, <span>, <br>, " +
                 "atributos class=, style=, id= ou qualquer outro atributo HTML\n" +
                 "• NÃO inclua boilerplate (<html>, <head>, <body>)\n" +
                 "• Responda SOMENTE com o fragmento HTML da análise, sem texto fora das tags\n\n" +
-                "ESTRUTURA (três partes obrigatórias):\n" +
+                "ESTRUTURA (parte obrigatória):\n" +
                 "1) <p><strong>Destaques gerais</strong></p> — resumo dos padrões da semana\n" +
-                "2) <p><strong>Vendedores críticos</strong></p> + <ul><li>...</li></ul> por vendedor\n" +
-                "3) <p><strong>Plano de ação</strong></p> — ações práticas e diretas\n\n" +
                 "Seja conciso. NÃO invente dados além dos fornecidos.";
 
             const resp = await fetch("https://api.anthropic.com/v1/messages", {
@@ -173,6 +171,57 @@ export const analiseRouter = router({
             const db = await getDb();
             if (!db) return [];
             return db.select().from(analiseRecorrencia).where(eq(analiseRecorrencia.semanaInicio, input.semanaInicio));
+        }),
+
+    // ── Flags diárias (deslocamento / problema) ──────────────────────────────
+
+    salvarFlag: publicProcedure
+        .input(z.object({
+            revenda:       z.string(),
+            vendedor:      z.string(),
+            data:          z.string(),
+            deslocamento:  z.boolean(),
+            problema:      z.boolean(),
+            naoIniciouRota: z.boolean(),
+        }))
+        .mutation(async ({ input }) => {
+            const db = await getDb();
+            if (!db) throw new Error("Banco de dados indisponível.");
+
+            const existing = await db
+                .select({ id: analiseFlagsDiarias.id })
+                .from(analiseFlagsDiarias)
+                .where(and(
+                    eq(analiseFlagsDiarias.revenda, input.revenda),
+                    eq(analiseFlagsDiarias.vendedor, input.vendedor),
+                    eq(analiseFlagsDiarias.data, input.data),
+                ))
+                .limit(1);
+
+            if (existing.length > 0) {
+                await db.update(analiseFlagsDiarias)
+                    .set({ deslocamento: input.deslocamento, problema: input.problema, naoIniciouRota: input.naoIniciouRota, updatedAt: new Date() })
+                    .where(eq(analiseFlagsDiarias.id, existing[0].id));
+            } else {
+                await db.insert(analiseFlagsDiarias).values(input);
+            }
+
+            return { ok: true } as const;
+        }),
+
+    listarFlagsDia: publicProcedure
+        .input(z.object({ data: z.string(), revenda: z.string().optional() }))
+        .query(async ({ input }) => {
+            const db = await getDb();
+            if (!db) return [];
+
+            const conds = [eq(analiseFlagsDiarias.data, input.data)];
+            if (input.revenda) conds.push(eq(analiseFlagsDiarias.revenda, input.revenda));
+
+            return db
+                .select()
+                .from(analiseFlagsDiarias)
+                .where(and(...conds));
         }),
 
     getVisitasDoDia: publicProcedure
