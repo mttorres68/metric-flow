@@ -10,7 +10,12 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const connectionString = process.env.DATABASE_URL;
+      const isRemote = connectionString && !connectionString.includes("localhost") && !connectionString.includes("127.0.0.1");
+      const pool = new Pool({
+        connectionString,
+        ...(isRemote ? { ssl: { rejectUnauthorized: false } } : {}),
+      });
       _db = drizzle(pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);

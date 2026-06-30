@@ -2,7 +2,7 @@
 id: p0-005
 title: Subir o backend no VPS
 priority: p0
-status: open
+status: closed
 fase: 2-backend
 dependencias: p0-004
 ---

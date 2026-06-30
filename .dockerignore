@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+.env.*
+*.sql
+*.tar.gz
+*.xlsx
+*.pdf
+client
+task
+.git
+.github
+.claude
+coverage

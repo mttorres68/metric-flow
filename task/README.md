@@ -21,10 +21,10 @@
 | ID | Task | Status |
 |---|---|---|
 | [p0-001](p0-001-rotacionar-segredos.md) | Rotacionar segredos expostos no repositório | open |
-| [p0-002](p0-002-criar-projeto-supabase.md) | Criar projeto no Supabase e obter connection string | open |
-| [p0-003](p0-003-importar-dump-supabase.md) | Importar dump do banco no Supabase | open |
-| [p0-004](p0-004-validar-conexao-supabase.md) | Validar conexão e dados no Supabase | open |
-| [p0-005](p0-005-deploy-backend-vps.md) | Subir o backend no VPS | open |
+| [p0-002](p0-002-criar-projeto-supabase.md) | Criar projeto no Supabase e obter connection string | closed |
+| [p0-003](p0-003-importar-dump-supabase.md) | Importar dump do banco no Supabase | closed |
+| [p0-004](p0-004-validar-conexao-supabase.md) | Validar conexão e dados no Supabase | closed |
+| [p0-005](p0-005-deploy-backend-vps.md) | Subir o backend no VPS | closed |
 | [p0-006](p0-006-configurar-env-producao.md) | Preencher .env de produção no VPS | open |
 | [p0-007](p0-007-https-traefik-backend.md) | Configurar HTTPS no backend via Traefik | open |
 | [p0-008](p0-008-testar-endpoint-backend.md) | Testar endpoint do backend no VPS | open |
@@ -37,7 +37,7 @@
 
 | ID | Task | Status |
 |---|---|---|
-| [p1-001](p1-001-gerar-dump-atualizado.md) | Gerar dump atualizado do banco local | open |
+| [p1-001](p1-001-gerar-dump-atualizado.md) | Gerar dump atualizado do banco local | closed |
 | [p1-002](p1-002-verificar-automacoes-vps.md) | Verificar automações Python/n8n que alimentam arquivos no VPS | open |
 | [p1-003](p1-003-atualizar-urls-oauth.md) | Atualizar URLs de redirect/callback do OAuth | open |
 | [p1-004](p1-004-testar-modulos-ponta-a-ponta.md) | Testar os 6 módulos ponta a ponta em produção | open |
