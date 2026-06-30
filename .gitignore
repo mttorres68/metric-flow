@@ -126,3 +126,4 @@ evolution-api/*
 metricflow_backup_*.sql
 .env
 
+snapshot_estado_atual_20260630.tar.gz
