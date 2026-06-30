@@ -1,14 +1,48 @@
+# Dependências e build
 node_modules
 dist
+coverage
+
+# Variáveis de ambiente
 .env
 .env.*
+
+# Frontend (vai para Vercel)
+client
+vite.config.ts
+components.json
+
+# Arquivos pesados / backups
 *.sql
 *.tar.gz
 *.xlsx
 *.pdf
-client
-task
+*.docx
+*.py
+snapshot_*
+
+# Drizzle — só schema.ts e relations.ts são usados pelo server
+drizzle/migrations
+drizzle/meta
+drizzle.config.ts
+
+# Ferramentas de dev (não usadas no container)
 .git
 .github
 .claude
-coverage
+.vscode
+.manus-logs
+.prettierrc
+.prettierignore
+vitest.config.ts
+testCache.ts
+package-lock.json
+
+# Docs e scripts externos
+task
+docs
+script
+evolution-api
+PLANO_DEPLOY.md
+Code.gs
+checkpoint.json
