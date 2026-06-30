@@ -2,7 +2,7 @@
 id: p0-004
 title: Validar conexão e dados no Supabase
 priority: p0
-status: open
+status: closed
 fase: 1-banco
 dependencias: p0-003
 ---

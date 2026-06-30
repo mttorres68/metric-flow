@@ -2,7 +2,7 @@
 id: p0-003
 title: Importar dump do banco no Supabase
 priority: p0
-status: open
+status: closed
 fase: 1-banco
 dependencias: p0-002, p1-001
 ---

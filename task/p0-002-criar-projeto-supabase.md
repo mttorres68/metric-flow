@@ -2,7 +2,7 @@
 id: p0-002
 title: Criar projeto no Supabase e obter connection string
 priority: p0
-status: open
+status: closed
 fase: 1-banco
 ---
 

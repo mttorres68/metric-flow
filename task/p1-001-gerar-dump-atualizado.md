@@ -2,7 +2,7 @@
 id: p1-001
 title: Gerar dump atualizado do banco local
 priority: p1
-status: open
+status: closed
 fase: 1-banco
 ---
 
