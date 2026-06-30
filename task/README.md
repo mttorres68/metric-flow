@@ -29,7 +29,7 @@
 | [p0-007](p0-007-https-traefik-backend.md) | Configurar HTTPS no backend via Traefik | open |
 | [p0-008](p0-008-testar-endpoint-backend.md) | Testar endpoint do backend no VPS | open |
 | [p0-009](p0-009-importar-repo-vercel.md) | Importar repositório na Vercel | open |
-| [p0-010](p0-010-criar-vercel-json.md) | Criar vercel.json com rewrite de /api/* para o VPS | open |
+| [p0-010](p0-010-criar-vercel-json.md) | Criar vercel.json com rewrite de /api/* para o VPS | closed |
 | [p0-011](p0-011-configurar-variaveis-vercel.md) | Configurar variáveis VITE_* no painel da Vercel | open |
 | [p0-012](p0-012-deploy-frontend-vercel.md) | Executar deploy do frontend na Vercel | open |
 
@@ -47,7 +47,7 @@
 | ID | Task | Status |
 |---|---|---|
 | [p2-001](p2-001-apontar-dominio-definitivo.md) | Apontar domínio definitivo na Vercel | open |
-| [p2-002](p2-002-verificar-assets-estaticos.md) | Verificar assets estáticos em client/public/ | open |
+| [p2-002](p2-002-verificar-assets-estaticos.md) | Verificar assets estáticos em client/public/ | closed |
 
 ## P3 — Futuro
 

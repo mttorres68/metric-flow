@@ -2,7 +2,7 @@
 id: p0-010
 title: Criar vercel.json com rewrite de /api/* para o VPS
 priority: p0
-status: open
+status: closed
 fase: 3-frontend
 dependencias: p0-007
 ---

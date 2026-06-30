@@ -2,7 +2,7 @@
 id: p2-002
 title: Verificar assets estáticos em client/public/
 priority: p2
-status: open
+status: closed
 fase: 3-frontend
 ---
 
