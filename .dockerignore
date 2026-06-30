@@ -9,7 +9,6 @@ coverage
 
 # Frontend (vai para Vercel)
 client
-vite.config.ts
 components.json
 
 # Arquivos pesados / backups
