@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://BACKEND_URL/api/$1" }
+    { "source": "/api/(.*)", "destination": "https://apidf.avanteedu.com.br/api/$1" }
   ]
 }
