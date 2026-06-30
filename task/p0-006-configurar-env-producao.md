@@ -2,7 +2,7 @@
 id: p0-006
 title: Preencher .env de produção no VPS
 priority: p0
-status: open
+status: closed
 fase: 2-backend
 dependencias: p0-001, p0-002
 ---

@@ -1,24 +1,32 @@
+version: "3.8"
+
 services:
   metricflow-api:
     image: ghcr.io/${GITHUB_REPOSITORY}:latest
-    container_name: metricflow_api
-    restart: unless-stopped
     env_file:
-      - .env.prod
+      - /opt/metricflow/.env.prod
     volumes:
-      # Arquivos gerados pelas automações Python/n8n
       - /data/metricflow/coaching:/data/coaching:ro
       - /data/metricflow/pathtracker:/data/pathtracker:ro
       - /data/metricflow/relatorios:/data/relatorios
     networks:
-      - evolution-network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.metricflow.rule=Host(`${API_DOMAIN}`)"
-      - "traefik.http.routers.metricflow.entrypoints=websecure"
-      - "traefik.http.routers.metricflow.tls.certresolver=letsencrypt"
-      - "traefik.http.services.metricflow.loadbalancer.server.port=3000"
+      - minha_rede
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: any
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.metricflow.rule=Host(`${API_DOMAIN}`)"
+        - "traefik.http.routers.metricflow.entrypoints=websecure"
+        - "traefik.http.routers.metricflow.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.metricflow.loadbalancer.server.port=3000"
 
 networks:
-  evolution-network:
+  minha_rede:
     external: true
+    name: minha_rede

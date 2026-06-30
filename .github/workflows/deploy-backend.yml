@@ -36,23 +36,33 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}:latest
 
-      - name: Deploy no VPS via SSH
+      - name: Copiar docker-compose.prod.yml para o VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "docker-compose.prod.yml"
+          target: "/opt/metricflow"
+
+      - name: Deploy no VPS via Docker Swarm
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
           script: |
+            # Autentica no GHCR para o Swarm conseguir puxar a imagem
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Deploy via Swarm
             cd /opt/metricflow
-
-            # Faz pull da nova imagem
             GITHUB_REPOSITORY=${{ github.repository }} \
-            docker compose -f docker-compose.prod.yml pull
-
-            # Reinicia o container com a nova imagem
-            GITHUB_REPOSITORY=${{ github.repository }} \
-            docker compose -f docker-compose.prod.yml up -d
+            API_DOMAIN=${{ secrets.API_DOMAIN }} \
+            docker stack deploy \
+              -c docker-compose.prod.yml \
+              --with-registry-auth \
+              metricflow
 
             # Remove imagens antigas
             docker image prune -f
