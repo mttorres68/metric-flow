@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  metricflow-api:
+    image: ghcr.io/${GITHUB_REPOSITORY}:latest
+    env_file:
+      - /opt/metricflow/.env.prod
+    volumes:
+      - /data/metricflow/coaching:/data/coaching:ro
+      - /data/metricflow/pathtracker:/data/pathtracker:ro
+      - /data/metricflow/relatorios:/data/relatorios
+    networks:
+      - minha_rede
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: any
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.metricflow.rule=Host(`${API_DOMAIN}`)"
+        - "traefik.http.routers.metricflow.entrypoints=websecure"
+        - "traefik.http.routers.metricflow.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.metricflow.loadbalancer.server.port=3000"
+
+networks:
+  minha_rede:
+    external: true
+    name: minha_rede
