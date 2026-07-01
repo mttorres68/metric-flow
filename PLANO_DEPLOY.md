@@ -119,7 +119,7 @@ Todos os módulos têm um pé no backend; nenhum é "só frontend". Por isso o b
 3. Validar conexão (`psql` + uma query nas tabelas `analises`, `rota_coaching`).
 
 ### Fase 2 — Backend no VPS
-4. Subir o código no VPS (junto da Evolution). Recomendado: container Docker ou `pm2`/systemd com `npm run build` + `npm start`.
+4. Subir o código no VPS (junto da Evolution). Recomendado: container Docker `/systemd com `npm run build` + `npm start` - docker + github action.
 5. Preencher o `.env` de produção (ver seção 6) com `DATABASE_URL` do Supabase.
 6. Garantir HTTPS no backend (Traefik já está no seu stack da Evolution — adicionar um subdomínio, ex. `api.seudominio.com`, com certificado).
 7. Confirmar que os caminhos de arquivo (`COACHING_DATA_PATH`, `PT_DATABASE_PATH`, `TRELLO_REPORT_OUTPUT_PATH`) existem no VPS e que os arquivos/automações que os alimentam rodam lá.
