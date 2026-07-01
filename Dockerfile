@@ -16,6 +16,7 @@ RUN node_modules/.bin/esbuild server/_core/index.ts \
     --packages=external \
     --bundle \
     --format=esm \
+    --define:process.env.NODE_ENV='"production"' \
     --outdir=dist
 
 # Stage 2: imagem de produção com apenas deps de runtime
