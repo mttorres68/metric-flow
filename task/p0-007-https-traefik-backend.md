@@ -2,7 +2,7 @@
 id: p0-007
 title: Configurar HTTPS no backend via Traefik
 priority: p0
-status: open
+status: closed
 fase: 2-backend
 dependencias: p0-005
 ---

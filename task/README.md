@@ -26,8 +26,8 @@
 | [p0-004](p0-004-validar-conexao-supabase.md) | Validar conexão e dados no Supabase | closed |
 | [p0-005](p0-005-deploy-backend-vps.md) | Subir o backend no VPS | closed |
 | [p0-006](p0-006-configurar-env-producao.md) | Preencher .env de produção no VPS | closed |
-| [p0-007](p0-007-https-traefik-backend.md) | Configurar HTTPS no backend via Traefik | open |
-| [p0-008](p0-008-testar-endpoint-backend.md) | Testar endpoint do backend no VPS | open |
+| [p0-007](p0-007-https-traefik-backend.md) | Configurar HTTPS no backend via Traefik | closed |
+| [p0-008](p0-008-testar-endpoint-backend.md) | Testar endpoint do backend no VPS | closed |
 | [p0-009](p0-009-importar-repo-vercel.md) | Importar repositório na Vercel | open |
 | [p0-010](p0-010-criar-vercel-json.md) | Criar vercel.json com rewrite de /api/* para o VPS | closed |
 | [p0-011](p0-011-configurar-variaveis-vercel.md) | Configurar variáveis VITE_* no painel da Vercel | open |

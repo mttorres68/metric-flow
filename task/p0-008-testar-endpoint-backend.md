@@ -2,7 +2,7 @@
 id: p0-008
 title: Testar endpoint do backend no VPS
 priority: p0
-status: open
+status: closed
 fase: 2-backend
 dependencias: p0-007
 ---
