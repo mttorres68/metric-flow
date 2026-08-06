@@ -95,3 +95,37 @@ export const CONFIG_RECORRENCIA     = {
     tempoAtendMin: CONFIG_METRICAS_DEFAULT.recorrencia.tempoAtendMin,
     fimCedo:       CONFIG_METRICAS_DEFAULT.recorrencia.fimCedo,
 };
+
+// ---------------------------------------------------------------------------
+// Legendas das métricas — texto compartilhado entre o PDF de recorrência e a
+// tela de Comparativo de Scores, para não divergir a descrição em dois lugares.
+// ---------------------------------------------------------------------------
+export interface LegendaItem { label: string; desc: string }
+
+export const LEGENDA_REGRA_RECORRENCIA: LegendaItem = {
+    label: "Recorrente",
+    desc: "Flag marcada quando o problema aparece em ≥ 2 dias OU em ≥ 40% dos dias ativos do vendedor no período.",
+};
+
+export const LEGENDA_SCORE_CRITICO: LegendaItem = {
+    label: "Score Crítico",
+    desc: "Número de flags recorrentes do vendedor no período (0 a 7). Quanto maior, mais padrões críticos se repetiram.",
+};
+
+/** Descrição das 7 flags que compõem o Score Crítico (ociosidadeAlta fica de fora — ver recorrencia.ts). */
+export const LEGENDA_FLAGS_RECORRENCIA: LegendaItem[] = [
+    { label: "Relâmpago alto",        desc: "% de visitas dentro do raio com duração < 3 min acima de 10%." },
+    { label: "Início tardio",         desc: "Primeiro atendimento dentro do raio após 09:30." },
+    { label: "Cobertura/IV baixa",    desc: "Clientes visitados dentro do raio / total da carteira abaixo de 90%." },
+    { label: "Almoço acima do limite",desc: "Mais de 4 visitas registradas na janela 12:15–13:45." },
+    { label: "Pouca visita após 14h", desc: "% de visitas com início após 14h abaixo de 25%." },
+    { label: "Σ atendimento < 2h",    desc: "Soma do tempo dentro dos PDVs visitados inferior a 2 horas no dia." },
+    { label: "Finaliza cedo",         desc: "Último atendimento dentro do raio encerrado antes das 14:00." },
+];
+
+/** Descrição das 3 flags manuais marcadas pelo gestor na tela Diária (tabela analiseFlagsDiarias). */
+export const LEGENDA_FLAGS_DIARIAS: LegendaItem[] = [
+    { label: "Deslocamento",     desc: "Vendedor realizou deslocamento extenso até o primeiro PDV do dia." },
+    { label: "Problema",         desc: "Vendedor apresentou problema no PathTracker (falha de rastreamento) no dia." },
+    { label: "Não iniciou rota", desc: "Vendedor não iniciou a rota de visitas no dia." },
+];

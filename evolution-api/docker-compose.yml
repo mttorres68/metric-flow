@@ -31,7 +31,7 @@ services:
   # ── PostgreSQL ───────────────────────────────────────────────────────────────
   evolution_postgres:
     container_name: evolution_postgres
-    image: postgres:15
+    image: pgvector/pgvector:pg16
     restart: always
     command:
       - postgres
@@ -44,7 +44,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USERNAME}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - evolution_postgres:/var/lib/postgresql/data
+      - evolution_postgres_pg16:/var/lib/postgresql/data
     networks:
       - evolution-net
     ports:
@@ -67,7 +67,7 @@ services:
 # ─── Volumes persistentes ─────────────────────────────────────────────────────
 volumes:
   evolution_instances:
-  evolution_postgres:
+  evolution_postgres_pg16:
   evolution_redis:
 
 # ─── Rede interna ─────────────────────────────────────────────────────────────

@@ -322,6 +322,7 @@ export function RecorrenciaSemanal({ dataInicio, dataFim, revendaFiltro, setAnal
                                     <tr className="bg-green-950 text-slate-100">
                                         <th className="px-2 py-2 text-left text-[11px] font-bold uppercase tracking-wide align-bottom">Vend.</th>
                                         <th className="px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wide whitespace-nowrap align-bottom" title="Dias com operação (visitas dentro do raio)">Dias ativos</th>
+                                        <th className="px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wide align-bottom" title="Número de flags recorrentes do vendedor">Score</th>
                                         {flags.map(f => (
                                             <th key={f.id} title={f.label} className="px-2 py-2 text-center text-[11px] font-bold uppercase tracking-tight leading-tight align-bottom">
                                                 {FLAG_SHORT[f.id] ?? f.label}
@@ -334,6 +335,9 @@ export function RecorrenciaSemanal({ dataInicio, dataFim, revendaFiltro, setAnal
                                         <tr key={v.vendedor} className={`hover:bg-indigo-50/80 dark:hover:bg-indigo-900/20 ${i % 2 ? "bg-slate-50 dark:bg-slate-800/30" : ""}`}>
                                             <td className="px-1.5 py-2 font-mono font-bold text-indigo-600 dark:text-indigo-400 border-b border-slate-100 dark:border-slate-700/40">{v.vendedor}</td>
                                             <td className="px-1 py-2 text-center text-slate-600 dark:text-slate-300 border-b border-slate-100 dark:border-slate-700/40">{v.diasAtivos}</td>
+                                            <td className={`px-1 py-2 text-center font-bold border-b border-slate-100 dark:border-slate-700/40 ${v.scoreCritico > 0 ? "text-red-600 dark:text-red-400" : "text-slate-600 dark:text-slate-300"}`}>
+                                                {v.scoreCritico}
+                                            </td>
                                             {flags.map(f => {
                                                 const m = v.metricas[f.id];
                                                 return (

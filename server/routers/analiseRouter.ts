@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 import { publicProcedure, router } from "../_core/trpc";
 import { getVisitasData } from "../services/dataCache";
 import { getDb } from "../db";
@@ -9,6 +9,9 @@ import { getConfigMetricas } from "../services/configService";
 import {
     calcularAnalisePeriodo,
     computarRecorrenciaPeriodo,
+    computarComparativo,
+    computarComparativoFlags,
+    gerarPeriodos,
     FLAGS_RECORRENCIA,
     hmsToMin,
     minToHM,
@@ -66,6 +69,67 @@ export const analiseRouter = router({
             const datas    = [...new Set(visitas.map(v => v.data))].sort();
             const revendas = [...new Set(visitas.map(v => v.revenda))].sort();
             return { porRevenda, flags: FLAGS_RECORRENCIA, semana: { inicio: input.dataInicio, fim: input.dataFim }, datas, revendas };
+        }),
+
+    getComparativoScores: publicProcedure
+        .input(z.object({
+            granularidade: z.enum(["diario", "semanal", "mensal"]),
+            metrica:       z.enum(["scoreCritico", "flagsDiarias"]).default("scoreCritico"),
+            dataFim:       z.string().optional(),
+            quantidade:    z.number().min(2).max(24).default(6),
+            revenda:       z.string().optional(),
+        }))
+        .query(async ({ input }) => {
+            if (input.metrica === "flagsDiarias") {
+                const db = await getDb();
+                if (!db) {
+                    const dataFim = input.dataFim ?? new Date().toISOString().slice(0, 10);
+                    return {
+                        ...computarComparativoFlags([], input.granularidade, dataFim, input.quantidade),
+                        dataFimUsada: dataFim, dataMinDisponivel: null, dataMaxDisponivel: null,
+                    };
+                }
+
+                const condsExtremo = input.revenda ? [eq(analiseFlagsDiarias.revenda, input.revenda)] : [];
+                const [primeiro] = await db.select({ data: analiseFlagsDiarias.data }).from(analiseFlagsDiarias)
+                    .where(and(...condsExtremo)).orderBy(asc(analiseFlagsDiarias.data)).limit(1);
+                const [ultimo] = await db.select({ data: analiseFlagsDiarias.data }).from(analiseFlagsDiarias)
+                    .where(and(...condsExtremo)).orderBy(desc(analiseFlagsDiarias.data)).limit(1);
+
+                const dataFim = input.dataFim ?? ultimo?.data ?? new Date().toISOString().slice(0, 10);
+                const periodos = gerarPeriodos(input.granularidade, dataFim, input.quantidade);
+
+                const conds = [
+                    gte(analiseFlagsDiarias.data, periodos[0].inicio),
+                    lte(analiseFlagsDiarias.data, periodos[periodos.length - 1].fim),
+                    ...condsExtremo,
+                ];
+                const linhas = await db.select().from(analiseFlagsDiarias).where(and(...conds));
+
+                const resultado = computarComparativoFlags(linhas, input.granularidade, dataFim, input.quantidade);
+                return {
+                    ...resultado,
+                    dataFimUsada: dataFim,
+                    dataMinDisponivel: primeiro?.data ?? null,
+                    dataMaxDisponivel: ultimo?.data ?? null,
+                };
+            }
+
+            let visitas = await getVisitasData();
+            if (input.revenda) visitas = visitas.filter(v => v.revenda === input.revenda);
+
+            const datas = [...new Set(visitas.map(v => v.data))].sort();
+            const dataFim = input.dataFim ?? datas[datas.length - 1] ?? new Date().toISOString().slice(0, 10);
+
+            const cfg = await getConfigMetricas();
+            const resultado = computarComparativo(visitas, input.granularidade, dataFim, input.quantidade, cfg.recorrencia);
+
+            return {
+                ...resultado,
+                dataFimUsada: dataFim,
+                dataMinDisponivel: datas[0] ?? null,
+                dataMaxDisponivel: datas[datas.length - 1] ?? null,
+            };
         }),
 
     gerarInsightRecorrencia: publicProcedure

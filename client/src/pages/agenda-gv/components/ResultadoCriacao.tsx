@@ -4,7 +4,9 @@ export interface ResultadoRevenda {
   revenda: string;
   boardId: string;
   criados: number;
+  atualizados: number;
   erros: { nome: string; erro: string }[];
+  labelWarning?: string | null;
 }
 
 export function ResultadoCriacao({
@@ -15,6 +17,7 @@ export function ResultadoCriacao({
   onClose: () => void;
 }) {
   const totalCriados = resultados.reduce((s, r) => s + r.criados, 0);
+  const totalAtualizados = resultados.reduce((s, r) => s + r.atualizados, 0);
   const totalErros = resultados.reduce((s, r) => s + r.erros.length, 0);
   const tudo_ok = totalErros === 0;
 
@@ -26,7 +29,7 @@ export function ResultadoCriacao({
             {tudo_ok
               ? <CheckCircle2 className="w-5 h-5 text-green-500" />
               : <AlertCircle className="w-5 h-5 text-amber-500" />}
-            Resultado da criação
+            Resultado
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
             <X className="w-5 h-5" />
@@ -35,11 +38,17 @@ export function ResultadoCriacao({
 
         <div className="p-5 space-y-3">
           {/* Resumo */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid gap-3 ${totalAtualizados > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
             <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
               <p className="text-2xl font-bold text-green-600 dark:text-green-400">{totalCriados}</p>
               <p className="text-xs text-green-700 dark:text-green-300">cards criados</p>
             </div>
+            {totalAtualizados > 0 && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalAtualizados}</p>
+                <p className="text-xs text-blue-700 dark:text-blue-300">cards atualizados</p>
+              </div>
+            )}
             <div className={`rounded-xl p-3 text-center ${totalErros > 0 ? "bg-red-50 dark:bg-red-900/20" : "bg-slate-50 dark:bg-slate-900/20"}`}>
               <p className={`text-2xl font-bold ${totalErros > 0 ? "text-red-600 dark:text-red-400" : "text-slate-400"}`}>{totalErros}</p>
               <p className={`text-xs ${totalErros > 0 ? "text-red-700 dark:text-red-300" : "text-slate-400"}`}>erros</p>
@@ -52,7 +61,7 @@ export function ResultadoCriacao({
               <div key={r.revenda} className={`rounded-lg p-3 border ${
                 r.erros.length === 0
                   ? "border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10"
-                  : r.criados === 0
+                  : r.criados === 0 && r.atualizados === 0
                     ? "border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10"
                     : "border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10"
               }`}>
@@ -65,6 +74,7 @@ export function ResultadoCriacao({
                   </div>
                   <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                     <span>{r.criados} criados</span>
+                    {r.atualizados > 0 && <span className="text-blue-500">{r.atualizados} atualizados</span>}
                     {r.erros.length > 0 && <span className="text-red-500">{r.erros.length} erros</span>}
                     <a
                       href={`https://trello.com/b/${r.boardId}`}
@@ -85,6 +95,11 @@ export function ResultadoCriacao({
                       </p>
                     ))}
                   </div>
+                )}
+                {r.labelWarning && (
+                  <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                    ⚠ Etiqueta não aplicada: {r.labelWarning}
+                  </p>
                 )}
               </div>
             ))}

@@ -1,5 +1,5 @@
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, Loader2, Play, RotateCcw } from "lucide-react";
+import { AlertCircle, Loader2, Play, RefreshCw, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { AtividadeParsed } from "../lib/parser";
@@ -30,6 +30,7 @@ export function TabNovoCiclo() {
   const [criando, setCriando] = useState(false);
   const [resultados, setResultados] = useState<ResultadoRevenda[] | null>(null);
   const [revendasState, setRevendasState] = useState<Record<string, RevendaState>>({});
+  const [modo, setModo] = useState<"criar" | "atualizar">("criar");
 
   const { data: boards, isLoading: loadingBoards } = trpc.crm.getBoards.useQuery(undefined, { staleTime: 10 * 60 * 1000 });
   const { data: mapeamentoGlobal } = trpc.crm.getMapeamento.useQuery(undefined, { staleTime: 60_000 });
@@ -94,10 +95,18 @@ export function TabNovoCiclo() {
           atividades: atividadesPayload,
           mes,
           ano,
+          modo,
         });
-        resultList.push({ revenda: board.revenda, boardId: board.boardId, criados: res.criados, erros: res.erros });
+        resultList.push({
+          revenda: board.revenda,
+          boardId: board.boardId,
+          criados: res.criados,
+          atualizados: res.atualizados,
+          erros: res.erros,
+          labelWarning: res.labelWarning,
+        });
       } catch (e: any) {
-        resultList.push({ revenda: board.revenda, boardId: board.boardId, criados: 0, erros: [{ nome: "—", erro: e.message }] });
+        resultList.push({ revenda: board.revenda, boardId: board.boardId, criados: 0, atualizados: 0, erros: [{ nome: "—", erro: e.message }] });
       }
     }
 
@@ -105,11 +114,19 @@ export function TabNovoCiclo() {
     setResultados(resultList);
 
     const totalCriados = resultList.reduce((s, r) => s + r.criados, 0);
+    const totalAtualizados = resultList.reduce((s, r) => s + r.atualizados, 0);
     const totalErros = resultList.reduce((s, r) => s + r.erros.length, 0);
+    const totalLabelWarnings = resultList.filter((r) => r.labelWarning).length;
+    const resumo = modo === "atualizar"
+      ? `${totalAtualizados} cards atualizados, ${totalCriados} criados`
+      : `${totalCriados} cards criados`;
     if (totalErros === 0) {
-      toast.success(`${totalCriados} cards criados com sucesso!`);
+      toast.success(`${resumo} com sucesso!`);
     } else {
-      toast.warning(`${totalCriados} cards criados, ${totalErros} erros.`);
+      toast.warning(`${resumo}, ${totalErros} erros.`);
+    }
+    if (totalLabelWarnings > 0) {
+      toast.warning(`Etiqueta não aplicada em ${totalLabelWarnings} revenda(s). Veja detalhes no resultado.`);
     }
   }
 
@@ -159,6 +176,31 @@ export function TabNovoCiclo() {
             ))}
           </select>
         </div>
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Modo</label>
+          <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden text-sm">
+            <button
+              onClick={() => setModo("criar")}
+              className={`px-3 py-2 transition-colors ${
+                modo === "criar"
+                  ? "bg-indigo-500 text-white"
+                  : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+              }`}
+            >
+              Criar novos
+            </button>
+            <button
+              onClick={() => setModo("atualizar")}
+              className={`px-3 py-2 transition-colors ${
+                modo === "atualizar"
+                  ? "bg-indigo-500 text-white"
+                  : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+              }`}
+            >
+              Atualizar existentes
+            </button>
+          </div>
+        </div>
         {revendasComDados.length > 0 && (
           <div className="ml-auto flex items-center gap-2 mt-5">
             <button
@@ -175,6 +217,9 @@ export function TabNovoCiclo() {
       <p className="text-sm text-slate-500 dark:text-slate-400 -mt-2">
         Faça o upload da planilha preenchida de cada revenda.
         A lista "Agenda" do board será detectada automaticamente.
+        {modo === "atualizar"
+          ? " Cards já criados anteriormente (mesmo código de atividade) terão apenas nome, descrição e data atualizados — não serão duplicados."
+          : " Atividades já criadas antes serão duplicadas; use \"Atualizar existentes\" para evitar isso."}
       </p>
 
       {/* Cards de upload por revenda */}
@@ -204,7 +249,7 @@ export function TabNovoCiclo() {
               {revendasComDados.length} revenda(s) prontas
             </p>
             <p className="text-xs text-slate-400 dark:text-slate-500">
-              {revendasComDados.reduce((s, b) => s + (getRevendaState(b.revenda).atividades?.length ?? 0), 0)} cards serão criados em {MESES[mes - 1]} {ano}
+              {revendasComDados.reduce((s, b) => s + (getRevendaState(b.revenda).atividades?.length ?? 0), 0)} atividades serão processadas ({modo === "atualizar" ? "atualizadas" : "criadas"}) em {MESES[mes - 1]} {ano}
             </p>
           </div>
           <button
@@ -214,8 +259,10 @@ export function TabNovoCiclo() {
           >
             {criando
               ? <Loader2 className="w-4 h-4 animate-spin" />
-              : <Play className="w-4 h-4" />}
-            {criando ? "Criando cards..." : "Criar todos os cards"}
+              : modo === "atualizar" ? <RefreshCw className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            {criando
+              ? (modo === "atualizar" ? "Atualizando cards..." : "Criando cards...")
+              : (modo === "atualizar" ? "Atualizar todos os cards" : "Criar todos os cards")}
           </button>
         </div>
       )}

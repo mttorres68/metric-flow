@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
-    CheckCircle2, Download, Filter, PenLine, FileCheck2, Search, X,
+    CheckCircle2, Download, Filter, PenLine, Search, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -17,6 +17,12 @@ function setColWidths(ws: XLSX.WorkSheet, rows: Record<string, unknown>[]) {
     ws["!cols"] = keys.map(k => ({
         wch: Math.min(60, Math.max(k.length, ...rows.map(r => String(r[k] ?? "").length)) + 2),
     }));
+}
+
+// Alguns registros do catálogo vêm sem espaço antes do hífen (ex: "DISTRI02- Revendas 2026"),
+// o que quebra o split(" - "). O regex extrai o código pelo padrão real usado no banco.
+function extractItemCode(idIndicador: string): string {
+    return idIndicador.match(/^([A-Z]+\d+)/)?.[1] ?? idIndicador.split(" - ")[0].trim();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,7 +69,6 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
     const [fMacro, setFMacro] = useState("");
     const [fMicro, setFMicro] = useState("");
     const [fPiramide, setFPiramide] = useState("");
-    const [fEvid, setFEvid] = useState("");
     const [fAutoav, setFAutoav] = useState("");
 
     // ── Padrinhos ──────────────────────────────────────────────────────────
@@ -156,14 +161,14 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
         const seen = new Set<string>();
         const indRevenda = indicadores.filter(i => {
             if (operacao && Number(i.idOperacao) !== operacao) return false;
-            const cod = i.idIndicador.split(" - ")[0].trim();
+            const cod = extractItemCode(i.idIndicador);
             if (seen.has(cod)) return false;
             seen.add(cod);
             return true;
         });
 
         return indRevenda.map(i => {
-            const itemCode = i.idIndicador.split(" - ")[0].trim(); // "ADM01"
+            const itemCode = extractItemCode(i.idIndicador); // "ADM01"
 
             return {
                 data: `${selectedAno}-${mesStr}-01`,
@@ -231,7 +236,7 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
 
     // ── Limpar filtros ao mudar seleção ────────────────────────────────────
     useEffect(() => {
-        setFBusca(""); setFMacro(""); setFMicro(""); setFPiramide(""); setFEvid(""); setFAutoav("");
+        setFBusca(""); setFMacro(""); setFMicro(""); setFPiramide(""); setFAutoav("");
     }, [selectedRevenda, selectedAno, selectedMes]);
 
     // ── Opções dos selects de filtro ───────────────────────────────────────
@@ -250,7 +255,6 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
             if (fMicro && r.microArea !== fMicro) return false;
             if (fPiramide && r.piramide !== fPiramide) return false;
             const st = rows[r.item];
-            if (fEvid && st?.evidencia !== fEvid) return false;
             if (fAutoav && st?.autoavaliacao !== fAutoav) return false;
             if (q) {
                 const blob = `${r.item} ${r.descricao} ${r.microArea} ${st?.padrinho ?? ""}`.toLowerCase();
@@ -258,24 +262,23 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
             }
             return true;
         });
-    }, [baseIndicadores, fMacro, fMicro, fPiramide, fEvid, fAutoav, fBusca, rows]);
+    }, [baseIndicadores, fMacro, fMicro, fPiramide, fAutoav, fBusca, rows]);
 
-    const temFiltro = !!(fBusca || fMacro || fMicro || fPiramide || fEvid || fAutoav);
+    const temFiltro = !!(fBusca || fMacro || fMicro || fPiramide || fAutoav);
 
     // ── KPIs ───────────────────────────────────────────────────────────────
     const kpis = useMemo(() => {
-        let evidSim = 0, autoavSim = 0, ptEvid = 0, ptPoss = 0;
+        let autoavSim = 0, ptAutoav = 0, ptPoss = 0;
         indicadoresFiltrados.forEach(r => {
             const st = rows[r.item];
             if (!st) return;
-            if (st.evidencia === "Sim") evidSim++;
             if (st.autoavaliacao === "Sim") autoavSim++;
-            ptEvid += st.pontosEvidencia;
+            ptAutoav += st.pontosAutoavaliacao;
             ptPoss += st.pontoPossivel;
         });
         const total = indicadoresFiltrados.length;
-        const pct = ptPoss > 0 ? Math.round(ptEvid / ptPoss * 100) : 0;
-        return { total, evidSim, autoavSim, ptEvid, ptPoss, pct };
+        const pct = ptPoss > 0 ? Math.round(ptAutoav / ptPoss * 100) : 0;
+        return { total, autoavSim, ptAutoav, ptPoss, pct };
     }, [indicadoresFiltrados, rows]);
 
     // ── Persistência no banco ──────────────────────────────────────────────
@@ -311,16 +314,15 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
         return `${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`;
     };
 
-    const handleCheck = useCallback((r: RespostaResultado, field: "autoavaliacao" | "evidencia", checked: boolean) => {
+    const handleCheck = useCallback((r: RespostaResultado, checked: boolean) => {
         const cur = rows[r.item];
         if (!cur) return;
         const updated: RowState = {
             ...cur,
-            [field]: checked ? "Sim" : "Não",
+            autoavaliacao: checked ? "Sim" : "Não",
             hora: cur.hora || nowHora(),
             data: cur.data || new Date().toISOString().split("T")[0],
-            ...(field === "evidencia" ? { pontosEvidencia: checked ? r.pontoPossivel : 0 } : {}),
-            ...(field === "autoavaliacao" ? { pontosAutoavaliacao: checked ? r.pontoPossivel : 0 } : {}),
+            pontosAutoavaliacao: checked ? r.pontoPossivel : 0,
         };
         setRows(prev => ({ ...prev, [r.item]: updated }));
         saveToDb(r, updated);
@@ -367,13 +369,11 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
                     "Descrição": r.descricao,
                     "Tipo Resposta": r.tipoResposta,
                     "Pts Possível": r.pontoPossivel,
-                    "Autoavaliação": st?.autoavaliacao ?? "Não",
-                    "Evidência": st?.evidencia ?? "Não",
+                    "Evidência": st?.autoavaliacao ?? "Não",
                     "Padrinho": st?.padrinho ?? "Sem padrinho",
                     "Hora Check": st?.hora ?? "",
                     "Data": st?.data ?? r.data,
-                    "Pts Evidência": st?.pontosEvidencia ?? 0,
-                    "Pts Autoavaliação": st?.pontosAutoavaliacao ?? 0,
+                    "Pts": st?.pontosAutoavaliacao ?? 0,
                     "Responsável": resp?.responsavelId ? (colaborMap[resp.responsavelId] ?? "") : "",
                     "Apoio": resp?.apoioId ? (colaborMap[resp.apoioId] ?? "") : "",
                 };
@@ -408,14 +408,14 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
                 const seen = new Set<string>();
                 const indRevenda = indicadores.filter(i => {
                     if (operacao && Number(i.idOperacao) !== operacao) return false;
-                    const cod = i.idIndicador.split(" - ")[0].trim();
+                    const cod = extractItemCode(i.idIndicador);
                     if (seen.has(cod)) return false;
                     seen.add(cod);
                     return true;
                 });
                 const revRespons = responsPerRevenda[rev.id] ?? {};
                 for (const ind of indRevenda) {
-                    const itemCode = ind.idIndicador.split(" - ")[0].trim();
+                    const itemCode = extractItemCode(ind.idIndicador);
                     const db = (allDbRows ?? []).find(d => d.revenda === rev.nome && d.item === itemCode);
                     const resp = revRespons[itemCode];
                     allRows.push({
@@ -428,13 +428,11 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
                         "Descrição": ind.descricaoItem,
                         "Tipo Resposta": ind.tipoResposta,
                         "Pts Possível": ind.pontoPossivel,
-                        "Autoavaliação": db?.autoavaliacao ?? "Não",
-                        "Evidência": db?.evidencia ?? "Não",
+                        "Evidência": db?.autoavaliacao ?? "Não",
                         "Padrinho": db?.padrinho ?? "Sem padrinho",
                         "Hora Check": db?.horaCheck ?? "",
                         "Data": db?.data ?? `${selectedAno}-${mesStr}-01`,
-                        "Pts Evidência": db?.pontosEvidencia ?? 0,
-                        "Pts Autoavaliação": db?.pontosAutoavaliacao ?? 0,
+                        "Pts": db?.pontosAutoavaliacao ?? 0,
                         "Responsável": resp?.responsavelId ? (colaborMap[resp.responsavelId] ?? "") : "",
                         "Apoio": resp?.apoioId ? (colaborMap[resp.apoioId] ?? "") : "",
                     });
@@ -516,18 +514,12 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
                 </div>
                 <div className="flex items-center gap-2">
                     <label className="text-xs text-slate-500 dark:text-slate-400" style={{ fontWeight: 600 }}>Evidência</label>
-                    <select value={fEvid} onChange={e => setFEvid(e.target.value)} className={selCls}>
-                        <option value="">Todos</option><option value="Sim">Sim</option><option value="Não">Não</option>
-                    </select>
-                </div>
-                <div className="flex items-center gap-2">
-                    <label className="text-xs text-slate-500 dark:text-slate-400" style={{ fontWeight: 600 }}>Autoavaliação</label>
                     <select value={fAutoav} onChange={e => setFAutoav(e.target.value)} className={selCls}>
                         <option value="">Todos</option><option value="Sim">Sim</option><option value="Não">Não</option>
                     </select>
                 </div>
                 {temFiltro && (
-                    <button onClick={() => { setFBusca(""); setFMacro(""); setFMicro(""); setFPiramide(""); setFEvid(""); setFAutoav(""); }}
+                    <button onClick={() => { setFBusca(""); setFMacro(""); setFMicro(""); setFPiramide(""); setFAutoav(""); }}
                         className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[var(--accent)] transition-all"
                         style={{ fontWeight: 600 }}>
                         <X className="w-3.5 h-3.5" /> Limpar
@@ -561,13 +553,10 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
 
             {/* ── KPIs ─────────────────────────────────────────────────── */}
             {kpis.total > 0 && (
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     {[
                         { label: "Indicadores", valor: kpis.total, sub: "No filtro atual" },
-                        { label: "Evidência ✓", valor: kpis.evidSim, sub: `${Math.round(kpis.evidSim / kpis.total * 100)}% respondidos` },
-                        { label: "Autoav. ✓", valor: kpis.autoavSim, sub: `${Math.round(kpis.autoavSim / kpis.total * 100)}% respondidos` },
-                        { label: "Pts Evidência", valor: kpis.ptEvid, sub: `de ${kpis.ptPoss} possíveis` },
-                        { label: "Aderência", valor: `${kpis.pct}%`, sub: "Pts evidência / possíveis" },
+                        { label: "Evidência ✓", valor: kpis.autoavSim, sub: `${Math.round(kpis.autoavSim / kpis.total * 100)}% respondidos` },
                     ].map(k => (
                         <div key={k.label} className="bg-white dark:bg-[var(--card)] rounded-2xl p-4" style={{ border: cardBorder, boxShadow: CS }}>
                             <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider" style={{ fontWeight: 700 }}>{k.label}</p>
@@ -660,7 +649,6 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
                                     <th className="px-3 py-3 text-left" style={{ fontWeight: 700 }}>Descrição</th>
                                     <th className="px-3 py-3 text-left" style={{ fontWeight: 700 }}>Área</th>
                                     <th className="px-3 py-3 text-left" style={{ fontWeight: 700 }}>Pirâmide</th>
-                                    <th className="px-3 py-3 text-center w-24" style={{ fontWeight: 700 }}>Autoav.</th>
                                     <th className="px-3 py-3 text-center w-24" style={{ fontWeight: 700 }}>Evidência</th>
                                     <th className="px-3 py-3 text-left" style={{ fontWeight: 700 }}>Padrinho</th>
                                     <th className="px-3 py-3 text-center w-20" style={{ fontWeight: 700 }}>Hora</th>
@@ -673,13 +661,12 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
                                     const st = rows[r.item];
                                     if (!st) return null;
                                     const corP = PIRAMIDE_COR[r.piramide] || "#94A3B8";
-                                    const isEvid = st.evidencia === "Sim";
                                     const isAutoav = st.autoavaliacao === "Sim";
                                     const isNovoThis = novoInput?.rowKey === r.item;
                                     return (
                                         <tr key={r.item} className={classNames(
                                             "transition-colors",
-                                            (isEvid || isAutoav) ? "bg-emerald-50/40 dark:bg-emerald-500/5" : "hover:bg-slate-50/80 dark:hover:bg-[var(--accent)]/40",
+                                            isAutoav ? "bg-emerald-50/40 dark:bg-emerald-500/5" : "hover:bg-slate-50/80 dark:hover:bg-[var(--accent)]/40",
                                         )}>
                                             {/* Item */}
                                             <td className="px-3 py-2.5">
@@ -699,33 +686,18 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
                                             <td className="px-3 py-2.5">
                                                 <span className="px-1.5 py-0.5 rounded-md text-[10px]" style={{ background: `${corP}33`, color: corP, fontWeight: 700 }}>{r.piramide}</span>
                                             </td>
-                                            {/* Autoavaliação */}
+                                            {/* Evidência (grava em autoavaliacao) */}
                                             <td className="px-3 py-2.5 text-center">
                                                 <label className="inline-flex flex-col items-center gap-1 cursor-pointer select-none">
                                                     <div className={classNames(
                                                         "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all",
                                                         isAutoav ? "bg-emerald-500 border-emerald-500 text-white" : "bg-white dark:bg-[var(--input)] border-slate-300 dark:border-slate-600 hover:border-emerald-400",
                                                     )}>
-                                                        <input type="checkbox" className="sr-only" checked={isAutoav} onChange={e => handleCheck(r, "autoavaliacao", e.target.checked)} />
+                                                        <input type="checkbox" className="sr-only" checked={isAutoav} onChange={e => handleCheck(r, e.target.checked)} />
                                                         {isAutoav && <CheckCircle2 className="w-4 h-4" />}
                                                     </div>
                                                     <span className={classNames("text-[10px]", isAutoav ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400")} style={{ fontWeight: 700 }}>
                                                         {st.autoavaliacao}
-                                                    </span>
-                                                </label>
-                                            </td>
-                                            {/* Evidência */}
-                                            <td className="px-3 py-2.5 text-center">
-                                                <label className="inline-flex flex-col items-center gap-1 cursor-pointer select-none">
-                                                    <div className={classNames(
-                                                        "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all",
-                                                        isEvid ? "bg-indigo-500 border-indigo-500 text-white" : "bg-white dark:bg-[var(--input)] border-slate-300 dark:border-slate-600 hover:border-indigo-400",
-                                                    )}>
-                                                        <input type="checkbox" className="sr-only" checked={isEvid} onChange={e => handleCheck(r, "evidencia", e.target.checked)} />
-                                                        {isEvid && <FileCheck2 className="w-4 h-4" />}
-                                                    </div>
-                                                    <span className={classNames("text-[10px]", isEvid ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400")} style={{ fontWeight: 700 }}>
-                                                        {st.evidencia}
                                                     </span>
                                                 </label>
                                             </td>
@@ -766,7 +738,7 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
                                             </td>
                                             {/* Pts */}
                                             <td className="px-3 py-2.5 text-right tabular-nums">
-                                                <span style={{ fontWeight: 800, color: isEvid ? "#22C55E" : "#94A3B8" }}>{st.pontosEvidencia}</span>
+                                                <span style={{ fontWeight: 800, color: isAutoav ? "#22C55E" : "#94A3B8" }}>{st.pontosAutoavaliacao}</span>
                                                 <span className="text-slate-300 dark:text-slate-600">/{r.pontoPossivel}</span>
                                             </td>
                                             {/* Status */}
@@ -784,11 +756,11 @@ export function RespostasView({ indicadores, dbRevendas, isDark: _dark, cardBord
                             {kpis.total > 0 && (
                                 <tfoot className="bg-slate-50 dark:bg-[var(--accent)] border-t-2 border-slate-100 dark:border-[var(--sidebar-border)]">
                                     <tr>
-                                        <td colSpan={8} className="px-3 py-3 text-xs text-slate-500 dark:text-slate-400" style={{ fontWeight: 700 }}>
-                                            Total ({indicadoresFiltrados.length} itens) · Evidência: {kpis.evidSim} Sim · Autoav.: {kpis.autoavSim} Sim
+                                        <td colSpan={7} className="px-3 py-3 text-xs text-slate-500 dark:text-slate-400" style={{ fontWeight: 700 }}>
+                                            Total ({indicadoresFiltrados.length} itens) · Evidência: {kpis.autoavSim} Sim
                                         </td>
                                         <td className="px-3 py-3 text-right tabular-nums text-xs" style={{ fontWeight: 900, color: pctColor(kpis.pct) }}>
-                                            {kpis.ptEvid}/{kpis.ptPoss}
+                                            {kpis.ptAutoav}/{kpis.ptPoss}
                                             <span className="text-slate-400 font-normal ml-1">({kpis.pct}%)</span>
                                         </td>
                                         <td />

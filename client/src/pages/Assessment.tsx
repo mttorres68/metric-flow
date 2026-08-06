@@ -102,7 +102,7 @@ export default function Assessment() {
             if (fTipo && i.tipoResposta !== fTipo) return false;
             if (fEvidencia && i.evidenciaObrigatoria !== fEvidencia) return false;
             if (q) {
-                const blob = `${i.idIndicador} ${i.descricaoItem} ${i.microArea} ${i.piramide}`.toLowerCase();
+                const blob = `${i.idIndicador} ${i.descricaoItem} ${i.detalhamentoItem} ${i.microArea} ${i.piramide}`.toLowerCase();
                 if (!blob.includes(q)) return false;
             }
             return true;

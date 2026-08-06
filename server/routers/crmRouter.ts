@@ -60,6 +60,25 @@ async function trelloPost<T>(path: string, apiKey: string, token: string, body: 
   throw new Error("trelloPost: rate limit excedido");
 }
 
+async function trelloPut<T>(path: string, apiKey: string, token: string, body: Record<string, unknown>): Promise<T> {
+  const url = `https://api.trello.com/1${path}?key=${apiKey}&token=${token}`;
+  for (let attempt = 0; attempt <= 3; attempt++) {
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 429) {
+      const delay = Number(res.headers.get("Retry-After")) * 1000 || 1000 * Math.pow(2, attempt);
+      await sleep(delay);
+      continue;
+    }
+    if (!res.ok) throw new Error(`Trello API PUT ${res.status}: ${await res.text()}`);
+    return res.json() as Promise<T>;
+  }
+  throw new Error("trelloPut: rate limit excedido");
+}
+
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface TrelloMember { id: string; fullName: string; username: string }
@@ -106,6 +125,20 @@ const AtividadeInput = z.object({
   descricao: z.string().optional().default(""),
   checklist: z.array(z.string()).optional().default([]),
 });
+
+// Marca o código da atividade dentro da descrição do card, para permitir
+// reconhecer o mesmo card em uploads futuros da mesma planilha (modo "atualizar")
+const CODIGO_MARKER_RE = /`cod:([SM]\d+)`/;
+
+function buildDescComCodigo(descricao: string, codigo: string): string {
+  const base = descricao?.trim() ?? "";
+  return `${base}${base ? "\n\n" : ""}\`cod:${codigo}\``;
+}
+
+function extrairCodigoDaDesc(desc: string | null | undefined): string | null {
+  if (!desc) return null;
+  return desc.match(CODIGO_MARKER_RE)?.[1] ?? null;
+}
 
 // ─── Router ───────────────────────────────────────────────────────────────────
 
@@ -158,7 +191,7 @@ export const crmRouter = router({
     .input(z.object({ revenda: z.string(), role: z.string() }))
     .mutation(({ input }) => removerMapeamento(input.revenda, input.role)),
 
-  // Criar cards de uma revenda em seu board Trello
+  // Criar (ou atualizar) cards de uma revenda em seu board Trello
   criarCardsRevenda: publicProcedure
     .input(z.object({
       revenda:    z.string(),
@@ -168,10 +201,14 @@ export const crmRouter = router({
       atividades: z.array(AtividadeInput),
       mes:        z.number().int(),
       ano:        z.number().int(),
+      // "criar": sempre cria cards novos. "atualizar": reaproveita cards já criados
+      // (identificados pelo código da atividade) e só atualiza nome/descrição/data.
+      modo:       z.enum(["criar", "atualizar"]).optional().default("criar"),
     }))
     .mutation(async ({ input }) => {
       const { apiKey, token } = getTrelloConfig();
       const criados: string[] = [];
+      const atualizados: string[] = [];
       const erros: { nome: string; erro: string }[] = [];
 
       // Carrega config de etiqueta (padrão: Agenda / green)
@@ -185,20 +222,60 @@ export const crmRouter = router({
 
       // Pré-resolve a etiqueta do board (uma vez para todos os cards)
       let boardLabelId: string | null = null;
+      let labelWarning: string | null = null;
       try {
         boardLabelId = await getOrCreateLabelId(
           input.boardId, labelConfig.name, labelConfig.color,
           apiKey, token, labelCache,
         );
         await sleep(200);
-      } catch { /* não bloqueia a criação se a etiqueta falhar */ }
+      } catch (e: any) {
+        // Não bloqueia a criação dos cards se a etiqueta falhar, mas registra o motivo
+        labelWarning = `Falha ao resolver etiqueta "${labelConfig.name}" no board ${input.boardId}: ${e.message}`;
+        console.error(`[criarCardsRevenda] ${labelWarning}`);
+      }
+
+      // Modo "atualizar": busca os cards já existentes na lista e mapeia por código
+      // (código é lido de uma marca `cod:XX` deixada na descrição na criação)
+      const existentesPorCodigo = new Map<string, string>();
+      if (input.modo === "atualizar") {
+        try {
+          const cardsExistentes = await trelloFetch<{ id: string; desc: string }[]>(
+            `/lists/${input.listaId}/cards?fields=id,desc`,
+            apiKey, token,
+          );
+          for (const c of cardsExistentes) {
+            const codigo = extrairCodigoDaDesc(c.desc);
+            if (codigo) existentesPorCodigo.set(codigo, c.id);
+          }
+        } catch (e: any) {
+          labelWarning = labelWarning
+            ? `${labelWarning} | Falha ao buscar cards existentes para atualização: ${e.message}`
+            : `Falha ao buscar cards existentes para atualização: ${e.message}`;
+          console.error(`[criarCardsRevenda] Falha ao buscar cards existentes:`, e.message);
+        }
+      }
 
       for (const ativ of input.atividades) {
         try {
+          const desc = buildDescComCodigo(ativ.descricao, ativ.codigo);
+          const cardExistenteId = existentesPorCodigo.get(ativ.codigo);
+
+          if (cardExistenteId) {
+            // Atualiza card já criado anteriormente: só nome, descrição e data.
+            // Não mexe em membro/etiqueta/checklist para preservar progresso já marcado.
+            const body: Record<string, unknown> = { name: ativ.nome, desc };
+            if (ativ.due) body.due = ativ.due;
+            await trelloPut(`/cards/${cardExistenteId}`, apiKey, token, body);
+            atualizados.push(cardExistenteId);
+            await sleep(250);
+            continue;
+          }
+
           const body: Record<string, unknown> = {
             idList: input.listaId,
             name:   ativ.nome,
-            desc:   ativ.descricao,
+            desc,
           };
           if (ativ.due) body.due = ativ.due;
           if (input.memberId) body.idMembers = input.memberId;
@@ -230,13 +307,20 @@ export const crmRouter = router({
         }
       }
 
+      const totalOk = criados.length + atualizados.length;
       await registrarCiclo(
         input.revenda, input.mes, input.ano,
-        criados.length,
-        erros.length === 0 ? "criado" : criados.length > 0 ? "parcial" : "erro",
+        totalOk,
+        erros.length === 0 ? "criado" : totalOk > 0 ? "parcial" : "erro",
       );
 
-      return { revenda: input.revenda, criados: criados.length, erros };
+      return {
+        revenda: input.revenda,
+        criados: criados.length,
+        atualizados: atualizados.length,
+        erros,
+        labelWarning,
+      };
     }),
 
   // Retorna a lista "Agenda" (ou primeira lista) de cada board configurado

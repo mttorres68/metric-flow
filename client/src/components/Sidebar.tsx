@@ -79,8 +79,9 @@ const navItems: NavItemDef[] = [
     label: "Análise",
     icon: LineChart,
     children: [
-      { id: "analise_diaria",     label: "Diária",       route: "/analises" },
-      { id: "analise_semanal",    label: "Recorrência",  route: "/analises/semanal" },
+      { id: "analise_diaria",       label: "Diária",       route: "/analises" },
+      { id: "analise_semanal",      label: "Recorrência",  route: "/analises/semanal" },
+      { id: "analise_comparativo",  label: "Comparativo",  route: "/analises/comparativo" },
     ],
   },
   { id: "trello_atraso",    label: "Trello Atraso", icon: Trello,            route: "/trello-atraso" },

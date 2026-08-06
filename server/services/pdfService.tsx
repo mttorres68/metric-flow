@@ -18,6 +18,7 @@ import {
   renderToBuffer,
   type DocumentProps,
 } from "@react-pdf/renderer";
+import { LEGENDA_REGRA_RECORRENCIA, LEGENDA_SCORE_CRITICO, LEGENDA_FLAGS_RECORRENCIA } from "@shared/const";
 
 // ---------------------------------------------------------------------------
 // Tipos públicos
@@ -829,42 +830,9 @@ const LEGENDA_SEMANAL = [
     label: "Leitura da tabela",
     desc: "Cada célula exibe Dias/Ativos: quantos dias o problema ocorreu vs. dias ativos na semana. Vermelho = recorrente; laranja = ocorreu sem recorrência; — = sem ocorrência.",
   },
-  {
-    label: "Recorrente",
-    desc: "Flag marcada quando o problema aparece em ≥ 2 dias OU em ≥ 40% dos dias ativos do vendedor na semana.",
-  },
-  {
-    label: "Score",
-    desc: "Número de flags recorrentes do vendedor. Quanto maior, mais padrões críticos se repetiram.",
-  },
-  {
-    label: "Relâmpago alto",
-    desc: "% de visitas dentro do raio com duração < 3 min acima de 10%.",
-  },
-  {
-    label: "Início tardio",
-    desc: "Primeiro atendimento dentro do raio após 09:30.",
-  },
-  {
-    label: "Cobertura/IV baixa",
-    desc: "Clientes visitados dentro do raio / total da carteira abaixo de 90%.",
-  },
-  {
-    label: "Almoço acima do limite",
-    desc: "Mais de 4 visitas registradas na janela 12:15–13:45.",
-  },
-  {
-    label: "Pouca visita após 14h",
-    desc: "% de visitas com início após 14h abaixo de 25%.",
-  },
-  {
-    label: "Σ atendimento < 2h",
-    desc: "Soma do tempo dentro dos PDVs visitados inferior a 2 horas no dia.",
-  },
-  {
-    label: "Finaliza cedo",
-    desc: "Último atendimento dentro do raio encerrado antes das 14:00.",
-  },
+  LEGENDA_REGRA_RECORRENCIA,
+  { label: "Score", desc: LEGENDA_SCORE_CRITICO.desc },
+  ...LEGENDA_FLAGS_RECORRENCIA,
 ];
 
 // Layout landscape A4: 841.89pt − 56pt padding = ~786pt úteis

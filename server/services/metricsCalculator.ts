@@ -168,7 +168,7 @@ export function calcularMetricas(
   const cfg = resolverConfig(config);
 
   const _label = `[metricsCalc] filtro=${filtroVendedor ?? "todos"} status=${filtroStatus ?? "todos"}`;
-  console.group(_label);
+  // console.group(_label);
 
   // ── 1. PRÉ-PROCESSAMENTO ──────────────────────────────────────────────
   const visitasMapeadas = visitasBrutas.map((v) => {
