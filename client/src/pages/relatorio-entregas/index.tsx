@@ -58,11 +58,16 @@ function ParadasNoCliente({ b }: { b: Baixa }) {
   const ps = b.paradasNoRaio;
   if (ps.length === 1) return <span className="font-semibold text-slate-700 dark:text-slate-200">{faixa(ps[0])}</span>;
   if (ps.length > 1) {
+    const maisPerto = ps.reduce((m, p) => (p.distM < m.distM ? p : m));
     return (
       <Popover>
         <PopoverTrigger asChild>
-          <button type="button" title="Clique para ver todas as paradas" className="cursor-pointer">
-            <Badge color="indigo">{ps.length} paradas</Badge>
+          <button type="button" title={`${ps.length} paradas no cliente — mostrando a mais próxima (${Math.round(maisPerto.distM)} m). Clique para ver todas`}
+            className="inline-flex items-center gap-1 cursor-pointer font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400">
+            {faixa(maisPerto)}
+            <span className="inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-indigo-500 text-white text-[10px] font-bold leading-none">
+              {ps.length}
+            </span>
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-3">
@@ -72,8 +77,8 @@ function ParadasNoCliente({ b }: { b: Baixa }) {
           <table className="text-xs font-mono">
             <tbody>
               {ps.map((p, i) => (
-                <tr key={i}>
-                  <td className="pr-3 py-0.5 font-semibold text-slate-700 dark:text-slate-200">{faixa(p)}</td>
+                <tr key={i} className={p === maisPerto ? "text-indigo-600 dark:text-indigo-400" : ""} title={p === maisPerto ? "A mais próxima do cliente (exibida na tabela)" : undefined}>
+                  <td className="pr-3 py-0.5 font-semibold">{faixa(p)}</td>
                   <td className="pr-3 py-0.5 text-slate-500">{duracao(Math.round((p.fim.getTime() - p.inicio.getTime()) / 60000))}</td>
                   <td className="py-0.5 text-slate-400">{Math.round(p.distM)} m</td>
                 </tr>
