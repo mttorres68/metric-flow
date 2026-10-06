@@ -19,8 +19,28 @@ describe("detectarParadas", () => {
     expect(minDe(r.paradas[0].inicio)).toBe(1);
     expect(minDe(r.paradas[0].fim)).toBe(11);
     expect(r.paradas[0].min).toBe(10);
-    expect(minDe(r.primeiroMovimento)).toBe(0);
-    expect(minDe(r.ultimoMovimento)).toBe(11);
+  });
+
+  const parado = (de: number, ate: number, lat = -7) => Array.from({ length: ate - de + 1 }, (_, i) => pos(de + i, 0, lat));
+  const andando = (de: number, ate: number) => Array.from({ length: ate - de + 1 }, (_, i) => pos(de + i, 40, -7 + 0.01 * (i + 1)));
+
+  it("saída = início do 1º trecho em movimento de 3 min ou mais; retorno = fim do último", () => {
+    const r = detectarParadas([...parado(0, 60), ...andando(61, 80), ...parado(81, 100, -6.8), ...andando(101, 120), ...parado(121, 200)]);
+    expect(minDe(r.saida)).toBe(61);
+    expect(minDe(r.retorno)).toBe(121);
+  });
+
+  it("manobra de pátio (menos de 3 min em movimento) não conta como saída", () => {
+    const cemM = -7 + 0.0009; // ≈ 100 m: não funde com a parada anterior
+    const r = detectarParadas([...parado(0, 30), pos(31, 20, -7.0004), pos(32, 20, -7.0007), ...parado(33, 60, cemM), ...andando(61, 80), ...parado(81, 90, -6.5)]);
+    expect(minDe(r.saida)).toBe(61);
+    expect(minDe(r.retorno)).toBe(81);
+  });
+
+  it("janela toda em movimento: saída e retorno nas pontas", () => {
+    const r = detectarParadas(andando(0, 10));
+    expect(minDe(r.saida)).toBe(0);
+    expect(minDe(r.retorno)).toBe(10);
   });
 
   it("descarta parada com menos de 1 min", () => {
@@ -68,8 +88,8 @@ describe("detectarParadas", () => {
 
   it("sem nenhum movimento: primeiro/último movimento null", () => {
     const r = detectarParadas([pos(0, 0), pos(600, 0)]);
-    expect(r.primeiroMovimento).toBeNull();
-    expect(r.ultimoMovimento).toBeNull();
+    expect(r.saida).toBeNull();
+    expect(r.retorno).toBeNull();
     expect(r.paradas).toHaveLength(1);
   });
 });

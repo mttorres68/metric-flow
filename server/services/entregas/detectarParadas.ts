@@ -9,11 +9,11 @@ export interface Posicao { lat: number; lon: number; em: Date; kmh: number; vali
 export interface Parada { lat: number; lon: number; inicio: Date; fim: Date; min: number }
 export interface ResultadoParadas {
   paradas: Parada[];
-  primeiroMovimento: Date | null;
-  ultimoMovimento: Date | null;
+  saida: Date | null;
+  retorno: Date | null;
 }
 
-export const PARADA = { velMaxKmh: 5, minDuracaoMin: 1, fundirDistM: 50, fundirGapMin: 2 } as const;
+export const PARADA = { velMaxKmh: 5, minDuracaoMin: 1, fundirDistM: 50, fundirGapMin: 2, movimentoMinMin: 3 } as const;
 
 /** Distância haversine em metros. */
 export function distM(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -62,9 +62,23 @@ export function detectarParadas(posicoes: Posicao[]): ResultadoParadas {
     }
   }
 
+  const paradas = fundidas.filter(p => p.min >= PARADA.minDuracaoMin);
+
+  // Trechos em movimento = intervalos entre paradas (e antes da 1ª / depois da última).
+  // Saída/retorno só contam trechos de PARADA.movimentoMinMin ou mais (ignora manobra de pátio).
+  const trechos: { de: Date; ate: Date }[] = [];
+  let cursor: Date | undefined = ps[0]?.em;
+  for (const p of paradas) {
+    if (cursor) trechos.push({ de: cursor, ate: p.inicio });
+    cursor = p.fim;
+  }
+  if (cursor && ps.length) trechos.push({ de: cursor, ate: ps[ps.length - 1].em });
+  const longos = trechos.filter(t =>
+    minutos(t.de, t.ate) >= PARADA.movimentoMinMin && movendo.some(m => m.em >= t.de && m.em <= t.ate));
+
   return {
-    paradas: fundidas.filter(p => p.min >= PARADA.minDuracaoMin),
-    primeiroMovimento: movendo[0]?.em ?? null,
-    ultimoMovimento: movendo[movendo.length - 1]?.em ?? null,
+    paradas,
+    saida: longos[0]?.de ?? null,
+    retorno: longos[longos.length - 1]?.ate ?? null,
   };
 }

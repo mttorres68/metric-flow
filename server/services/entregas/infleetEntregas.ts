@@ -28,7 +28,7 @@ export function blocos(inicio: Date, fim: Date): { startAt: string; endAt: strin
 }
 
 export const gpsErro = (erro: string): GpsLinha =>
-  ({ erro, paradas: [], primeiroMovimento: null, ultimoMovimento: null, kmGps: null });
+  ({ erro, paradas: [], saida: null, retorno: null, kmGps: null });
 
 const Q_POSICOES = `query($filter: ListVehiclePositionsFilterInput!) {
   listVehiclePositions(filter: $filter) { latitude longitude fixTime speed valid }

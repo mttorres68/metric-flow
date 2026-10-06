@@ -23,8 +23,8 @@ export interface LinhaDia {
 export interface GpsLinha {
   erro: string | null; // "sem rastreador" | "sem sinal GPS" | "falha no Infleet: ..."
   paradas: Parada[];
-  primeiroMovimento: Date | null;
-  ultimoMovimento: Date | null;
+  saida: Date | null;
+  retorno: Date | null;
   kmGps: number | null;
 }
 
@@ -126,8 +126,8 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha):
   };
   if (gps.erro) return r;
 
-  r.saida = gps.primeiroMovimento;
-  r.retorno = gps.ultimoMovimento;
+  r.saida = gps.saida;
+  r.retorno = gps.retorno;
   r.kmGps = gps.kmGps;
 
   for (const e of baixasDia) {

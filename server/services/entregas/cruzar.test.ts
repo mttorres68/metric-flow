@@ -18,7 +18,7 @@ const parada = (lat: number, lon: number, inicio: string, min: number): Parada =
 
 const gps = (paradas: Parada[], o: Partial<GpsLinha> = {}): GpsLinha => ({
   erro: null, paradas, kmGps: 120,
-  primeiroMovimento: brt("2026-10-05T07:30"), ultimoMovimento: brt("2026-10-05T18:00"), ...o,
+  saida: brt("2026-10-05T07:30"), retorno: brt("2026-10-05T18:00"), ...o,
 });
 
 const linha = (o: Partial<LinhaDia> = {}): LinhaDia => ({
@@ -149,7 +149,7 @@ describe("cruzar", () => {
   // Review Focus 4
   it("caminhão parado o dia todo: saída/retorno null e nenhuma parada sem cliente", () => {
     const r = cruzar(linha(), [entrega()],
-      gps([parada(-7, -43, "2026-10-05T00:00", 1439)], { primeiroMovimento: null, ultimoMovimento: null }));
+      gps([parada(-7, -43, "2026-10-05T00:00", 1439)], { saida: null, retorno: null }));
     expect(r.saida).toBeNull();
     expect(r.retorno).toBeNull();
     expect(r.paradasSemCliente.qtd).toBe(0);
