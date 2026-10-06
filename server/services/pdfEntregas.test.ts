@@ -15,12 +15,12 @@ const base: ResultadoLinha = {
   semGps: null, saida: brt("2026-10-05T08:44"), retorno: brt("2026-10-05T17:10"),
   entregasDia: 33, totalRota: 60, apos14h: 10, baixasComCoord: 35, noRaio: 30, relampago: 2, semParada: 3,
   paradasSemCliente: { qtd: 2, min: 75 }, kmGps: 210.4, pendentes: null, kmInformado: null,
-  excecoes: [{ entrega, status: "sem_parada", permanenciaMin: 0, distMaisProximaM: 774.4 }],
+  baixas: [{ entrega, status: "sem_parada", permanenciaMin: 0, distMaisProximaM: 774.4 }, { entrega, status: "no_raio", permanenciaMin: 12, distMaisProximaM: 30 }],
 };
 const semGps: ResultadoLinha = {
   ...base, linha: { ...base.linha, placa: "SOO-8D81", motorista: "ISRAEL" }, semGps: "sem rastreador",
   saida: null, retorno: null, baixasComCoord: 0, noRaio: 0, relampago: 0, semParada: 0,
-  paradasSemCliente: { qtd: 0, min: 0 }, kmGps: null, pendentes: 4, kmInformado: 334, excecoes: [],
+  paradasSemCliente: { qtd: 0, min: 0 }, kmGps: null, pendentes: 4, kmInformado: 334, baixas: [],
 };
 const ehPdf = (b: Buffer) => b.subarray(0, 4).toString() === "%PDF";
 

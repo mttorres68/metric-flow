@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cruzar, montarLinhas, type GpsLinha, type LinhaDia } from "./cruzar";
+import { cruzar, excecoes, montarLinhas, type GpsLinha, type LinhaDia } from "./cruzar";
 import type { Entrega } from "./parseCheckNow";
 import type { Parada } from "./detectarParadas";
 
@@ -62,13 +62,13 @@ describe("montarLinhas", () => {
 describe("cruzar", () => {
   it("no_raio: parada de 5 min a 50 m", () => {
     const r = cruzar(linha(), [entrega()], gps([parada(CINQUENTA_M, -43, "2026-10-05T09:55", 5)]));
-    expect(r).toMatchObject({ noRaio: 1, relampago: 0, semParada: 0, baixasComCoord: 1, excecoes: [] });
+    expect(r).toMatchObject({ noRaio: 1, relampago: 0, semParada: 0, baixasComCoord: 1, baixas: [{ status: "no_raio", permanenciaMin: 5 }] });
   });
 
   it("relampago: parada de 2 min no raio vira exceção", () => {
     const r = cruzar(linha(), [entrega()], gps([parada(CINQUENTA_M, -43, "2026-10-05T09:55", 2)]));
     expect(r.relampago).toBe(1);
-    expect(r.excecoes[0]).toMatchObject({ status: "relampago", permanenciaMin: 2 });
+    expect(r.baixas[0]).toMatchObject({ status: "relampago", permanenciaMin: 2 });
   });
 
   it("soma as paradas no raio para a permanência", () => {
@@ -82,21 +82,33 @@ describe("cruzar", () => {
   it("sem_parada: guarda a distância da parada mais próxima", () => {
     const r = cruzar(linha(), [entrega()], gps([parada(UM_KM, -43, "2026-10-05T10:00", 10)]));
     expect(r.semParada).toBe(1);
-    expect(r.excecoes[0].status).toBe("sem_parada");
-    expect(r.excecoes[0].distMaisProximaM).toBeGreaterThan(990);
-    expect(r.excecoes[0].distMaisProximaM).toBeLessThan(1010);
+    expect(r.baixas[0].status).toBe("sem_parada");
+    expect(r.baixas[0].distMaisProximaM).toBeGreaterThan(990);
+    expect(r.baixas[0].distMaisProximaM).toBeLessThan(1010);
   });
 
   it("sem_coordenada: exceção fora dos percentuais", () => {
     const r = cruzar(linha(), [entrega({ lat: null, lon: null })], gps([]));
     expect(r.baixasComCoord).toBe(0);
-    expect(r.excecoes[0]).toMatchObject({ status: "sem_coordenada", distMaisProximaM: null });
+    expect(r.baixas[0]).toMatchObject({ status: "sem_coordenada", distMaisProximaM: null });
   });
 
   it("clientes vizinhos podem ser atendidos pela mesma parada", () => {
     const r = cruzar(linha(), [entrega(), entrega({ codCliente: "2", lat: -7.0009 })],
       gps([parada(-7.00045, -43, "2026-10-05T09:55", 5)]));
     expect(r.noRaio).toBe(2);
+  });
+
+  it("baixas traz todas as baixas do dia (inclusive no_raio), cada uma com seu status", () => {
+    const r = cruzar(linha(), [entrega(), entrega({ codCliente: "2", lat: UM_KM })],
+      gps([parada(CINQUENTA_M, -43, "2026-10-05T09:55", 5)]));
+    expect(r.baixas.map(b => [b.entrega.codCliente, b.status])).toEqual([["1", "no_raio"], ["2", "sem_parada"]]);
+  });
+
+  it("excecoes() devolve só as baixas que não ficaram no raio", () => {
+    const r = cruzar(linha(), [entrega(), entrega({ codCliente: "2", lat: UM_KM })],
+      gps([parada(CINQUENTA_M, -43, "2026-10-05T09:55", 5)]));
+    expect(excecoes(r).map(b => b.entrega.codCliente)).toEqual(["2"]);
   });
 
   it("ignora baixas de outro dia e conta entregas do dia sobre o total da rota", () => {
@@ -120,7 +132,7 @@ describe("cruzar", () => {
 
   it("linha sem GPS: só KPIs do CheckNow, sem exceções", () => {
     const r = cruzar(linha(), [entrega()], gps([], { erro: "sem rastreador" }));
-    expect(r).toMatchObject({ semGps: "sem rastreador", entregasDia: 1, noRaio: 0, saida: null, kmGps: null, excecoes: [] });
+    expect(r).toMatchObject({ semGps: "sem rastreador", entregasDia: 1, noRaio: 0, saida: null, kmGps: null, baixas: [] });
   });
 
   it("paradas sem cliente: só ≥ 10 min, entre saída e retorno, longe de todo cliente", () => {

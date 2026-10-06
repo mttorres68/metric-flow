@@ -59,8 +59,11 @@ export interface ResultadoLinha {
   kmGps: number | null;
   pendentes: number | null;
   kmInformado: number | null;
-  excecoes: EntregaCruzada[];
+  baixas: EntregaCruzada[]; // todas as baixas do dia com status (vazio quando a linha está sem GPS)
 }
+
+/** Baixas que o GPS não confirma (status diferente de no_raio). */
+export const excecoes = (r: ResultadoLinha) => r.baixas.filter(b => b.status !== "no_raio");
 
 const H3 = 3 * 3600000;
 const DIA = 24 * 3600000;
@@ -130,7 +133,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha):
     kmGps: null,
     pendentes: linha.fechaRota ? entregasRota.filter(e => e.situacao === "AGUARDANDO").length : null,
     kmInformado: linha.fechaRota ? kmInformado(entregasRota[0]) : null,
-    excecoes: [],
+    baixas: [],
   };
   if (gps.erro) return r;
 
@@ -140,17 +143,17 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha):
 
   for (const e of baixasDia) {
     if (!temCoord(e)) {
-      r.excecoes.push({ entrega: e, status: "sem_coordenada", permanenciaMin: 0, distMaisProximaM: null });
+      r.baixas.push({ entrega: e, status: "sem_coordenada", permanenciaMin: 0, distMaisProximaM: null });
       continue;
     }
     r.baixasComCoord++;
     const dists = gps.paradas.map(p => distM(p.lat, p.lon, e.lat, e.lon));
     const perm = gps.paradas.reduce((s, p, i) => (dists[i] <= LIMITES.raioM ? s + p.min : s), 0);
     const status: Status = perm >= LIMITES.relampagoMin ? "no_raio" : perm > 0 ? "relampago" : "sem_parada";
-    if (status === "no_raio") { r.noRaio++; continue; }
-    if (status === "relampago") r.relampago++;
+    if (status === "no_raio") r.noRaio++;
+    else if (status === "relampago") r.relampago++;
     else r.semParada++;
-    r.excecoes.push({ entrega: e, status, permanenciaMin: perm, distMaisProximaM: dists.length ? Math.min(...dists) : null });
+    r.baixas.push({ entrega: e, status, permanenciaMin: perm, distMaisProximaM: dists.length ? Math.min(...dists) : null });
   }
 
   const clientes = entregasRota.filter(temCoord);

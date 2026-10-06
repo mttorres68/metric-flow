@@ -7,7 +7,7 @@
 import fs from "fs";
 import * as XLSX from "xlsx";
 import { parseCheckNow } from "../server/services/entregas/parseCheckNow";
-import { montarLinhas, agruparPorRota, cruzar, diaBRT, horaBRT } from "../server/services/entregas/cruzar";
+import { montarLinhas, agruparPorRota, cruzar, horaBRT } from "../server/services/entregas/cruzar";
 import { mapaVeiculos, buscarGpsLinha, gpsErro, normalizarPlaca } from "../server/services/entregas/infleetEntregas";
 
 const buf = fs.readFileSync(process.argv[2]);
@@ -35,8 +35,7 @@ for (const l of montarLinhas(entregas, new Date())) {
       `saída ${r.saida ? horaBRT(r.saida) : "—"} | no raio ${r.noRaio}/${r.baixasComCoord} | sem parada ${r.semParada} | relâmpago ${r.relampago} | s/ cliente ${r.paradasSemCliente.qtd} | km ${r.kmGps}`,
   );
   if (r.semGps) continue;
-  for (const e of es.filter(x => x.situacao !== "AGUARDANDO" && x.baixaEm && diaBRT(x.baixaEm) === l.data)) {
-    const status = r.excecoes.find(x => x.entrega === e)?.status ?? "no_raio";
+  for (const { entrega: e, status } of r.baixas) {
     const f = faixa(distBaixa.get(`${e.routeId}|${e.codCliente}`) ?? 0);
     tabela[f] ??= {};
     tabela[f][status] = (tabela[f][status] ?? 0) + 1;

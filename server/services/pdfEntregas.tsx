@@ -7,7 +7,7 @@
 import React from "react";
 import { Document, Page, Text, View, renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 import { s, FooterBar, VERDE_TITULO, VERMELHO, fmtDate, fmtPct, stripHtml, renderAnalise } from "./pdfService";
-import { LIMITES, horaBRT, type ResultadoLinha, type Status } from "./entregas/cruzar";
+import { LIMITES, excecoes, horaBRT, type ResultadoLinha, type Status } from "./entregas/cruzar";
 
 export interface PDFEntregasData {
   data: string; // "aaaa-mm-dd"
@@ -171,7 +171,7 @@ const PaginaLinhas = ({ d }: { d: PDFEntregasData }) => {
 };
 
 const PaginaExcecoes = ({ d }: { d: PDFEntregasData }) => {
-  const itens = d.linhas.flatMap(r => r.excecoes.map(x => ({ r, x })));
+  const itens = d.linhas.flatMap(r => excecoes(r).map(x => ({ r, x })));
   const semParada = itens.filter(i => i.x.status === "sem_parada").length;
 
   return (
