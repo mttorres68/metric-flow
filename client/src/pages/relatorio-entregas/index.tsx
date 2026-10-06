@@ -10,13 +10,14 @@ import { useSidebarCollapse } from "@/hooks/useSidebarCollapse";
 import { Th, Td } from "@/pages/analise/components/TablePrimitives";
 import { Badge } from "@/pages/analise/components/Badge";
 import { blobToBase64 } from "@/pages/analise/lib/pdf";
+import { ConfigEntregasModal } from "./ConfigEntregasModal";
 import { trpc } from "@/lib/trpc";
 import { LIMITES, horaBRT, minParaHM } from "@shared/entregas";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../server/routers";
 import {
   AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, FileUp, Loader2,
-  MapPin, PenLine, Printer, RefreshCw, Timer, Truck, Zap,
+  MapPin, PenLine, Printer, RefreshCw, Settings2, Timer, Truck, Zap,
 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -52,7 +53,7 @@ function MomentoBaixa({ m }: { m: Baixa["momentoBaixa"] }) {
 }
 
 /** Tabela de baixas — usada no detalhe da linha e na lista de exceções do dia. */
-function TabelaBaixas({ itens, comPlaca }: { itens: { r: Resultado; b: Baixa }[]; comPlaca?: boolean }) {
+function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Baixa }[]; comPlaca?: boolean; raioM: number }) {
   return (
     <table className="w-full text-xs">
       <thead className="bg-slate-100 dark:bg-slate-800/60">
@@ -61,7 +62,7 @@ function TabelaBaixas({ itens, comPlaca }: { itens: { r: Resultado; b: Baixa }[]
           <th className="px-2 py-1.5">Cliente</th>
           <th className="px-2 py-1.5">Código</th>
           <th className="px-2 py-1.5 text-center" title="Hora da baixa no app do CheckNow">Baixa (app)</th>
-          <th className="px-2 py-1.5 text-center" title={`Quando o caminhão esteve parado a até ${LIMITES.raioM} m do cliente (chegada–saída pelo GPS)`}>Parada no cliente (GPS)</th>
+          <th className="px-2 py-1.5 text-center" title={`Quando o caminhão esteve parado a até ${raioM} m do cliente (chegada–saída pelo GPS)`}>Parada no cliente (GPS)</th>
           <th className="px-2 py-1.5 text-center" title={`Hora da baixa comparada com a parada no cliente (tolerância de ${LIMITES.momentoTolMin} min)`}>Momento da baixa</th>
           <th className="px-2 py-1.5 text-center">Status</th>
           <th className="px-2 py-1.5 text-center">Parada mais próxima</th>
@@ -101,6 +102,8 @@ export default function RelatorioEntregas() {
   const [verExcecoes, setVerExcecoes] = useState(false);
   const [analise, setAnalise] = useState("");
   const [baixando, setBaixando] = useState<"dia" | "zip" | null>(null);
+  const [configAberto, setConfigAberto] = useState(false);
+  const raioM = trpc.config.getEntregasConfig.useQuery().data?.raioM ?? LIMITES.raioM;
   const [cercaSel, setCercaSel] = useState<string | null>(null); // null = padrão (cerca "Sede", se existir)
   const cercas = trpc.infleet.listarCercas.useQuery(undefined, { staleTime: Infinity }).data ?? [];
   const cercaId = cercaSel ?? cercas.find(c => /sede/i.test(c.name))?.id ?? "";
@@ -185,8 +188,13 @@ export default function RelatorioEntregas() {
               Baixas do CheckNow × paradas do GPS (Infleet), por placa · motorista · dia
             </p>
           </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setConfigAberto(true)} title={`Configurar o relatório (raio atual: ${raioM} m)`}
+              className={`${botao} border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50`}>
+              <Settings2 size={12} /> Configurar
+            </button>
           {arquivo && (
-            <div className="flex items-center gap-2">
+            <>
               <label className={`${botao} border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer`}>
                 <FileUp size={12} /> Trocar planilha
                 <input type="file" accept=".xlsx" className="hidden" onChange={e => { carregar(e.target.files?.[0]); e.target.value = ""; }} />
@@ -199,9 +207,16 @@ export default function RelatorioEntregas() {
                 className={`${botao} border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20`}>
                 <Printer size={12} /> {baixando === "zip" ? "Gerando..." : "Baixar todos (ZIP)"}
               </button>
-            </div>
+            </>
           )}
+          </div>
         </div>
+
+        <ConfigEntregasModal
+          open={configAberto}
+          onClose={() => setConfigAberto(false)}
+          onSalvo={() => { if (arquivo) processar.mutate({ xlsxBase64: arquivo.base64, cercaId: cercaId || undefined }); }}
+        />
 
         <div className="flex-1 min-h-0 overflow-auto">
           {/* ── Upload ── */}
@@ -225,6 +240,7 @@ export default function RelatorioEntregas() {
               {/* ── Filtro de dia + KPIs ── */}
               <div className="bg-white dark:bg-[var(--card)] rounded-2xl px-5 py-3 flex items-center gap-4 mx-6 mt-4 border border-slate-100 dark:border-[var(--border)]">
                 <span className="text-xs text-slate-500 dark:text-slate-400">Planilha: <b className="text-slate-700 dark:text-slate-200">{arquivo.nome}</b></span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Raio: <b className="text-slate-700 dark:text-slate-200">{raioM} m</b></span>
                 <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" title="Saiu da cerca escolhida = horário de saída; entrou nela depois da saída = horário de retorno. Sem esses eventos no dia, vale o GPS">
                   Saída / retorno pela cerca
                   <select value={cercaId} disabled={processar.isPending}
@@ -283,7 +299,7 @@ export default function RelatorioEntregas() {
                   {verExcecoes && (
                     <div className="border-b border-amber-100 dark:border-amber-800/30 bg-amber-50/30 dark:bg-amber-900/5 px-5 py-3">
                       {excecoesDia.length
-                        ? <TabelaBaixas itens={excecoesDia} comPlaca />
+                        ? <TabelaBaixas itens={excecoesDia} comPlaca raioM={raioM} />
                         : <p className="text-xs text-slate-500">Todas as baixas do dia foram confirmadas pelo GPS.</p>}
                     </div>
                   )}
@@ -297,7 +313,7 @@ export default function RelatorioEntregas() {
                           <Th center title="Entrada na cerca escolhida depois da saída ou, sem ela, fim do último trecho em movimento de 3 min ou mais">Retorno</Th>
                           <Th center title="Entregues no dia / total de clientes da rota">Entregas</Th>
                           <Th center title={`% das entregas com baixa após as 14h (vermelho se < ${LIMITES.apos14hMinPct}%)`}>Após 14h</Th>
-                          <Th center title={`Baixas com parada de ${LIMITES.relampagoMin} min ou mais a até ${LIMITES.raioM} m do cliente`}>No raio</Th>
+                          <Th center title={`Baixas com parada de ${LIMITES.relampagoMin} min ou mais a até ${raioM} m do cliente`}>No raio</Th>
                           <Th center title="Baixas sem nenhuma parada do GPS no raio">Sem parada</Th>
                           <Th center title={`Paradas no raio com menos de ${LIMITES.relampagoMin} min (vermelho se > ${LIMITES.relampagoMaxPct}%)`}>Relâmpago</Th>
                           <Th center title={`Paradas de ${LIMITES.paradaSemClienteMin} min ou mais longe de todo cliente, entre a saída e o retorno`}>Paradas s/ cliente</Th>
@@ -378,7 +394,7 @@ export default function RelatorioEntregas() {
                                   <td colSpan={11} className="bg-slate-50/60 dark:bg-slate-800/30 px-6 py-3 border-b border-slate-100 dark:border-slate-700/40">
                                     {gps
                                       ? (r.baixas.length
-                                        ? <TabelaBaixas itens={r.baixas.map(b => ({ r, b }))} />
+                                        ? <TabelaBaixas itens={r.baixas.map(b => ({ r, b }))} raioM={raioM} />
                                         : <p className="text-xs text-slate-500">Nenhuma baixa neste dia.</p>)
                                       : <p className="text-xs text-slate-500">Sem GPS ({r.semGps}): não é possível conferir as baixas.</p>}
                                   </td>

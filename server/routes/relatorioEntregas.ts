@@ -12,6 +12,7 @@ import { PlanilhaInvalidaError } from "../services/entregas/parseCheckNow";
 import { processarPlanilha } from "../services/entregas/processar";
 import type { ResultadoLinha } from "../services/entregas/cruzar";
 import { gerarPDFEntregas } from "../services/pdfEntregas";
+import { getConfigEntregas } from "../services/configService";
 
 export const relatorioEntregasRouter = Router();
 
@@ -23,7 +24,11 @@ relatorioEntregasRouter.post("/gerar", async (req: Request, res: Response) => {
   }
 
   try {
-    let resultados = await processarPlanilha(Buffer.from(xlsxBase64, "base64"), new Date(), typeof cercaId === "string" && cercaId ? cercaId : undefined);
+    const { raioM } = await getConfigEntregas();
+    let resultados = await processarPlanilha(Buffer.from(xlsxBase64, "base64"), new Date(), {
+      cercaId: typeof cercaId === "string" && cercaId ? cercaId : undefined,
+      raioM,
+    });
     if (typeof soData === "string" && soData) resultados = resultados.filter(r => r.linha.data === soData);
     if (!resultados.length) {
       res.status(400).json({ error: "Nenhuma rota iniciada na planilha para o período pedido." });
@@ -37,7 +42,7 @@ relatorioEntregasRouter.post("/gerar", async (req: Request, res: Response) => {
     const pdfs: { nome: string; buf: Buffer }[] = [];
     for (const [data, ls] of porDia) {
       const avisos = ls.filter(r => r.semGps).map(r => `${r.linha.placa} · ${r.linha.motorista}: ${r.semGps}`);
-      pdfs.push({ nome: `entregas_${data}.pdf`, buf: await gerarPDFEntregas({ data, linhas: ls, analise: textoAnalise, avisos }) });
+      pdfs.push({ nome: `entregas_${data}.pdf`, buf: await gerarPDFEntregas({ data, linhas: ls, analise: textoAnalise, avisos, raioM }) });
     }
 
     if (pdfs.length === 1) {

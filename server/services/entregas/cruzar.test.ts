@@ -165,6 +165,20 @@ describe("cruzar", () => {
     });
   });
 
+  it("raio configurável: parada a ~400 m vira no_raio com raio de 500 m (padrão 300 = sem_parada)", () => {
+    const quatrocentosM = -7 + 0.0036;
+    const paradas = [parada(quatrocentosM, -43, "2026-10-05T09:55", 10)];
+    expect(cruzar(linha(), [entrega()], gps(paradas)).baixas[0].status).toBe("sem_parada");
+    expect(cruzar(linha(), [entrega()], gps(paradas), 500).baixas[0].status).toBe("no_raio");
+  });
+
+  it("raio configurável vale também para parada sem cliente", () => {
+    const quatrocentosM = -7 + 0.0036;
+    const paradas = [parada(quatrocentosM, -43, "2026-10-05T12:00", 30)];
+    expect(cruzar(linha(), [entrega()], gps(paradas)).paradasSemCliente.qtd).toBe(1);
+    expect(cruzar(linha(), [entrega()], gps(paradas), 500).paradasSemCliente.qtd).toBe(0);
+  });
+
   it("excecoes() devolve só as baixas que não ficaram no raio", () => {
     const r = cruzar(linha(), [entrega(), entrega({ codCliente: "2", lat: UM_KM })],
       gps([parada(CINQUENTA_M, -43, "2026-10-05T09:55", 5)]));

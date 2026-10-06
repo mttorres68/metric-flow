@@ -2,9 +2,9 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { metricasConfig } from "../../drizzle/schema";
+import { entregasConfig, metricasConfig } from "../../drizzle/schema";
 import { CONFIG_METRICAS_DEFAULT } from "@shared/const";
-import { getConfigMetricas, invalidateConfigCache } from "../services/configService";
+import { getConfigEntregas, getConfigMetricas, invalidateConfigCache } from "../services/configService";
 
 const timeRegex = /^\d{2}:\d{2}$/;
 
@@ -61,6 +61,30 @@ export const configRouter = router({
             invalidateConfigCache();
             return { ok: true } as const;
         }),
+
+    // ── Relatório de Entregas (tabela entregas_config, single-row) ──────────
+    getEntregasConfig: publicProcedure.query(() => getConfigEntregas()),
+
+    saveEntregasConfig: publicProcedure
+        .input(z.object({ raioM: z.number().int().min(50).max(2000) }))
+        .mutation(async ({ input }) => {
+            const db = await getDb();
+            if (!db) throw new Error("Banco de dados indisponível.");
+            const existing = await db.select({ id: entregasConfig.id }).from(entregasConfig).limit(1);
+            if (existing.length > 0) {
+                await db.update(entregasConfig).set({ raioM: input.raioM, updatedAt: new Date() }).where(eq(entregasConfig.id, existing[0].id));
+            } else {
+                await db.insert(entregasConfig).values({ raioM: input.raioM });
+            }
+            return { ok: true } as const;
+        }),
+
+    resetEntregasConfig: publicProcedure.mutation(async () => {
+        const db = await getDb();
+        if (!db) throw new Error("Banco de dados indisponível.");
+        await db.delete(entregasConfig);
+        return getConfigEntregas();
+    }),
 
     resetMetricasConfig: publicProcedure.mutation(async () => {
         const db = await getDb();

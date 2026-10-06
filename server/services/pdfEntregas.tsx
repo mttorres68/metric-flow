@@ -15,14 +15,15 @@ export interface PDFEntregasData {
   linhas: ResultadoLinha[];
   analise: string; // texto ou HTML
   avisos: string[];
+  raioM: number; // raio do cliente em uso (config de entregas)
 }
 
 // Larguras — A4 paisagem (842pt − 2×28 de padding ≈ 786pt)
 const C = { placa: 155, saida: 45, retorno: 45, entregas: 55, tarde: 75, raio: 75, semParada: 55, relamp: 75, semCliente: 80, km: 45, pend: 80 } as const;
 const CE = { placa: 150, cliente: 220, cod: 60, baixa: 50, status: 100, dist: 80, perm: 70 } as const;
 
-const LEGENDA = [
-  { desc: `Entregas confirmadas por parada do GPS a até ${LIMITES.raioM}m do cliente` },
+const legenda = (raioM: number) => [
+  { desc: `Entregas confirmadas por parada do GPS a até ${raioM}m do cliente` },
   { label: "Saída", desc: `Início do 1º trecho em movimento de 3 min ou mais; * = saída da cerca da base (vermelho se > ${LIMITES.saidaAte})` },
   { label: "Retorno", desc: "Fim do último trecho em movimento de 3 min ou mais; * = entrou na cerca da base depois da saída" },
   { label: "Entregas", desc: "Entregues no dia / total de clientes da rota" },
@@ -64,12 +65,12 @@ const PaginaLinhas = ({ d }: { d: PDFEntregasData }) => {
     <Page size="A4" orientation="landscape" style={s.page}>
       <View style={s.pageHeader}>
         <Text style={s.pageHeaderTitle}>Relatório Gerencial de Entregas</Text>
-        <Text style={s.pageHeaderMeta}>Data: {fmtDate(d.data)} · Raio: {LIMITES.raioM}m · Fonte: CheckNow × GPS Infleet</Text>
+        <Text style={s.pageHeaderMeta}>Data: {fmtDate(d.data)} · Raio: {d.raioM}m · Fonte: CheckNow × GPS Infleet</Text>
       </View>
 
       <View style={s.content}>
         <Text style={s.sectionTitle}>Legenda</Text>
-        {LEGENDA.map((item, i) => (
+        {legenda(d.raioM).map((item, i) => (
           <View key={i} style={s.legendRow}>
             <Text style={s.legendLabel}>{item.label}</Text>
             <Text style={s.legendDesc}>{item.desc}</Text>
@@ -175,7 +176,7 @@ const PaginaExcecoes = ({ d }: { d: PDFEntregasData }) => {
     <Page size="A4" orientation="landscape" style={s.page}>
       <View style={{ backgroundColor: VERDE_TITULO, paddingHorizontal: 28, paddingVertical: 13 }}>
         <Text style={s.pageHeaderTitle}>Exceções — Baixas não confirmadas pelo GPS</Text>
-        <Text style={s.pageHeaderMeta}>Data: {fmtDate(d.data)} · Raio: {LIMITES.raioM}m</Text>
+        <Text style={s.pageHeaderMeta}>Data: {fmtDate(d.data)} · Raio: {d.raioM}m</Text>
       </View>
 
       <View style={s.content}>

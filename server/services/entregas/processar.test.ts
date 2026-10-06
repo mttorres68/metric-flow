@@ -57,8 +57,17 @@ describe("processarPlanilha", () => {
   it("repassa a cerca escolhida para a busca do GPS", async () => {
     (mapaVeiculos as Mock).mockResolvedValue(new Map([["SOL6B13", "v1"]]));
     (buscarGpsLinha as Mock).mockResolvedValue(gpsNoCliente);
-    await processarPlanilha(planilha([linha({})]), new Date("2026-10-06T12:00:00-03:00"), "sede");
+    await processarPlanilha(planilha([linha({})]), new Date("2026-10-06T12:00:00-03:00"), { cercaId: "sede" });
     expect((buscarGpsLinha as Mock).mock.calls[0][2]).toBe("sede");
+  });
+
+  it("usa o raio informado no cruzamento", async () => {
+    (mapaVeiculos as Mock).mockResolvedValue(new Map([["SOL6B13", "v1"]]));
+    const a400m = { ...gpsNoCliente, paradas: [{ ...gpsNoCliente.paradas[0], lat: -7 + 0.0036 }] };
+    (buscarGpsLinha as Mock).mockResolvedValue(a400m);
+    const agora = new Date("2026-10-06T12:00:00-03:00");
+    expect((await processarPlanilha(planilha([linha({})]), agora))[0].noRaio).toBe(0);
+    expect((await processarPlanilha(planilha([linha({})]), agora, { raioM: 500 }))[0].noRaio).toBe(1);
   });
 
   it("planilha sem rota iniciada devolve lista vazia sem chamar o Infleet", async () => {

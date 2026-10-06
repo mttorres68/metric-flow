@@ -27,13 +27,13 @@ const ehPdf = (b: Buffer) => b.subarray(0, 4).toString() === "%PDF";
 
 describe("gerarPDFEntregas", () => {
   it("gera PDF com linha com GPS, linha sem GPS, exceção, análise e avisos", async () => {
-    const b = await gerarPDFEntregas({ data: "2026-10-05", linhas: [base, semGps], analise: "<p>Ok</p>", avisos: ["SOO-8D81 · ISRAEL: sem rastreador"] });
+    const b = await gerarPDFEntregas({ data: "2026-10-05", linhas: [base, semGps], analise: "<p>Ok</p>", avisos: ["SOO-8D81 · ISRAEL: sem rastreador"], raioM: 500 });
     expect(ehPdf(b)).toBe(true);
   });
 
   // Review Focus 5
   it("gera PDF sem nenhuma linha (denominadores zero)", async () => {
-    const b = await gerarPDFEntregas({ data: "2026-10-05", linhas: [], analise: "", avisos: [] });
+    const b = await gerarPDFEntregas({ data: "2026-10-05", linhas: [], analise: "", avisos: [], raioM: 300 });
     expect(ehPdf(b)).toBe(true);
   });
 });

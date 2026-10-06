@@ -140,7 +140,8 @@ function kmInformado(e: Entrega): number | null {
   return e.odoIniInformado !== null && e.odoFimInformado !== null ? e.odoFimInformado - e.odoIniInformado : null;
 }
 
-export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha): ResultadoLinha {
+/** raioM: raio do cliente em metros (configurável na tela; padrão LIMITES.raioM). */
+export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, raioM: number = LIMITES.raioM): ResultadoLinha {
   const baixasDia = entregasRota.filter(e =>
     e.situacao !== "AGUARDANDO" && e.baixaEm !== null && diaBRT(e.baixaEm) === linha.data);
   const entregues = baixasDia.filter(e => e.situacao === "ENTREGUE");
@@ -181,7 +182,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha):
     }
     r.baixasComCoord++;
     const comDist = gps.paradas.map(p => ({ inicio: p.inicio, fim: p.fim, min: p.min, distM: distM(p.lat, p.lon, e.lat, e.lon) }));
-    const noRaio = comDist.filter(p => p.distM <= LIMITES.raioM).sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
+    const noRaio = comDist.filter(p => p.distM <= raioM).sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
     const perm = noRaio.reduce((s, p) => s + p.min, 0);
     const maisProxima = comDist.reduce<(typeof comDist)[number] | null>((m, p) => (!m || p.distM < m.distM ? p : m), null);
     const status: Status = perm >= LIMITES.relampagoMin ? "no_raio" : perm > 0 ? "relampago" : "sem_parada";
@@ -203,7 +204,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha):
   if (saida && retorno) {
     for (const p of gps.paradas) {
       if (p.min < LIMITES.paradaSemClienteMin || p.inicio <= saida || p.inicio >= retorno) continue;
-      if (clientes.some(c => distM(p.lat, p.lon, c.lat, c.lon) <= LIMITES.raioM)) continue;
+      if (clientes.some(c => distM(p.lat, p.lon, c.lat, c.lon) <= raioM)) continue;
       r.paradasSemCliente.qtd++;
       r.paradasSemCliente.min += p.min;
     }

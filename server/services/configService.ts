@@ -1,6 +1,7 @@
 import { getDb } from "../db";
-import { metricasConfig } from "../../drizzle/schema";
+import { entregasConfig, metricasConfig } from "../../drizzle/schema";
 import { CONFIG_METRICAS_DEFAULT, type ConfigMetricas } from "@shared/const";
+import { LIMITES } from "@shared/entregas";
 
 let _cache: ConfigMetricas | null = null;
 let _cacheAt = 0;
@@ -52,6 +53,18 @@ export async function getConfigMetricas(): Promise<ConfigMetricas> {
         return _cache;
     } catch {
         return CONFIG_METRICAS_DEFAULT;
+    }
+}
+
+/** Config do Relatório de Entregas (tabela entregas_config); padrão de shared/entregas quando vazia ou sem banco. */
+export async function getConfigEntregas(): Promise<{ raioM: number }> {
+    try {
+        const db = await getDb();
+        if (!db) return { raioM: LIMITES.raioM };
+        const rows = await db.select().from(entregasConfig).limit(1);
+        return { raioM: rows[0]?.raioM ?? LIMITES.raioM };
+    } catch {
+        return { raioM: LIMITES.raioM };
     }
 }
 

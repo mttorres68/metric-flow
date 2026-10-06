@@ -338,6 +338,17 @@ export type MetricasConfig = typeof metricasConfig.$inferSelect;
 export type InsertMetricasConfig = typeof metricasConfig.$inferInsert;
 
 // ---------------------------------------------------------------------------
+// Configuração do Relatório de Entregas — tabela single-row, editada no modal
+// ⚙ da tela de entregas. Separada de metricas_config porque o "Restaurar padrão"
+// de vendas apaga aquela linha inteira.
+// ---------------------------------------------------------------------------
+export const entregasConfig = pgTable("entregas_config", {
+  id:        serial("id").primaryKey(),
+  raioM:     integer("raioM").notNull().default(300),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// ---------------------------------------------------------------------------
 // Análise Diária — flags de ocorrência por vendedor × dia
 // Persistidas ao marcar "Desl." (início tardio) ou "Prob." (pathtracker).
 // ---------------------------------------------------------------------------
