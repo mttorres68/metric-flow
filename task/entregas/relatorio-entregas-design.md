@@ -230,6 +230,37 @@ Diária). Upload → tRPC `entregas.processar` (pipeline em
 - editor de análise e "Baixar PDF do dia" (`POST /gerar` com `data`) ou
   "Baixar todos (ZIP)".
 
+**Aba "Por rota"** (adicionada em 2026-10-06; `server/services/entregas/rota.ts`
++ `client/src/pages/relatorio-entregas/PainelRota.tsx`). Uma rota = um `RouteId`,
+podendo durar vários dias. O tRPC `entregas.processar` devolve
+`{ linhas, rotas }`. Blocos:
+1. **Resumo:**
+   - período e dias; clientes · notas;
+   - entregue / devolvido / pendente, em quantidade e R$;
+   - peso × capacidade (ocupação, vermelho acima de 100%);
+   - pernoites: a última parada de cada dia, menos o último, mostrada como a
+     cidade do cliente mais próximo e um link para o Google Maps.
+2. **Sequência:** a ordem real é a ordem das paradas do GPS em cada cliente
+   (chegada da parada mais próxima), comparada com `Ordem Planejada`. "Na
+   sequência" é a maior subsequência crescente; o resto são os pulos. Clientes
+   sem parada no GPS ficam fora do cálculo.
+3. **Tempo:**
+   - jornada (saída → retorno) dividida em rodando, parado em cliente e parado
+     sem cliente, num gráfico por dia com a tabela dos números;
+   - **motor ligado parado**: calculado pela ignição das posições, só dentro da
+     jornada. O total do dia do Infleet inclui a noite, e há rastreador que
+     marca ignição ligada o tempo todo;
+   - tempo médio por entrega e entregas por hora.
+4. **Distância:** km GPS × km informado (odômetro), km por entrega, R$ entregue
+   por km.
+5. **Devoluções com prova:** cada PROBLEMA com motivo, valor, peso e se o
+   caminhão esteve no cliente (esteve X min / não parou / sem GPS), mais os
+   totais por motivo.
+
+Colunas opcionais lidas do CheckNow para isso: `Ordem Planejada`, `Documento`,
+`Valor (R$)`, `Peso (Kg)`, `Motivo Problema`, `Capacidade Veículo` e `Cidade`.
+Valor, peso e notas somam as notas distintas do cliente.
+
 Limites e formatação ficam em `shared/entregas.ts`, usados pelo servidor e pela
 tela. Percentual com denominador zero aparece como "—" (tela e PDF).
 

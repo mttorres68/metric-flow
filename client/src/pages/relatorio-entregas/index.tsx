@@ -11,6 +11,7 @@ import { Th, Td } from "@/pages/analise/components/TablePrimitives";
 import { Badge } from "@/pages/analise/components/Badge";
 import { blobToBase64 } from "@/pages/analise/lib/pdf";
 import { ConfigEntregasModal } from "./ConfigEntregasModal";
+import { PainelRota } from "./PainelRota";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc";
 import { LIMITES, horaBRT, minParaHM } from "@shared/entregas";
@@ -23,7 +24,8 @@ import {
 import React, { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-type Resultado = inferRouterOutputs<AppRouter>["entregas"]["processar"][number];
+type Saida = inferRouterOutputs<AppRouter>["entregas"]["processar"];
+type Resultado = Saida["linhas"][number];
 type Baixa = Resultado["baixas"][number];
 
 const pct = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0);
@@ -145,7 +147,7 @@ export default function RelatorioEntregas() {
   const cercaId = cercaSel ?? cercas.find(c => /sede/i.test(c.name))?.id ?? "";
 
   const processar = trpc.entregas.processar.useMutation({
-    onSuccess: rs => {
+    onSuccess: ({ linhas: rs }) => {
       if (!rs.length) toast.warning("Nenhuma rota iniciada na planilha.");
       // Recalcular (GPS, cerca, raio) mantém o dia aberto; planilha nova abre no último dia.
       setDia(d => (d && rs.some(r => r.linha.data === d) ? d : rs.length ? rs[rs.length - 1].linha.data : null));
@@ -153,7 +155,9 @@ export default function RelatorioEntregas() {
     },
     onError: e => toast.error(e.message),
   });
-  const resultados = processar.data ?? [];
+  const resultados = processar.data?.linhas ?? [];
+  const rotas = processar.data?.rotas ?? [];
+  const [aba, setAba] = useState<"dia" | "rota">("dia");
 
   async function carregar(file: File | undefined) {
     if (!file) return;
@@ -273,7 +277,21 @@ export default function RelatorioEntregas() {
             </div>
           )}
 
+          {/* ── Abas: por dia × por rota ── */}
           {arquivo && !processar.isPending && dia && (
+            <div className="mx-6 mt-4 inline-flex rounded-xl border border-slate-200 dark:border-slate-600 p-0.5 bg-white dark:bg-[var(--card)]">
+              {([["dia", "Por dia"], ["rota", "Por rota"]] as const).map(([v, rotulo]) => (
+                <button key={v} onClick={() => setAba(v)}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${aba === v ? "bg-indigo-500 text-white" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50"}`}>
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {arquivo && !processar.isPending && dia && aba === "rota" && <PainelRota rotas={rotas} />}
+
+          {arquivo && !processar.isPending && dia && aba === "dia" && (
             <>
               {/* ── Filtro de dia + KPIs ── */}
               <div className="bg-white dark:bg-[var(--card)] rounded-2xl px-5 py-3 flex items-center gap-4 mx-6 mt-4 border border-slate-100 dark:border-[var(--border)]">
