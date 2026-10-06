@@ -17,7 +17,7 @@ export interface PDFEntregasData {
 }
 
 // Larguras — A4 paisagem (842pt − 2×28 de padding ≈ 786pt)
-const C = { placa: 130, saida: 45, retorno: 45, entregas: 55, tarde: 75, raio: 75, semParada: 55, relamp: 75, semCliente: 80, km: 45, pend: 80 } as const;
+const C = { placa: 155, saida: 45, retorno: 45, entregas: 55, tarde: 75, raio: 75, semParada: 55, relamp: 75, semCliente: 80, km: 45, pend: 80 } as const;
 const CE = { placa: 150, cliente: 220, cod: 60, baixa: 50, status: 100, dist: 80, perm: 70 } as const;
 
 const LEGENDA = [

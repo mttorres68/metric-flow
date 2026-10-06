@@ -10,6 +10,7 @@ import { serveStatic, setupVite } from "./vite";
 import { relatorioRouter } from "../routes/relatorio";
 import { assessmentSyncRouter } from "../routes/assessmentSync";
 import { crmUploadRouter } from "../routes/crmUpload";
+import { relatorioEntregasRouter } from "../routes/relatorioEntregas";
 import { initWATables } from "../db/whatsapp";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -48,6 +49,7 @@ async function startServer() {
   app.use("/api/relatorio", relatorioRouter);
   app.use("/api/assessment", assessmentSyncRouter);
   app.use("/api/crm", crmUploadRouter);
+  app.use("/api/relatorio-entregas", relatorioEntregasRouter);
   // tRPC API
   app.use(
     "/api/trpc",
