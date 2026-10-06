@@ -83,6 +83,35 @@ describe("parseCheckNow", () => {
   });
 });
 
+describe("parseCheckNow — dados da rota (colunas opcionais)", () => {
+  const extra = {
+    "Documento": 202610030111, "Valor (R$)": "R$ 3.153,98", "Peso (Kg)": 413.44, "Ordem Planejada": 34,
+    "Motivo Problema": "", "Capacidade Veículo": 8000, "Cidade": "BERTOLINIA",
+  };
+
+  it("soma valor, peso e notas distintas do cliente, ignorando linhas repetidas", () => {
+    const [e] = parseCheckNow(planilha([
+      { ...base, ...extra },
+      { ...base, ...extra },                                                   // linha repetida
+      { ...base, ...extra, "Documento": 202610030124, "Valor (R$)": "R$ 1.000,02", "Peso (Kg)": 100 },
+    ]));
+    expect(e.notas).toBe(2);
+    expect(e.valor).toBeCloseTo(4154, 2);
+    expect(e.pesoKg).toBeCloseTo(513.44, 2);
+    expect(e).toMatchObject({ ordemPlanejada: 34, capacidadeKg: 8000, cidade: "BERTOLINIA", motivoProblema: null });
+  });
+
+  it("lê o motivo do problema", () => {
+    const [e] = parseCheckNow(planilha([{ ...base, ...extra, "Situação": "PROBLEMA", "Motivo Problema": "FECHADO/AUSENTE" }]));
+    expect(e.motivoProblema).toBe("FECHADO/AUSENTE");
+  });
+
+  it("sem as colunas opcionais, usa valores neutros", () => {
+    const [e] = parseCheckNow(planilha([base]));
+    expect(e).toMatchObject({ notas: 1, valor: 0, pesoKg: 0, ordemPlanejada: null, capacidadeKg: null, cidade: "", motivoProblema: null });
+  });
+});
+
 describe("dataHoraBRT", () => {
   it("retorna null quando falta data ou hora", () => {
     expect(dataHoraBRT("05/10/2026", "")).toBeNull();

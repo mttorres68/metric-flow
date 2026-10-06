@@ -10,7 +10,8 @@ const entrega = (o: Partial<Entrega> = {}): Entrega => ({
   codCliente: "1", cliente: "C1", lat: -7, lon: -43,
   situacao: "ENTREGUE", baixaEm: brt("2026-10-05T10:00"),
   rotaInicio: brt("2026-10-05T07:00"), rotaFim: null,
-  odoIniInformado: null, odoFimInformado: null, ...o,
+  odoIniInformado: null, odoFimInformado: null,
+  ordemPlanejada: null, valor: 0, pesoKg: 0, notas: 1, motivoProblema: null, capacidadeKg: null, cidade: "", ...o,
 });
 
 const parada = (lat: number, lon: number, inicio: string, min: number): Parada =>

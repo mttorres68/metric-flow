@@ -21,6 +21,22 @@ export interface Entrega {
   rotaFim: Date | null;
   odoIniInformado: number | null;
   odoFimInformado: number | null;
+  // Colunas opcionais (análise por rota). Valor, peso e notas somam as notas distintas do cliente.
+  ordemPlanejada: number | null;
+  valor: number;
+  pesoKg: number;
+  notas: number;
+  motivoProblema: string | null;
+  capacidadeKg: number | null;
+  cidade: string;
+}
+
+/** "R$ 3.153,98" → 3153.98 (aceita número). */
+function reais(v: unknown): number {
+  if (typeof v === "number") return v;
+  if (typeof v !== "string") return 0;
+  const n = Number(v.replace(/R\$/g, "").replace(/\./g, "").replace(",", ".").trim());
+  return Number.isFinite(n) ? n : 0;
 }
 
 export const COLUNAS_CHECKNOW = [
@@ -91,12 +107,25 @@ export function parseCheckNow(buffer: Buffer): Entrega[] {
 
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: null });
   const entregas = new Map<string, Entrega>();
+  const notasVistas = new Set<string>(); // RouteId|Cliente|Documento — a planilha repete linhas inteiras
   for (const r of rows) {
     const routeId = String(r["RouteId"] ?? "").trim();
     const codCliente = String(r["Código do Cliente"] ?? "").trim();
     if (!routeId || !codCliente) continue;
     const chave = `${routeId}|${codCliente}`;
-    if (entregas.has(chave)) continue;
+    const doc = String(r["Documento"] ?? "").trim();
+    const notaNova = !notasVistas.has(`${chave}|${doc}`);
+    notasVistas.add(`${chave}|${doc}`);
+
+    const existente = entregas.get(chave);
+    if (existente) {
+      if (notaNova && doc) {
+        existente.notas++;
+        existente.valor += reais(r["Valor (R$)"]);
+        existente.pesoKg += num(r["Peso (Kg)"]) ?? 0;
+      }
+      continue;
+    }
 
     const lat = num(r["Latitude"]), lon = num(r["Longitude"]);
     const temCoord = lat !== null && lon !== null && Math.abs(lat) > 0.001 && Math.abs(lon) > 0.001;
@@ -114,6 +143,13 @@ export function parseCheckNow(buffer: Buffer): Entrega[] {
       rotaFim: dataHoraBRT(r["Data Rota Fim Realizada"], r["Hora Rota Fim Realizada"]),
       odoIniInformado: num(r["Odometro Inicial Real. Informado"]),
       odoFimInformado: num(r["Odometro Final Real. Informado"]),
+      ordemPlanejada: num(r["Ordem Planejada"]),
+      valor: reais(r["Valor (R$)"]),
+      pesoKg: num(r["Peso (Kg)"]) ?? 0,
+      notas: 1,
+      motivoProblema: String(r["Motivo Problema"] ?? "").trim() || null,
+      capacidadeKg: num(r["Capacidade Veículo"]),
+      cidade: String(r["Cidade"] ?? "").trim(),
     });
   }
   return [...entregas.values()];
