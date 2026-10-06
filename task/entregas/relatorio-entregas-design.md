@@ -63,9 +63,11 @@ comprova presença:
   `Position { latitude longitude fixTime speed ignition valid driverId }`.
 - `routeVehicleDetails(filter)`: `totalDistanceTraveled` na janela (mesma
   conversão de unidade do `resumoDiario`).
-- **A confirmar na sonda (§9):** unidade do `speed` (o schema lembra o do
-  Traccar, que usa nós), limite e paginação de `listVehiclePositions`, formato
-  de `plate`.
+- **Sonda (2026-10-05, SOO-8D21, 06:00–12:00):** 509 posições em 6 h (sem
+  sinal de truncamento; chegam em ordem decrescente de `fixTime`); `speed` em
+  km/h (mediana da razão 1.00, 408 amostras) → `SPEED_PARA_KMH = 1`; `plate`
+  no formato `SOL6B13` (sem hífen, por isso a normalização da placa); 10
+  veículos na conta; `routeVehicleDetails.totalDistanceTraveled` = 124.68 (km).
 
 ## 3. Arquitetura
 
