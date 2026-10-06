@@ -25,7 +25,7 @@ relatorioEntregasRouter.post("/gerar", async (req: Request, res: Response) => {
 
   try {
     const { raioM } = await getConfigEntregas();
-    let resultados = await processarPlanilha(Buffer.from(xlsxBase64, "base64"), new Date(), {
+    let { linhas: resultados } = await processarPlanilha(Buffer.from(xlsxBase64, "base64"), new Date(), {
       cercaId: typeof cercaId === "string" && cercaId ? cercaId : undefined,
       raioM,
     });

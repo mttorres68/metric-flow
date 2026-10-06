@@ -8,7 +8,7 @@ const q = infleetQuery as Mock;
 const T0 = new Date("2026-10-05T07:00:00-03:00");
 const em = (min: number) => new Date(T0.getTime() + min * 60000).toISOString();
 const janela = { inicio: T0, fim: new Date(T0.getTime() + 2 * 3600000) };
-const p = (min: number, speed: number) => ({ latitude: -7, longitude: -43, fixTime: em(min), speed, valid: true });
+const p = (min: number, speed: number, ignition: boolean | null = null) => ({ latitude: -7, longitude: -43, fixTime: em(min), speed, valid: true, ignition });
 
 // Chaves: um beforeEach que devolve função vira teardown no vitest (chamaria o mock sem argumentos).
 beforeEach(() => { q.mockReset(); });
@@ -41,14 +41,13 @@ describe("buscarGpsLinha", () => {
   it("converte posições, detecta paradas e lê o km", async () => {
     q.mockImplementation(async (query: string) =>
       query.includes("routeVehicleDetails")
-        ? { routeVehicleDetails: { totalDistanceTraveled: 123456, totalTimeStoppedWithIgnitionOn: 1800 } }
+        ? { routeVehicleDetails: { totalDistanceTraveled: 123456 } }
         : { listVehiclePositions: [p(0, 40 / SPEED_PARA_KMH), p(1, 0), p(10, 0), p(11, 40 / SPEED_PARA_KMH)] });
     const r = await buscarGpsLinha("v1", janela);
     expect(r.erro).toBeNull();
     expect(r.paradas).toHaveLength(1);
     expect(r.paradas[0].min).toBe(10);
     expect(r.kmGps).toBe(123.5);
-    expect(r.ociosoMin).toBe(30); // 1800 s parado com motor ligado
   });
 
 
@@ -102,6 +101,20 @@ describe("buscarGpsLinha", () => {
       expect([r.saidaOrigem, r.retornoOrigem]).toEqual(["gps", "gps"]);
       expect(q.mock.calls.some(c => String(c[0]).includes("listEvents"))).toBe(false);
     });
+  });
+
+  it("motor ligado parado vem das posições (ignição) dentro da jornada", async () => {
+    const posicoes = [
+      p(0, 0, true), p(30, 0, true),                    // antes da saída, ignição ligada: não conta
+      ...[31, 32, 33, 34, 35].map(m => p(m, 40, true)),  // rodando
+      p(36, 0, true), p(46, 0, true),                    // parado com motor ligado 36→47 = 11 min
+      ...[47, 48, 49, 50, 51].map(m => p(m, 40, true)),  // rodando
+      p(52, 0, false), p(110, 0, false),                 // estacionado desligado (fim da jornada)
+    ];
+    q.mockImplementation(async (query: string) =>
+      query.includes("routeVehicleDetails") ? { routeVehicleDetails: { totalDistanceTraveled: 10 } } : { listVehiclePositions: posicoes });
+    const r = await buscarGpsLinha("v1", janela);
+    expect(r.ociosoMin).toBe(11);
   });
 
   it("sem posições → 'sem sinal GPS'", async () => {

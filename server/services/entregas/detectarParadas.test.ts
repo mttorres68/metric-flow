@@ -2,8 +2,9 @@ import { describe, it, expect } from "vitest";
 import { detectarParadas, distM, type Posicao } from "./detectarParadas";
 
 const T0 = Date.UTC(2026, 9, 5, 12, 0); // 05/10 09:00 BRT
-const pos = (min: number, kmh: number, lat = -7, lon = -43, valida = true): Posicao =>
-  ({ lat, lon, em: new Date(T0 + min * 60000), kmh, valida });
+const pos = (min: number, kmh: number, lat = -7, lon = -43, valida = true, ignicao: boolean | null = null): Posicao =>
+  ({ lat, lon, em: new Date(T0 + min * 60000), kmh, valida, ignicao });
+
 const minDe = (d: Date | null) => (d ? (d.getTime() - T0) / 60000 : null);
 
 describe("distM", () => {
@@ -35,6 +36,24 @@ describe("detectarParadas", () => {
     const r = detectarParadas([...parado(0, 30), pos(31, 20, -7.0004), pos(32, 20, -7.0007), ...parado(33, 60, cemM), ...andando(61, 80), ...parado(81, 90, -6.5)]);
     expect(minDe(r.saida)).toBe(61);
     expect(minDe(r.retorno)).toBe(81);
+  });
+
+  it("motor ligado parado: só o tempo parado com ignição ligada dentro da jornada (saída → retorno)", () => {
+    const ligado = (de: number, ate: number, lat: number, kmh: number) =>
+      Array.from({ length: ate - de + 1 }, (_, i) => pos(de + i, kmh, kmh ? -7 + 0.01 * (i + 1) : lat, -43, true, true));
+    const r = detectarParadas([
+      ...ligado(0, 60, -7, 0),        // pernoite com ignição ligada: fora da jornada
+      ...ligado(61, 80, -7, 40),      // rodando (saída aos 61)
+      ...ligado(81, 100, -6.8, 0),    // parado no cliente com motor ligado: 20 min
+      ...ligado(101, 120, -7, 40),    // rodando (retorno aos 121)
+      ...Array.from({ length: 80 }, (_, i) => pos(121 + i, 0, -7, -43, true, false)), // estacionado desligado
+    ]);
+    expect([minDe(r.saida), minDe(r.retorno)]).toEqual([61, 121]);
+    expect(r.ociosoMin).toBe(20);
+  });
+
+  it("sem jornada (sem movimento), motor ligado parado é nulo", () => {
+    expect(detectarParadas([pos(0, 0, -7, -43, true, true), pos(600, 0, -7, -43, true, true)]).ociosoMin).toBeNull();
   });
 
   it("janela toda em movimento: saída e retorno nas pontas", () => {

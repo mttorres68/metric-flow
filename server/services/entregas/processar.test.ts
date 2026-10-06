@@ -41,7 +41,7 @@ describe("processarPlanilha", () => {
   it("cruza cada linha com o GPS, ordena por dia/placa/motorista e marca placa sem rastreador", async () => {
     (mapaVeiculos as Mock).mockResolvedValue(new Map([["SOL6B13", "v1"]]));
     (buscarGpsLinha as Mock).mockResolvedValue(gpsNoCliente);
-    const rs = await processarPlanilha(planilha([
+    const { linhas: rs, rotas } = await processarPlanilha(planilha([
       linha({ "RouteId": 2, "Placa": "ABC-1234", "Motorista": "ZE", "Código do Cliente": 20 }),
       linha({}),
     ]), new Date("2026-10-06T12:00:00-03:00"));
@@ -51,6 +51,7 @@ describe("processarPlanilha", () => {
       ["2026-10-05", "SOL-6B13", null],
     ]);
     expect(rs[1].noRaio).toBe(1);
+    expect(rotas).toHaveLength(2);
     expect((buscarGpsLinha as Mock).mock.calls.map(c => c[0])).toEqual(["v1"]);
   });
 
@@ -66,17 +67,18 @@ describe("processarPlanilha", () => {
     const a400m = { ...gpsNoCliente, paradas: [{ ...gpsNoCliente.paradas[0], lat: -7 + 0.0036 }] };
     (buscarGpsLinha as Mock).mockResolvedValue(a400m);
     const agora = new Date("2026-10-06T12:00:00-03:00");
-    expect((await processarPlanilha(planilha([linha({})]), agora))[0].noRaio).toBe(0);
-    expect((await processarPlanilha(planilha([linha({})]), agora, { raioM: 500 }))[0].noRaio).toBe(1);
+    expect((await processarPlanilha(planilha([linha({})]), agora)).linhas[0].noRaio).toBe(0);
+    expect((await processarPlanilha(planilha([linha({})]), agora, { raioM: 500 })).linhas[0].noRaio).toBe(1);
   });
 
   it("planilha sem rota iniciada devolve lista vazia sem chamar o Infleet", async () => {
-    const rs = await processarPlanilha(planilha([linha({
+    const { linhas: rs, rotas } = await processarPlanilha(planilha([linha({
       "Situação": "AGUARDANDO", "Data de Chegada": "", "Hora de Chegada": "",
       "Data Rota Inicio Realizada": "", "Hora Rota Inicio Realizada": "",
       "Data Rota Fim Realizada": "", "Hora Rota Fim Realizada": "",
     })]), new Date());
     expect(rs).toEqual([]);
+    expect(rotas).toEqual([]);
     expect(mapaVeiculos).not.toHaveBeenCalled();
   });
 });

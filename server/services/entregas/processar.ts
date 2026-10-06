@@ -5,6 +5,7 @@
  */
 import { parseCheckNow } from "./parseCheckNow";
 import { montarLinhas, agruparPorRota, cruzar, type ResultadoLinha } from "./cruzar";
+import { analisarRotas, type AnaliseRota } from "./rota";
 import { mapaVeiculos, buscarGpsLinha, gpsErro, normalizarPlaca } from "./infleetEntregas";
 
 /** Executa fn sobre itens com no máximo n chamadas simultâneas, preservando a ordem. */
@@ -20,13 +21,13 @@ async function emParalelo<T, R>(itens: T[], n: number, fn: (t: T) => Promise<R>)
   return out;
 }
 
-/** Resultados de todos os dias, ordenados por dia, placa e motorista. cercaId: cerca da base (saída/retorno); raioM: raio do cliente. */
+/** Linhas por dia (ordenadas por dia, placa e motorista) e análise por rota. cercaId: cerca da base (saída/retorno); raioM: raio do cliente. */
 export async function processarPlanilha(
   buffer: Buffer, agora: Date, { cercaId, raioM }: { cercaId?: string; raioM?: number } = {},
-): Promise<ResultadoLinha[]> {
+): Promise<{ linhas: ResultadoLinha[]; rotas: AnaliseRota[] }> {
   const entregas = parseCheckNow(buffer);
   const linhas = montarLinhas(entregas, agora);
-  if (!linhas.length) return [];
+  if (!linhas.length) return { linhas: [], rotas: [] };
 
   const veiculos = await mapaVeiculos();
   const porRota = agruparPorRota(entregas);
@@ -35,8 +36,9 @@ export async function processarPlanilha(
     const gps = vId ? await buscarGpsLinha(vId, l.janela, cercaId) : gpsErro("sem rastreador");
     return cruzar(l, porRota.get(l.routeId)!, gps, raioM);
   });
-  return resultados.sort((a, b) =>
+  resultados.sort((a, b) =>
     a.linha.data.localeCompare(b.linha.data)
     || a.linha.placa.localeCompare(b.linha.placa)
     || a.linha.motorista.localeCompare(b.linha.motorista));
+  return { linhas: resultados, rotas: analisarRotas(entregas, resultados) };
 }

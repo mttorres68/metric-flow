@@ -50,13 +50,13 @@ async function eventosDaCerca(vehicleId: string, janela: { inicio: Date; fim: Da
 }
 
 const Q_POSICOES = `query($filter: ListVehiclePositionsFilterInput!) {
-  listVehiclePositions(filter: $filter) { latitude longitude fixTime speed valid }
+  listVehiclePositions(filter: $filter) { latitude longitude fixTime speed valid ignition }
 }`;
 const Q_KM = `query($filter: ListVehiclePositionsFilterInput!) {
-  routeVehicleDetails(filter: $filter) { totalDistanceTraveled totalTimeStoppedWithIgnitionOn }
+  routeVehicleDetails(filter: $filter) { totalDistanceTraveled }
 }`;
 
-type PosicaoInfleet = { latitude: number; longitude: number; fixTime: string; speed: number; valid: boolean };
+type PosicaoInfleet = { latitude: number; longitude: number; fixTime: string; speed: number; valid: boolean; ignition: boolean | null };
 
 /**
  * cercaId: quando informado, saída = 1ª "Saiu da cerca" na janela e retorno = última "Entrou na cerca"
@@ -68,12 +68,12 @@ export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; 
     for (const fixTime of blocos(janela.inicio, janela.fim)) {
       const r = await infleetQuery<{ listVehiclePositions: PosicaoInfleet[] }>(Q_POSICOES, { filter: { vehicleId, fixTime } });
       for (const p of r.listVehiclePositions) {
-        posicoes.push({ lat: p.latitude, lon: p.longitude, em: new Date(p.fixTime), kmh: p.speed * SPEED_PARA_KMH, valida: p.valid });
+        posicoes.push({ lat: p.latitude, lon: p.longitude, em: new Date(p.fixTime), kmh: p.speed * SPEED_PARA_KMH, valida: p.valid, ignicao: p.ignition ?? null });
       }
     }
     if (!posicoes.length) return gpsErro("sem sinal GPS");
 
-    const km = await infleetQuery<{ routeVehicleDetails: { totalDistanceTraveled: number; totalTimeStoppedWithIgnitionOn: number | null } | null }>(Q_KM, {
+    const km = await infleetQuery<{ routeVehicleDetails: { totalDistanceTraveled: number } | null }>(Q_KM, {
       filter: { vehicleId, fixTime: { startAt: janela.inicio.toISOString(), endAt: janela.fim.toISOString() } },
     });
     const raw = km.routeVehicleDetails?.totalDistanceTraveled ?? null;
@@ -81,9 +81,7 @@ export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; 
     const kmGps = raw === null ? null : Math.round((raw > 1000 ? raw / 1000 : raw) * 10) / 10;
 
     const gps = detectarParadas(posicoes);
-    const ocioso = km.routeVehicleDetails?.totalTimeStoppedWithIgnitionOn;
-    const ociosoMin = ocioso == null ? null : Math.round(ocioso / 60); // segundos → min
-    const r: GpsLinha = { erro: null, ...gps, saidaOrigem: "gps", retornoOrigem: "gps", kmGps, ociosoMin };
+    const r: GpsLinha = { erro: null, ...gps, saidaOrigem: "gps", retornoOrigem: "gps", kmGps };
     if (!cercaId) return r;
 
     const { saidas, entradas } = await eventosDaCerca(vehicleId, janela, cercaId);
