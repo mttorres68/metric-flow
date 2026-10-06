@@ -238,8 +238,21 @@ podendo durar vários dias. O tRPC `entregas.processar` devolve
    - período e dias; clientes · notas;
    - entregue / devolvido / pendente, em quantidade e R$;
    - peso × capacidade (ocupação, vermelho acima de 100%);
-   - pernoites: a última parada de cada dia, menos o último, mostrada como a
-     cidade do cliente mais próximo e um link para o Google Maps.
+   - **pernoites** (bloco próprio, revisto em 2026-10-06). Os dados vêm dos
+     eventos do Infleet do dia (`listEvents`: `geofenceExit/Enter`,
+     `deviceIdle`, `ignitionOn/Off`, `deviceStopped/Moving`, com endereço). Para
+     cada noite entre dois dias da rota:
+     - endereço do Infleet no horário em que o caminhão parou;
+     - tipo de local: cerca (ex.: Sede) / rodovia (heurística pelo texto do
+       endereço: "Rodovia…", "PI-130"…) / cidade;
+     - parou (retorno) e saiu (saída do dia seguinte);
+     - **descanso**, com alerta abaixo de `descansoMinH` (11 h, Lei
+       13.103/2015);
+     - **chave ligada após parar** (até o 1º `ignitionOff`);
+     - **fora de hora**: chave ligada ou caminhão andando entre 22h e 5h;
+     - distância em linha reta até o 1º cliente atendido no dia seguinte.
+     A "ignição" do rastreador é a **chave**, não o motor: "Marcha lenta
+     excessiva" (`deviceIdle`) sai junto do desligar, com a duração em segundos.
 2. **Sequência:** a ordem real é a ordem das paradas do GPS em cada cliente
    (chegada da parada mais próxima), comparada com `Ordem Planejada`. "Na
    sequência" é a maior subsequência crescente; o resto são os pulos. Clientes
@@ -247,9 +260,10 @@ podendo durar vários dias. O tRPC `entregas.processar` devolve
 3. **Tempo:**
    - jornada (saída → retorno) dividida em rodando, parado em cliente e parado
      sem cliente, num gráfico por dia com a tabela dos números;
-   - **motor ligado parado**: calculado pela ignição das posições, só dentro da
-     jornada. O total do dia do Infleet inclui a noite, e há rastreador que
-     marca ignição ligada o tempo todo;
+   - **parado com chave ligada**: soma, dentro da jornada, dos períodos de
+     "marcha lenta excessiva" (`deviceIdle`: [evento − duração, evento]). A
+     ignição do rastreador é a chave, não o motor; o total do dia do Infleet
+     inclui a noite;
    - tempo médio por entrega e entregas por hora.
 4. **Distância:** km GPS × km informado (odômetro), km por entrega, R$ entregue
    por km.

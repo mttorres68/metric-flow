@@ -10,7 +10,7 @@ import type { AppRouter } from "../../../../server/routers";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Badge } from "@/pages/analise/components/Badge";
 import { Td, Th } from "@/pages/analise/components/TablePrimitives";
-import { diaBRT, horaBRT, minParaHM } from "@shared/entregas";
+import { LIMITES, diaBRT, horaBRT, minParaHM } from "@shared/entregas";
 
 type Rota = inferRouterOutputs<AppRouter>["entregas"]["processar"]["rotas"][number];
 
@@ -48,6 +48,14 @@ function Cartao({ rotulo, valor, sub, alerta }: { rotulo: string; valor: React.R
   );
 }
 
+const LOCAL = {
+  cerca: { cor: "green", rotulo: "Cerca" },
+  cidade: { cor: "blue", rotulo: "Cidade" },
+  rodovia: { cor: "amber", rotulo: "Rodovia" },
+  desconhecido: { cor: "slate", rotulo: "?" },
+} as const;
+const diaSeguinte = (dia: string) => diaBRT(new Date(new Date(`${dia}T12:00:00-03:00`).getTime() + 86400000));
+
 const GPS_DEVOLUCAO = {
   esteve: { cor: "green", texto: (m: number) => `Esteve ${minParaHM(m)}` },
   nao_parou: { cor: "red", texto: () => "Não parou no cliente" },
@@ -65,7 +73,8 @@ export function PainelRota({ rotas }: { rotas: Rota[] }) {
   const dadosTempo = r.tempoPorDia.map(t => ({
     dia: ddmm(t.data), rodando: t.rodandoMin, emCliente: t.emClienteMin, semCliente: t.paradoSemClienteMin,
   }));
-  const ociosoTotal = r.tempoPorDia.reduce((a, t) => a + (t.ociosoMin ?? 0), 0);
+  const chaveTotal = r.tempoPorDia.reduce((a, t) => a + (t.chaveLigadaMin ?? 0), 0);
+  const marchasLentas = r.tempoPorDia.reduce((a, t) => a + t.marchasLentas, 0);
   const pulos = r.sequencia.itens.filter(i => i.foraSequencia).length;
   const suspeitas = r.devolucoes.itens.filter(d => d.gps === "nao_parou").length;
   const d = r.distancia;
@@ -103,24 +112,73 @@ export function PainelRota({ rotas }: { rotas: Rota[] }) {
             <AlertTriangle size={12} /> Peso acima da capacidade cadastrada no CheckNow: excesso de carga, capacidade errada ou recarga no meio da rota.
           </p>
         )}
-        <div className="mt-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Pernoites</p>
-          {r.pernoites.length ? (
-            <ul className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
-              {r.pernoites.map(p => (
-                <li key={p.data} className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-slate-500">{ddmm(p.data)}</span>
-                  perto de <b>{p.cidade ?? "—"}</b>
-                  <span className="text-xs text-slate-400">(a {num(p.distM)} m de um cliente)</span>
-                  <a href={`https://www.google.com/maps?q=${p.lat},${p.lon}`} target="_blank" rel="noreferrer"
-                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-0.5">
-                    ver no mapa <ExternalLink size={10} />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          ) : <p className="text-xs text-slate-400">Sem pernoite fora (rota de um dia ou sem GPS).</p>}
-        </div>
+      </Bloco>
+
+      {/* ── Pernoites ── */}
+      <Bloco titulo="Pernoites"
+        extra={r.pernoites.some(p => p.descansoCurto || p.foraDeHora.length)
+          ? <span className="text-xs text-red-600 font-semibold flex items-center gap-1"><AlertTriangle size={12} /> há noites com alerta</span>
+          : undefined}>
+        {r.pernoites.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-green-950 text-slate-100">
+                <tr>
+                  <Th>Noite</Th>
+                  <Th title="Endereço do Infleet no horário em que o caminhão parou">Onde dormiu</Th>
+                  <Th center>Parou</Th>
+                  <Th center>Saiu</Th>
+                  <Th center title={`Lei 13.103/2015: ${LIMITES.descansoMinH} h de descanso entre jornadas`}>Descanso</Th>
+                  <Th center title="Do horário em que parou até desligar a chave">Chave ligada após parar</Th>
+                  <Th title={`Chave ligada ou caminhão andando entre ${LIMITES.noturnoDe} e ${LIMITES.noturnoAte}`}>Fora de hora</Th>
+                  <Th title="Distância em linha reta do pernoite até o 1º cliente atendido no dia seguinte">1º cliente do dia seguinte</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.pernoites.map(p => (
+                  <tr key={p.data} className="align-top">
+                    <Td mono>{ddmm(p.data)} → {ddmm(diaSeguinte(p.data))}</Td>
+                    <Td>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge color={LOCAL[p.local].cor}>{p.cerca ?? LOCAL[p.local].rotulo}</Badge>
+                        <span className="text-slate-700 dark:text-slate-200">{p.endereco ?? (p.cidade ? `perto de ${p.cidade}` : "—")}</span>
+                        <a href={`https://www.google.com/maps?q=${p.lat},${p.lon}`} target="_blank" rel="noreferrer"
+                          className="text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-0.5">
+                          mapa <ExternalLink size={10} />
+                        </a>
+                      </div>
+                    </Td>
+                    <Td center mono>{p.parou ? horaBRT(p.parou) : "—"}</Td>
+                    <Td center mono>{p.saiu ? horaBRT(p.saiu) : "—"}</Td>
+                    <Td center>
+                      {p.descansoMin === null ? "—" : p.descansoCurto
+                        ? <Badge color="red">{minParaHM(p.descansoMin)} — abaixo de {LIMITES.descansoMinH} h</Badge>
+                        : <span className="font-mono">{minParaHM(p.descansoMin)}</span>}
+                    </Td>
+                    <Td center mono>
+                      {p.chaveLigadaMin === null ? "—" : p.chaveLigadaMin > 30
+                        ? <span className="text-amber-600 dark:text-amber-400 font-bold">{minParaHM(p.chaveLigadaMin)}</span>
+                        : minParaHM(p.chaveLigadaMin)}
+                    </Td>
+                    <Td>
+                      {p.foraDeHora.length
+                        ? p.foraDeHora.map((e, i) => (
+                          <div key={i} className="text-red-600 font-semibold" title={e.endereco ?? undefined}>
+                            {horaBRT(e.em)} {e.tipo === "ignitionOn" ? "ligou a chave" : "andou"}
+                          </div>))
+                        : <span className="text-slate-400">—</span>}
+                    </Td>
+                    <Td>
+                      {p.primeiroCliente
+                        ? <>{p.primeiroCliente.cliente} <span className="text-slate-400">· {num(p.primeiroCliente.distKm, 1, " km")}</span></>
+                        : <span className="text-slate-400">—</span>}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="text-xs text-slate-400">Sem pernoite fora (rota de um dia ou sem GPS).</p>}
       </Bloco>
 
       {/* ── 2. Sequência ── */}
@@ -162,7 +220,7 @@ export function PainelRota({ rotas }: { rotas: Rota[] }) {
         {dadosTempo.length ? (
           <>
             <div className="grid grid-cols-3 gap-3 mb-4">
-              <Cartao rotulo="Parado com motor ligado" valor={minParaHM(ociosoTotal)} sub="ignição ligada no GPS, dentro da jornada" />
+              <Cartao rotulo="Parado com chave ligada" valor={minParaHM(chaveTotal)} sub={`${marchasLentas} "marcha lenta excessiva" na jornada — chave na ignição, não necessariamente motor`} />
               <Cartao rotulo="Tempo médio por entrega" valor={r.tempoMedioEntregaMin === null ? "—" : minParaHM(r.tempoMedioEntregaMin)} sub="parado em cliente ÷ entregas" />
               <Cartao rotulo="Entregas por hora de jornada" valor={num(r.entregasPorHora, 1)} />
             </div>
@@ -183,13 +241,13 @@ export function PainelRota({ rotas }: { rotas: Rota[] }) {
             {/* Tabela com os números (acessibilidade e leitura exata) */}
             <table className="w-full text-xs mt-3">
               <thead className="text-slate-500 dark:text-slate-400">
-                <tr className="text-left"><th className="py-1">Dia</th><th>Jornada</th><th>Rodando</th><th>Parado em cliente</th><th>Parado sem cliente</th><th>Motor ligado parado</th></tr>
+                <tr className="text-left"><th className="py-1">Dia</th><th>Jornada</th><th>Rodando</th><th>Parado em cliente</th><th>Parado sem cliente</th><th>Chave ligada parado</th></tr>
               </thead>
               <tbody className="font-mono text-slate-700 dark:text-slate-200">
                 {r.tempoPorDia.map(t => (
                   <tr key={t.data} className="border-t border-slate-100 dark:border-slate-700/40">
                     <td className="py-1">{ddmm(t.data)}</td><td>{minParaHM(t.jornadaMin)}</td><td>{minParaHM(t.rodandoMin)}</td>
-                    <td>{minParaHM(t.emClienteMin)}</td><td>{minParaHM(t.paradoSemClienteMin)}</td><td>{t.ociosoMin === null ? "—" : minParaHM(t.ociosoMin)}</td>
+                    <td>{minParaHM(t.emClienteMin)}</td><td>{minParaHM(t.paradoSemClienteMin)}</td><td>{t.chaveLigadaMin === null ? "—" : minParaHM(t.chaveLigadaMin)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -8,7 +8,18 @@ const q = infleetQuery as Mock;
 const T0 = new Date("2026-10-05T07:00:00-03:00");
 const em = (min: number) => new Date(T0.getTime() + min * 60000).toISOString();
 const janela = { inicio: T0, fim: new Date(T0.getTime() + 2 * 3600000) };
-const p = (min: number, speed: number, ignition: boolean | null = null) => ({ latitude: -7, longitude: -43, fixTime: em(min), speed, valid: true, ignition });
+const p = (min: number, speed: number) => ({ latitude: -7, longitude: -43, fixTime: em(min), speed, valid: true });
+
+type Ev = {
+  slugName: string; reportedAt: string; address?: string | null; latitude?: number; longitude?: number;
+  geofenceId?: string | null; geofence?: { name: string } | null; attributes?: Record<string, unknown> | null;
+};
+/** Responde posições, eventos e km como o Infleet. */
+const responder = (posicoes: ReturnType<typeof p>[], eventos: Ev[] = [], km = 10) =>
+  q.mockImplementation(async (query: string) =>
+    query.includes("routeVehicleDetails") ? { routeVehicleDetails: { totalDistanceTraveled: km } }
+      : query.includes("listEvents") ? { listEvents: eventos }
+      : { listVehiclePositions: posicoes });
 
 // Chaves: um beforeEach que devolve função vira teardown no vitest (chamaria o mock sem argumentos).
 beforeEach(() => { q.mockReset(); });
@@ -39,10 +50,7 @@ describe("blocos", () => {
 
 describe("buscarGpsLinha", () => {
   it("converte posições, detecta paradas e lê o km", async () => {
-    q.mockImplementation(async (query: string) =>
-      query.includes("routeVehicleDetails")
-        ? { routeVehicleDetails: { totalDistanceTraveled: 123456 } }
-        : { listVehiclePositions: [p(0, 40 / SPEED_PARA_KMH), p(1, 0), p(10, 0), p(11, 40 / SPEED_PARA_KMH)] });
+    responder([p(0, 40 / SPEED_PARA_KMH), p(1, 0), p(10, 0), p(11, 40 / SPEED_PARA_KMH)], [], 123456);
     const r = await buscarGpsLinha("v1", janela);
     expect(r.erro).toBeNull();
     expect(r.paradas).toHaveLength(1);
@@ -50,21 +58,26 @@ describe("buscarGpsLinha", () => {
     expect(r.kmGps).toBe(123.5);
   });
 
+  it("traz os eventos do dia em ordem, com endereço, cerca e duração da marcha lenta", async () => {
+    responder([p(0, 0), p(10, 0)], [
+      { slugName: "geofenceEnter", reportedAt: em(40), address: "Rua João Dantas, Floriano", latitude: -6.7, longitude: -43, geofenceId: "sede", geofence: { name: "Sede" }, attributes: {} },
+      { slugName: "deviceIdle", reportedAt: em(30), address: "Rodovia PI-130, Palmeirais", latitude: -5.9, longitude: -43.1, geofenceId: null, geofence: null, attributes: { duration: 722 } },
+    ]);
+    const r = await buscarGpsLinha("v1", janela);
+    expect(r.eventos.map(e => [e.tipo, e.em.toISOString(), e.endereco, e.cerca, e.duracaoMin])).toEqual([
+      ["deviceIdle", em(30), "Rodovia PI-130, Palmeirais", null, 12],
+      ["geofenceEnter", em(40), "Rua João Dantas, Floriano", "Sede", null],
+    ]);
+  });
 
   describe("saída e retorno pela cerca", () => {
     // GPS: parado 0–11, anda 11–21, parado 21–30 → saída GPS aos 11, retorno GPS aos 21
     const movimento = [p(0, 0), p(10, 0), p(11, 40), p(20, 40), p(21, 0), p(30, 0)];
-    type Ev = { slugName: "geofenceExit" | "geofenceEnter"; reportedAt: string; geofenceId: string };
     const saiu = (min: number, cerca = "sede"): Ev => ({ slugName: "geofenceExit", reportedAt: em(min), geofenceId: cerca });
     const entrou = (min: number, cerca = "sede"): Ev => ({ slugName: "geofenceEnter", reportedAt: em(min), geofenceId: cerca });
-    const responder = (eventos: Ev[]) =>
-      q.mockImplementation(async (query: string) =>
-        query.includes("routeVehicleDetails") ? { routeVehicleDetails: { totalDistanceTraveled: 10 } }
-          : query.includes("listEvents") ? { listEvents: eventos }
-          : { listVehiclePositions: movimento });
 
     it("saída = 1ª saída da cerca escolhida; retorno = última entrada depois da saída", async () => {
-      responder([entrou(2), saiu(8), saiu(5, "outra"), entrou(25), entrou(27, "outra")]);
+      responder(movimento, [entrou(2), saiu(8), saiu(5, "outra"), entrou(25), entrou(27, "outra")]);
       const r = await buscarGpsLinha("v1", janela, "sede");
       expect(r.saida?.toISOString()).toBe(em(8));
       expect(r.saidaOrigem).toBe("cerca");
@@ -73,7 +86,7 @@ describe("buscarGpsLinha", () => {
     });
 
     it("entrada só antes da saída não é retorno: retorno volta para o GPS", async () => {
-      responder([entrou(2), saiu(8)]);
+      responder(movimento, [entrou(2), saiu(8)]);
       const r = await buscarGpsLinha("v1", janela, "sede");
       expect(r.saidaOrigem).toBe("cerca");
       expect(r.retorno?.toISOString()).toBe(em(21));
@@ -81,7 +94,7 @@ describe("buscarGpsLinha", () => {
     });
 
     it("sem eventos da cerca escolhida, saída e retorno pelo GPS", async () => {
-      responder([saiu(5, "outra"), entrou(25, "outra")]);
+      responder(movimento, [saiu(5, "outra"), entrou(25, "outra")]);
       const r = await buscarGpsLinha("v1", janela, "sede");
       expect(r.saida?.toISOString()).toBe(em(11));
       expect(r.retorno?.toISOString()).toBe(em(21));
@@ -89,32 +102,18 @@ describe("buscarGpsLinha", () => {
     });
 
     it("entrou na cerca sem ter saído dela no dia (saída pelo GPS): retorno pela cerca se for depois da saída", async () => {
-      responder([entrou(25)]);
+      responder(movimento, [entrou(25)]);
       const r = await buscarGpsLinha("v1", janela, "sede");
       expect([r.saidaOrigem, r.retornoOrigem]).toEqual(["gps", "cerca"]);
       expect(r.retorno?.toISOString()).toBe(em(25));
     });
 
-    it("sem cerca escolhida, nem consulta eventos", async () => {
-      responder([saiu(8), entrou(25)]);
+    it("sem cerca escolhida, saída e retorno pelo GPS mesmo com eventos de cerca", async () => {
+      responder(movimento, [saiu(8), entrou(25)]);
       const r = await buscarGpsLinha("v1", janela);
       expect([r.saidaOrigem, r.retornoOrigem]).toEqual(["gps", "gps"]);
-      expect(q.mock.calls.some(c => String(c[0]).includes("listEvents"))).toBe(false);
+      expect(r.saida?.toISOString()).toBe(em(11));
     });
-  });
-
-  it("motor ligado parado vem das posições (ignição) dentro da jornada", async () => {
-    const posicoes = [
-      p(0, 0, true), p(30, 0, true),                    // antes da saída, ignição ligada: não conta
-      ...[31, 32, 33, 34, 35].map(m => p(m, 40, true)),  // rodando
-      p(36, 0, true), p(46, 0, true),                    // parado com motor ligado 36→47 = 11 min
-      ...[47, 48, 49, 50, 51].map(m => p(m, 40, true)),  // rodando
-      p(52, 0, false), p(110, 0, false),                 // estacionado desligado (fim da jornada)
-    ];
-    q.mockImplementation(async (query: string) =>
-      query.includes("routeVehicleDetails") ? { routeVehicleDetails: { totalDistanceTraveled: 10 } } : { listVehiclePositions: posicoes });
-    const r = await buscarGpsLinha("v1", janela);
-    expect(r.ociosoMin).toBe(11);
   });
 
   it("sem posições → 'sem sinal GPS'", async () => {

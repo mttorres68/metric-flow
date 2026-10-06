@@ -13,6 +13,9 @@ export const LIMITES = {
   apos14hMinPct: 25,
   relampagoMaxPct: 10,
   momentoTolMin: 15, // baixa até 15 min antes da chegada ou depois da saída do caminhão ainda conta como "na parada"
+  descansoMinH: 11, // descanso entre jornadas (Lei 13.103/2015) — alerta abaixo disso
+  noturnoDe: "22:00", // chave ligada ou caminhão andando neste intervalo = atividade fora de hora
+  noturnoAte: "05:00",
 } as const;
 
 const H3 = 3 * 3600000;

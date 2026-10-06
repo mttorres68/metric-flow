@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cruzar, excecoes, montarLinhas, type GpsLinha, type LinhaDia } from "./cruzar";
+import { cruzar, excecoes, montarLinhas, type EventoGps, type GpsLinha, type LinhaDia } from "./cruzar";
 import type { Entrega } from "./parseCheckNow";
 import type { Parada } from "./detectarParadas";
 
@@ -18,7 +18,7 @@ const parada = (lat: number, lon: number, inicio: string, min: number): Parada =
   ({ lat, lon, inicio: brt(inicio), fim: new Date(brt(inicio).getTime() + min * 60000), min });
 
 const gps = (paradas: Parada[], o: Partial<GpsLinha> = {}): GpsLinha => ({
-  erro: null, paradas, kmGps: 120, ociosoMin: null, saidaOrigem: "gps", retornoOrigem: "gps",
+  erro: null, paradas, kmGps: 120, eventos: [], saidaOrigem: "gps", retornoOrigem: "gps",
   saida: brt("2026-10-05T07:30"), retorno: brt("2026-10-05T18:00"), ...o,
 });
 
@@ -199,17 +199,28 @@ describe("cruzar", () => {
       expect(r.tempo?.paradoSemClienteMin).toBe(30);
     });
 
-    it("última parada do dia (onde estacionou) e motor ligado parado vêm junto", () => {
-      const r = cruzar(linha(), [entrega()], gps(paradasDia, { ociosoMin: 42 }));
+    it("parado com chave ligada: marchas lentas que caem dentro da jornada", () => {
+      const idle = (fim: string, min: number): EventoGps => ({
+        tipo: "deviceIdle", em: brt(fim), endereco: null, lat: -7, lon: -43, cercaId: null, cerca: null, duracaoMin: min,
+      });
+      const r = cruzar(linha(), [entrega()], gps(paradasDia, {
+        eventos: [idle("2026-10-05T07:40", 40), idle("2026-10-05T10:00", 30), idle("2026-10-05T23:00", 120)],
+      }));
+      expect(r.chaveLigadaMin).toBe(40); // 10 (07:30–07:40) + 30 (09:30–10:00); a da noite fica fora
+      expect(r.marchasLentas).toBe(2);
+      expect(r.eventos).toHaveLength(3);
+    });
+
+    it("última parada do dia (onde estacionou)", () => {
+      const r = cruzar(linha(), [entrega()], gps(paradasDia));
       expect(r.ultimaParada?.inicio.toISOString()).toBe(brt("2026-10-05T18:00").toISOString());
       expect(r.ultimaParada?.lat).toBe(LONGE);
-      expect(r.ociosoMin).toBe(42);
     });
 
     it("sem GPS ou sem saída/retorno: tempo e última parada nulos", () => {
       expect(cruzar(linha(), [entrega()], gps([], { erro: "sem rastreador" })).tempo).toBeNull();
       const parado = cruzar(linha(), [entrega()], gps(paradasDia, { saida: null, retorno: null }));
-      expect([parado.tempo, parado.ultimaParada]).toEqual([null, null]);
+      expect([parado.tempo, parado.ultimaParada, parado.chaveLigadaMin]).toEqual([null, null, null]);
     });
   });
 

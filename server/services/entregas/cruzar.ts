@@ -20,6 +20,22 @@ export interface LinhaDia {
   fechaRota: boolean;
 }
 
+/**
+ * Evento do Infleet relevante para a rota. A "ignição" do rastreador é a chave, não o motor:
+ * "Marcha lenta excessiva" (deviceIdle) sai junto do desligar e traz quanto tempo a chave ficou ligada parada.
+ */
+export type TipoEvento = "geofenceExit" | "geofenceEnter" | "deviceIdle" | "ignitionOn" | "ignitionOff" | "deviceStopped" | "deviceMoving";
+export interface EventoGps {
+  tipo: TipoEvento;
+  em: Date;
+  endereco: string | null;
+  lat: number;
+  lon: number;
+  cercaId: string | null;
+  cerca: string | null;
+  duracaoMin: number | null; // só em deviceIdle
+}
+
 export interface GpsLinha {
   erro: string | null; // "sem rastreador" | "sem sinal GPS" | "falha no Infleet: ..."
   paradas: Parada[];
@@ -28,7 +44,7 @@ export interface GpsLinha {
   retornoOrigem: "gps" | "cerca"; // "cerca" = evento Entrou na cerca (depois da saída); "gps" = fim do último trecho
   retorno: Date | null;
   kmGps: number | null;
-  ociosoMin: number | null; // parado com motor ligado na janela (Infleet)
+  eventos: EventoGps[]; // eventos do Infleet no dia (cerca, chave, marcha lenta, parado/andando), em ordem
 }
 
 export interface ParadaNoCliente { inicio: Date; fim: Date; distM: number }
@@ -69,7 +85,10 @@ export interface ResultadoLinha {
   semParada: number;
   paradasSemCliente: { qtd: number; min: number };
   kmGps: number | null;
-  ociosoMin: number | null;
+  /** Parado com a chave ligada dentro da jornada (eventos "Marcha lenta excessiva"). */
+  chaveLigadaMin: number | null;
+  marchasLentas: number;
+  eventos: EventoGps[];
   /** Divisão da jornada (saída → retorno). null sem GPS ou sem saída/retorno. */
   tempo: { jornadaMin: number; rodandoMin: number; emClienteMin: number; paradoSemClienteMin: number } | null;
   /** Onde o caminhão estacionou no fim do dia (parada que começa no retorno) — base do pernoite. */
@@ -168,7 +187,9 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
     semParada: 0,
     paradasSemCliente: { qtd: 0, min: 0 },
     kmGps: null,
-    ociosoMin: null,
+    chaveLigadaMin: null,
+    marchasLentas: 0,
+    eventos: gps.eventos,
     tempo: null,
     ultimaParada: null,
     pendentes: linha.fechaRota ? entregasRota.filter(e => e.situacao === "AGUARDANDO").length : null,
@@ -180,7 +201,6 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
   r.saida = gps.saida;
   r.retorno = gps.retorno;
   r.kmGps = gps.kmGps;
-  r.ociosoMin = gps.ociosoMin;
 
   for (const e of baixasDia) {
     if (!temCoord(e)) {
@@ -236,6 +256,18 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
       emClienteMin: Math.round(emCliente),
       paradoSemClienteMin: Math.round(semCliente),
     };
+    // Chave ligada parado: cada marcha lenta cobre [evento − duração, evento]; conta a parte na jornada.
+    let chave = 0;
+    for (const e of gps.eventos) {
+      if (e.tipo !== "deviceIdle" || !e.duracaoMin) continue;
+      const fim = Math.min(e.em.getTime(), retorno.getTime());
+      const ini = Math.max(e.em.getTime() - e.duracaoMin * 60000, saida.getTime());
+      if (fim <= ini) continue;
+      chave += (fim - ini) / 60000;
+      r.marchasLentas++;
+    }
+    r.chaveLigadaMin = Math.round(chave);
+
     const ultima = gps.paradas.filter(p => p.inicio >= retorno).pop();
     r.ultimaParada = ultima ? { lat: ultima.lat, lon: ultima.lon, inicio: ultima.inicio } : null;
   }

@@ -4,7 +4,8 @@
  */
 import type { Entrega } from "./parseCheckNow";
 import { distM } from "./detectarParadas";
-import { agruparPorRota, type EntregaCruzada, type ResultadoLinha } from "./cruzar";
+import { agruparPorRota, type EntregaCruzada, type EventoGps, type ResultadoLinha } from "./cruzar";
+import { LIMITES, horaBRT } from "@shared/entregas";
 
 export interface ItemSequencia {
   ordemReal: number;
@@ -26,6 +27,78 @@ export interface Devolucao {
   permanenciaMin: number;
 }
 
+export interface Pernoite {
+  data: string; // noite que começa neste dia
+  lat: number;
+  lon: number;
+  endereco: string | null; // endereço do Infleet no horário em que o caminhão parou
+  cidade: string | null; // cidade do cliente da rota mais próximo (referência)
+  local: "cerca" | "rodovia" | "cidade" | "desconhecido";
+  cerca: string | null;
+  parou: Date | null; // retorno do dia
+  saiu: Date | null; // saída do dia seguinte
+  descansoMin: number | null;
+  descansoCurto: boolean; // abaixo de LIMITES.descansoMinH
+  chaveLigadaMin: number | null; // da parada até desligar a chave
+  foraDeHora: { tipo: EventoGps["tipo"]; em: Date; endereco: string | null }[]; // chave ligada / andando de madrugada
+  primeiroCliente: { codCliente: string; cliente: string; distKm: number } | null; // 1º cliente atendido no dia seguinte
+}
+
+// Endereço de rodovia: "Rodovia …", "Estrada …", "BR-316", "PI-130"…  (ponytail: heurística pelo texto do endereço)
+const EH_RODOVIA = /^(rodovia|estrada|rod\.)|\b[A-Z]{2}-\d{2,3}\b/i;
+const noturno = (d: Date) => { const h = horaBRT(d); return h >= LIMITES.noturnoDe || h < LIMITES.noturnoAte; };
+type ComCoord = Entrega & { lat: number; lon: number };
+
+/** A noite entre um dia e o seguinte da mesma rota: onde dormiu, descanso, chave ligada, atividade fora de hora. */
+function pernoite(dia: ResultadoLinha, seguinte: ResultadoLinha, clientes: ComCoord[]): Pernoite | null {
+  if (!dia.ultimaParada) return null;
+  const { lat, lon } = dia.ultimaParada;
+  const parou = dia.retorno, saiu = seguinte.saida;
+  const desde = (parou ?? dia.ultimaParada.inicio).getTime() - 5 * 60000;
+  const noite = [...dia.eventos, ...seguinte.eventos].filter(e => e.em.getTime() >= desde && (!saiu || e.em <= saiu));
+
+  const endereco = noite.find(e => e.endereco)?.endereco ?? null;
+  const cerca = noite.find(e => e.cerca)?.cerca ?? null;
+  const perto = clientes
+    .map(c => ({ c, d: distM(lat, lon, c.lat, c.lon) }))
+    .reduce<{ c: Entrega; d: number } | null>((m, x) => (!m || x.d < m.d ? x : m), null);
+  const descansoMin = parou && saiu ? Math.round((saiu.getTime() - parou.getTime()) / 60000) : null;
+
+  // Chave: até o 1º desligar depois de parar; sem desligar, depende do último estado antes de parar.
+  let chaveLigadaMin: number | null = null;
+  if (parou) {
+    const off = noite.find(e => e.tipo === "ignitionOff" && e.em >= parou);
+    if (off) chaveLigadaMin = Math.round((off.em.getTime() - parou.getTime()) / 60000);
+    else {
+      const antes = dia.eventos.filter(e => (e.tipo === "ignitionOn" || e.tipo === "ignitionOff") && e.em < parou).pop();
+      if (antes?.tipo === "ignitionOff") chaveLigadaMin = 0;
+      else if (antes) chaveLigadaMin = descansoMin;
+    }
+  }
+
+  const primeira = seguinte.baixas
+    .filter(b => b.paradasNoRaio.length && b.entrega.lat !== null && b.entrega.lon !== null)
+    .map(b => ({ b, chegada: b.paradasNoRaio.reduce((m, p) => (p.distM < m.distM ? p : m)).inicio }))
+    .sort((x, y) => x.chegada.getTime() - y.chegada.getTime())[0];
+
+  return {
+    data: dia.linha.data, lat, lon, endereco,
+    cidade: perto?.c.cidade || null,
+    local: cerca ? "cerca" : endereco ? (EH_RODOVIA.test(endereco) ? "rodovia" : "cidade") : "desconhecido",
+    cerca, parou, saiu, descansoMin,
+    descansoCurto: descansoMin !== null && descansoMin < LIMITES.descansoMinH * 60,
+    chaveLigadaMin,
+    foraDeHora: noite
+      .filter(e => (e.tipo === "ignitionOn" || e.tipo === "deviceMoving") && noturno(e.em))
+      .map(e => ({ tipo: e.tipo, em: e.em, endereco: e.endereco })),
+    primeiroCliente: primeira ? {
+      codCliente: primeira.b.entrega.codCliente,
+      cliente: primeira.b.entrega.cliente,
+      distKm: Math.round(distM(lat, lon, primeira.b.entrega.lat!, primeira.b.entrega.lon!) / 100) / 10,
+    } : null,
+  };
+}
+
 export interface AnaliseRota {
   routeId: string;
   placa: string;
@@ -41,9 +114,9 @@ export interface AnaliseRota {
   pesoKg: number;
   capacidadeKg: number | null;
   ocupacaoPct: number | null;
-  pernoites: { data: string; lat: number; lon: number; cidade: string | null; distM: number }[];
+  pernoites: Pernoite[];
   sequencia: { itens: ItemSequencia[]; naSequenciaPct: number | null; semParada: number };
-  tempoPorDia: { data: string; jornadaMin: number; rodandoMin: number; emClienteMin: number; paradoSemClienteMin: number; ociosoMin: number | null }[];
+  tempoPorDia: { data: string; jornadaMin: number; rodandoMin: number; emClienteMin: number; paradoSemClienteMin: number; chaveLigadaMin: number | null; marchasLentas: number }[];
   tempoMedioEntregaMin: number | null;
   entregasPorHora: number | null;
   distancia: { kmGps: number | null; kmInformado: number | null; diferencaKm: number | null; diferencaPct: number | null; kmPorEntrega: number | null; reaisPorKm: number | null };
@@ -125,16 +198,14 @@ export function analisarRotas(entregas: Entrega[], linhas: ResultadoLinha[]): An
     const capacidadeKg = es.find(e => e.capacidadeKg)?.capacidadeKg ?? null;
 
     const comCoord = es.filter((e): e is Entrega & { lat: number; lon: number } => e.lat !== null && e.lon !== null);
-    const pernoites = ls.slice(0, -1).flatMap(l => {
-      if (!l.ultimaParada) return [];
-      const { lat, lon } = l.ultimaParada;
-      const perto = comCoord
-        .map(c => ({ c, d: distM(lat, lon, c.lat, c.lon) }))
-        .reduce<{ c: Entrega; d: number } | null>((m, x) => (!m || x.d < m.d ? x : m), null);
-      return [{ data: l.linha.data, lat, lon, cidade: perto?.c.cidade || null, distM: perto?.d ?? 0 }];
+    const pernoites = ls.slice(0, -1).flatMap((l, i) => {
+      const p = pernoite(l, ls[i + 1], comCoord);
+      return p ? [p] : [];
     });
 
-    const tempoPorDia = ls.flatMap(l => (l.tempo ? [{ data: l.linha.data, ...l.tempo, ociosoMin: l.ociosoMin }] : []));
+    const tempoPorDia = ls.flatMap(l => (l.tempo
+      ? [{ data: l.linha.data, ...l.tempo, chaveLigadaMin: l.chaveLigadaMin, marchasLentas: l.marchasLentas }]
+      : []));
     const kms = ls.map(l => l.kmGps).filter((k): k is number => k !== null);
     const kmGps = kms.length ? Math.round(soma(kms, k => k) * 10) / 10 : null;
     const e0 = es[0];

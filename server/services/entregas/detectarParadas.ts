@@ -5,13 +5,12 @@
  * com motor desligado). Funde manobras curtas e descarta paradas de trânsito.
  */
 
-export interface Posicao { lat: number; lon: number; em: Date; kmh: number; valida: boolean; ignicao: boolean | null }
+export interface Posicao { lat: number; lon: number; em: Date; kmh: number; valida: boolean }
 export interface Parada { lat: number; lon: number; inicio: Date; fim: Date; min: number }
 export interface ResultadoParadas {
   paradas: Parada[];
   saida: Date | null;
   retorno: Date | null;
-  ociosoMin: number | null; // parado com ignição ligada dentro da jornada (saída → retorno)
 }
 
 export const PARADA = { velMaxKmh: 5, minDuracaoMin: 1, fundirDistM: 50, fundirGapMin: 2, movimentoMinMin: 3 } as const;
@@ -77,20 +76,9 @@ export function detectarParadas(posicoes: Posicao[]): ResultadoParadas {
   const longos = trechos.filter(t =>
     minutos(t.de, t.ate) >= PARADA.movimentoMinMin && movendo.some(m => m.em >= t.de && m.em <= t.ate));
 
-  const saida = longos[0]?.de ?? null;
-  const retorno = longos[longos.length - 1]?.ate ?? null;
-
-  // Motor ligado parado só dentro da jornada: há rastreador que marca ignição ligada a noite toda.
-  let ocioso = 0;
-  if (saida && retorno) {
-    for (let i = 0; i < ps.length - 1; i++) {
-      const p = ps[i];
-      if (p.kmh >= PARADA.velMaxKmh || p.ignicao !== true) continue;
-      const de = Math.max(p.em.getTime(), saida.getTime());
-      const ate = Math.min(ps[i + 1].em.getTime(), retorno.getTime());
-      if (ate > de) ocioso += (ate - de) / 60000;
-    }
-  }
-
-  return { paradas, saida, retorno, ociosoMin: saida && retorno ? Math.round(ocioso) : null };
+  return {
+    paradas,
+    saida: longos[0]?.de ?? null,
+    retorno: longos[longos.length - 1]?.ate ?? null,
+  };
 }
