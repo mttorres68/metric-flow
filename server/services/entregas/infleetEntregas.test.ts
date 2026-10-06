@@ -41,13 +41,14 @@ describe("buscarGpsLinha", () => {
   it("converte posições, detecta paradas e lê o km", async () => {
     q.mockImplementation(async (query: string) =>
       query.includes("routeVehicleDetails")
-        ? { routeVehicleDetails: { totalDistanceTraveled: 123456 } }
+        ? { routeVehicleDetails: { totalDistanceTraveled: 123456, totalTimeStoppedWithIgnitionOn: 1800 } }
         : { listVehiclePositions: [p(0, 40 / SPEED_PARA_KMH), p(1, 0), p(10, 0), p(11, 40 / SPEED_PARA_KMH)] });
     const r = await buscarGpsLinha("v1", janela);
     expect(r.erro).toBeNull();
     expect(r.paradas).toHaveLength(1);
     expect(r.paradas[0].min).toBe(10);
     expect(r.kmGps).toBe(123.5);
+    expect(r.ociosoMin).toBe(30); // 1800 s parado com motor ligado
   });
 
 

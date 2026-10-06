@@ -28,7 +28,7 @@ export function blocos(inicio: Date, fim: Date): { startAt: string; endAt: strin
 }
 
 export const gpsErro = (erro: string): GpsLinha =>
-  ({ erro, paradas: [], saida: null, saidaOrigem: "gps", retorno: null, retornoOrigem: "gps", kmGps: null });
+  ({ erro, paradas: [], saida: null, saidaOrigem: "gps", retorno: null, retornoOrigem: "gps", kmGps: null, ociosoMin: null });
 
 const Q_EVENTOS_CERCA = `query($filter: ListEventsFilterInput!) {
   listEvents(filter: $filter) { slugName reportedAt geofenceId }
@@ -53,7 +53,7 @@ const Q_POSICOES = `query($filter: ListVehiclePositionsFilterInput!) {
   listVehiclePositions(filter: $filter) { latitude longitude fixTime speed valid }
 }`;
 const Q_KM = `query($filter: ListVehiclePositionsFilterInput!) {
-  routeVehicleDetails(filter: $filter) { totalDistanceTraveled }
+  routeVehicleDetails(filter: $filter) { totalDistanceTraveled totalTimeStoppedWithIgnitionOn }
 }`;
 
 type PosicaoInfleet = { latitude: number; longitude: number; fixTime: string; speed: number; valid: boolean };
@@ -73,7 +73,7 @@ export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; 
     }
     if (!posicoes.length) return gpsErro("sem sinal GPS");
 
-    const km = await infleetQuery<{ routeVehicleDetails: { totalDistanceTraveled: number } | null }>(Q_KM, {
+    const km = await infleetQuery<{ routeVehicleDetails: { totalDistanceTraveled: number; totalTimeStoppedWithIgnitionOn: number | null } | null }>(Q_KM, {
       filter: { vehicleId, fixTime: { startAt: janela.inicio.toISOString(), endAt: janela.fim.toISOString() } },
     });
     const raw = km.routeVehicleDetails?.totalDistanceTraveled ?? null;
@@ -81,7 +81,9 @@ export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; 
     const kmGps = raw === null ? null : Math.round((raw > 1000 ? raw / 1000 : raw) * 10) / 10;
 
     const gps = detectarParadas(posicoes);
-    const r: GpsLinha = { erro: null, ...gps, saidaOrigem: "gps", retornoOrigem: "gps", kmGps };
+    const ocioso = km.routeVehicleDetails?.totalTimeStoppedWithIgnitionOn;
+    const ociosoMin = ocioso == null ? null : Math.round(ocioso / 60); // segundos → min
+    const r: GpsLinha = { erro: null, ...gps, saidaOrigem: "gps", retornoOrigem: "gps", kmGps, ociosoMin };
     if (!cercaId) return r;
 
     const { saidas, entradas } = await eventosDaCerca(vehicleId, janela, cercaId);

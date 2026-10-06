@@ -18,7 +18,7 @@ const parada = (lat: number, lon: number, inicio: string, min: number): Parada =
   ({ lat, lon, inicio: brt(inicio), fim: new Date(brt(inicio).getTime() + min * 60000), min });
 
 const gps = (paradas: Parada[], o: Partial<GpsLinha> = {}): GpsLinha => ({
-  erro: null, paradas, kmGps: 120, saidaOrigem: "gps", retornoOrigem: "gps",
+  erro: null, paradas, kmGps: 120, ociosoMin: null, saidaOrigem: "gps", retornoOrigem: "gps",
   saida: brt("2026-10-05T07:30"), retorno: brt("2026-10-05T18:00"), ...o,
 });
 
@@ -178,6 +178,39 @@ describe("cruzar", () => {
     const paradas = [parada(quatrocentosM, -43, "2026-10-05T12:00", 30)];
     expect(cruzar(linha(), [entrega()], gps(paradas)).paradasSemCliente.qtd).toBe(1);
     expect(cruzar(linha(), [entrega()], gps(paradas), 500).paradasSemCliente.qtd).toBe(0);
+  });
+
+  describe("tempo do dia", () => {
+    // saída 07:30, retorno 18:00 → jornada 630 min
+    const paradasDia = [
+      parada(LONGE, -43, "2026-10-04T20:00", 690),      // pernoite: termina 07:30, fora da jornada
+      parada(CINQUENTA_M, -43, "2026-10-05T09:55", 5),  // no cliente
+      parada(LONGE, -43, "2026-10-05T12:00", 60),       // sem cliente
+      parada(LONGE, -43, "2026-10-05T18:00", 600),      // estacionou no fim do dia
+    ];
+
+    it("divide a jornada em rodando, parado em cliente e parado sem cliente", () => {
+      const r = cruzar(linha(), [entrega()], gps(paradasDia));
+      expect(r.tempo).toEqual({ jornadaMin: 630, rodandoMin: 565, emClienteMin: 5, paradoSemClienteMin: 60 });
+    });
+
+    it("parada que cruza a saída conta só a parte dentro da jornada", () => {
+      const r = cruzar(linha(), [entrega()], gps([parada(LONGE, -43, "2026-10-05T07:00", 60)]));
+      expect(r.tempo?.paradoSemClienteMin).toBe(30);
+    });
+
+    it("última parada do dia (onde estacionou) e motor ligado parado vêm junto", () => {
+      const r = cruzar(linha(), [entrega()], gps(paradasDia, { ociosoMin: 42 }));
+      expect(r.ultimaParada?.inicio.toISOString()).toBe(brt("2026-10-05T18:00").toISOString());
+      expect(r.ultimaParada?.lat).toBe(LONGE);
+      expect(r.ociosoMin).toBe(42);
+    });
+
+    it("sem GPS ou sem saída/retorno: tempo e última parada nulos", () => {
+      expect(cruzar(linha(), [entrega()], gps([], { erro: "sem rastreador" })).tempo).toBeNull();
+      const parado = cruzar(linha(), [entrega()], gps(paradasDia, { saida: null, retorno: null }));
+      expect([parado.tempo, parado.ultimaParada]).toEqual([null, null]);
+    });
   });
 
   it("excecoes() devolve só as baixas que não ficaram no raio", () => {

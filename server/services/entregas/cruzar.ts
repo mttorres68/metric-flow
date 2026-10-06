@@ -28,6 +28,7 @@ export interface GpsLinha {
   retornoOrigem: "gps" | "cerca"; // "cerca" = evento Entrou na cerca (depois da saída); "gps" = fim do último trecho
   retorno: Date | null;
   kmGps: number | null;
+  ociosoMin: number | null; // parado com motor ligado na janela (Infleet)
 }
 
 export interface ParadaNoCliente { inicio: Date; fim: Date; distM: number }
@@ -68,6 +69,11 @@ export interface ResultadoLinha {
   semParada: number;
   paradasSemCliente: { qtd: number; min: number };
   kmGps: number | null;
+  ociosoMin: number | null;
+  /** Divisão da jornada (saída → retorno). null sem GPS ou sem saída/retorno. */
+  tempo: { jornadaMin: number; rodandoMin: number; emClienteMin: number; paradoSemClienteMin: number } | null;
+  /** Onde o caminhão estacionou no fim do dia (parada que começa no retorno) — base do pernoite. */
+  ultimaParada: { lat: number; lon: number; inicio: Date } | null;
   pendentes: number | null;
   kmInformado: number | null;
   baixas: EntregaCruzada[]; // todas as baixas do dia com status (vazio quando a linha está sem GPS)
@@ -162,6 +168,9 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
     semParada: 0,
     paradasSemCliente: { qtd: 0, min: 0 },
     kmGps: null,
+    ociosoMin: null,
+    tempo: null,
+    ultimaParada: null,
     pendentes: linha.fechaRota ? entregasRota.filter(e => e.situacao === "AGUARDANDO").length : null,
     kmInformado: linha.fechaRota ? kmInformado(entregasRota[0]) : null,
     baixas: [],
@@ -171,6 +180,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
   r.saida = gps.saida;
   r.retorno = gps.retorno;
   r.kmGps = gps.kmGps;
+  r.ociosoMin = gps.ociosoMin;
 
   for (const e of baixasDia) {
     if (!temCoord(e)) {
@@ -208,6 +218,26 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
       r.paradasSemCliente.qtd++;
       r.paradasSemCliente.min += p.min;
     }
+
+    // Divisão da jornada: cada parada conta só a parte dentro de [saída, retorno].
+    const minDentro = (p: Parada) =>
+      Math.max(0, (Math.min(p.fim.getTime(), retorno.getTime()) - Math.max(p.inicio.getTime(), saida.getTime())) / 60000);
+    let emCliente = 0, semCliente = 0;
+    for (const p of gps.paradas) {
+      const m = minDentro(p);
+      if (!m) continue;
+      if (clientes.some(c => distM(p.lat, p.lon, c.lat, c.lon) <= raioM)) emCliente += m;
+      else semCliente += m;
+    }
+    const jornada = (retorno.getTime() - saida.getTime()) / 60000;
+    r.tempo = {
+      jornadaMin: Math.round(jornada),
+      rodandoMin: Math.round(Math.max(0, jornada - emCliente - semCliente)),
+      emClienteMin: Math.round(emCliente),
+      paradoSemClienteMin: Math.round(semCliente),
+    };
+    const ultima = gps.paradas.filter(p => p.inicio >= retorno).pop();
+    r.ultimaParada = ultima ? { lat: ultima.lat, lon: ultima.lon, inicio: ultima.inicio } : null;
   }
   return r;
 }
