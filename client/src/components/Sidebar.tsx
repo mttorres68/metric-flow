@@ -25,6 +25,7 @@ import {
   Trello,
   TrendingUp,
   Trophy,
+  Truck,
   UsersRound,
 } from "lucide-react";
 import { useState } from "react";
@@ -64,6 +65,7 @@ const navItems: NavItemDef[] = [
   { id: "clientes",         label: "Clientes",      icon: UsersRound,        route: "/clientes" },
   { id: "relatorio",        label: "Relatórios",    icon: BarChart2,         route: "/relatorio" },
   { id: "relatorio_semanal",label: "Rel. Semanal",  icon: BarChartHorizontal,route: "/relatorio-semanal" },
+  { id: "relatorio_entregas",label: "Rel. Entregas", icon: Truck,            route: "/relatorio-entregas" },
   {
     id: "rota_coaching",
     label: "Rota Coaching",

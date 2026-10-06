@@ -14,6 +14,7 @@ import RotaCoaching from "./pages/rota-coaching/RotaCoaching";
 import AppCampeao from "./pages/rota-coaching/AppCampeao";
 import AgendaGA from "./pages/rota-coaching/AgendaGA";
 import RelatorioSemanal from "./pages/RelatorioSemanal";
+import RelatorioEntregas from "./pages/relatorio-entregas";
 import Analise from "./pages/Analise";
 import AnaliseSemanal from "./pages/analise/AnaliseSemanal";
 import ComparativoScores from "./pages/analise/ComparativoScores";
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/rota-coaching/app-campeao" component={AppCampeao} />
       <Route path="/rota-coaching/agenda-ga" component={AgendaGA} />
       <Route path="/relatorio-semanal" component={RelatorioSemanal} />
+      <Route path="/relatorio-entregas" component={RelatorioEntregas} />
       <Route path="/analises" component={Analise} />
       <Route path="/analises/semanal" component={AnaliseSemanal} />
       <Route path="/analises/comparativo" component={ComparativoScores} />
