@@ -7,7 +7,8 @@
 import React from "react";
 import { Document, Page, Text, View, renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 import { s, FooterBar, VERDE_TITULO, VERMELHO, fmtDate, fmtPct, stripHtml, renderAnalise } from "./pdfService";
-import { LIMITES, excecoes, horaBRT, type ResultadoLinha, type Status } from "./entregas/cruzar";
+import { excecoes, type ResultadoLinha, type Status } from "./entregas/cruzar";
+import { LIMITES, horaBRT, minParaHM } from "@shared/entregas";
 
 export interface PDFEntregasData {
   data: string; // "aaaa-mm-dd"
@@ -40,10 +41,6 @@ const STATUS_LABEL: Record<Status, string> = {
 
 const pct = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0);
 const hora = (d: Date | null) => (d ? horaBRT(d) : "—");
-function minParaHM(min: number): string {
-  const t = Math.round(min);
-  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
-}
 
 const PaginaLinhas = ({ d }: { d: PDFEntregasData }) => {
   const ls = d.linhas;
@@ -110,14 +107,14 @@ const PaginaLinhas = ({ d }: { d: PDFEntregasData }) => {
                   <Text style={[s.td, { width: C.retorno }]}>{gps ? hora(r.retorno) : "—"}</Text>
                   <Text style={[s.td, { width: C.entregas }]}>{r.entregasDia}/{r.totalRota}</Text>
                   <Text style={[r.entregasDia > 0 && pTarde < LIMITES.apos14hMinPct ? s.tdAlert : s.td, { width: C.tarde }]}>
-                    {fmtPct(pTarde)} ({r.apos14h}/{r.entregasDia})
+                    {r.entregasDia > 0 ? `${fmtPct(pTarde)} (${r.apos14h}/${r.entregasDia})` : "—"}
                   </Text>
                   <Text style={[gps && r.baixasComCoord > 0 && pRaio < 100 ? s.tdAlert : s.td, { width: C.raio }]}>
-                    {gps ? `${fmtPct(pRaio)} (${r.noRaio}/${r.baixasComCoord})` : "—"}
+                    {gps && r.baixasComCoord > 0 ? `${fmtPct(pRaio)} (${r.noRaio}/${r.baixasComCoord})` : "—"}
                   </Text>
                   <Text style={[gps && r.semParada > 0 ? s.tdAlert : s.td, { width: C.semParada }]}>{gps ? String(r.semParada) : "—"}</Text>
                   <Text style={[gps && pRel > LIMITES.relampagoMaxPct ? s.tdAlert : s.td, { width: C.relamp }]}>
-                    {gps ? `${fmtPct(pRel)} (${r.relampago}/${relBase})` : "—"}
+                    {gps && relBase > 0 ? `${fmtPct(pRel)} (${r.relampago}/${relBase})` : "—"}
                   </Text>
                   <Text style={[s.td, { width: C.semCliente }]}>
                     {gps ? `${r.paradasSemCliente.qtd} · ${minParaHM(r.paradasSemCliente.min)}` : "—"}

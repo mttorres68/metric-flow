@@ -5,17 +5,9 @@
  */
 import type { Entrega } from "./parseCheckNow";
 import { distM, type Parada } from "./detectarParadas";
+import { LIMITES, diaBRT, horaBRT } from "@shared/entregas";
 
-// Único lugar dos limites (v1: constantes; v2: configService).
-export const LIMITES = {
-  raioM: 300,
-  relampagoMin: 3,
-  paradaSemClienteMin: 10,
-  saidaAte: "08:00",
-  apos14h: "14:00",
-  apos14hMinPct: 25,
-  relampagoMaxPct: 10,
-} as const;
+export { LIMITES, diaBRT, horaBRT };
 
 export type Status = "no_raio" | "relampago" | "sem_parada" | "sem_coordenada";
 
@@ -65,10 +57,7 @@ export interface ResultadoLinha {
 /** Baixas que o GPS não confirma (status diferente de no_raio). */
 export const excecoes = (r: ResultadoLinha) => r.baixas.filter(b => b.status !== "no_raio");
 
-const H3 = 3 * 3600000;
 const DIA = 24 * 3600000;
-export const diaBRT = (d: Date) => new Date(d.getTime() - H3).toISOString().slice(0, 10);
-export const horaBRT = (d: Date) => new Date(d.getTime() - H3).toISOString().slice(11, 16);
 const inicioDia = (dia: string) => new Date(`${dia}T00:00:00-03:00`);
 const fimDia = (dia: string) => new Date(`${dia}T23:59:59-03:00`);
 

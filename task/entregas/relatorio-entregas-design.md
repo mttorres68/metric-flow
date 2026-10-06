@@ -197,6 +197,21 @@ distância da parada mais próxima (m) e permanência no raio.
 
 Rodapé de avisos: placas sem rastreador e falhas do Infleet por linha.
 
+**Painel na tela** (adicionado em 2026-10-06; mesmo padrão visual de Análise →
+Diária). Upload → tRPC `entregas.processar` (pipeline em
+`server/services/entregas/processar.ts`, compartilhado com o PDF) →:
+- seletor de dia (só os dias da planilha);
+- KPIs do dia (placas · motoristas, entregas, % no raio, baixas sem parada, %
+  relâmpago);
+- tabela com as mesmas colunas e regras de vermelho do PDF. Clicar na placa ·
+  motorista abre todas as baixas daquele dia com o status de cada uma;
+- botão "Exceções" com a lista do dia;
+- editor de análise e "Baixar PDF do dia" (`POST /gerar` com `data`) ou
+  "Baixar todos (ZIP)".
+
+Limites e formatação ficam em `shared/entregas.ts`, usados pelo servidor e pela
+tela. Percentual com denominador zero aparece como "—" (tela e PDF).
+
 ## 8. Erros
 
 | Situação | Comportamento |
