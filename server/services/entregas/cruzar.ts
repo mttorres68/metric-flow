@@ -70,15 +70,20 @@ export function agruparPorRota(entregas: Entrega[]): Map<string, Entrega[]> {
   return m;
 }
 
+/**
+ * Uma linha por rota e dia. Janela de GPS = o dia inteiro (00:00–23:59, ou até `agora`),
+ * para pegar a saída real mesmo que o motorista inicie a rota no app depois. Só é cortada
+ * quando o mesmo caminhão troca de motorista no dia: no fim da rota anterior, ou no início
+ * da seguinte se a anterior não tiver fim registrado.
+ */
 export function montarLinhas(entregas: Entrega[], agora: Date): LinhaDia[] {
-  const linhas: LinhaDia[] = [];
+  const linhas: (LinhaDia & { rotaInicio: Date; rotaFim: Date | null })[] = [];
   for (const [routeId, es] of agruparPorRota(entregas)) {
     const baixas = es.map(e => e.baixaEm?.getTime()).filter((t): t is number => t !== undefined);
     const inicio = es[0].rotaInicio ?? (baixas.length ? new Date(Math.min(...baixas)) : null);
     if (!inicio) continue; // rota não iniciada
     const fimRota = es[0].rotaFim;
     const ultimo = fimRota ?? (baixas.length ? new Date(Math.max(...baixas)) : inicio);
-    const fimJanela = fimRota ?? agora;
 
     for (let dia = diaBRT(inicio); dia <= diaBRT(ultimo); dia = diaBRT(new Date(inicioDia(dia).getTime() + DIA))) {
       linhas.push({
@@ -86,15 +91,30 @@ export function montarLinhas(entregas: Entrega[], agora: Date): LinhaDia[] {
         placa: es[0].placa,
         motorista: es[0].motorista,
         routeId,
-        janela: {
-          inicio: new Date(Math.max(inicioDia(dia).getTime(), inicio.getTime())),
-          fim: new Date(Math.min(fimDia(dia).getTime(), fimJanela.getTime())),
-        },
+        janela: { inicio: inicioDia(dia), fim: new Date(Math.min(fimDia(dia).getTime(), agora.getTime())) },
         fechaRota: fimRota !== null && dia === diaBRT(fimRota),
+        rotaInicio: inicio,
+        rotaFim: fimRota,
       });
     }
   }
-  return linhas;
+
+  // Troca de motorista no mesmo caminhão e dia: divide a janela entre as rotas.
+  const porCaminhaoDia = new Map<string, typeof linhas>();
+  for (const l of linhas) {
+    const k = `${l.placa}|${l.data}`;
+    porCaminhaoDia.set(k, [...(porCaminhaoDia.get(k) ?? []), l]);
+  }
+  for (const ls of porCaminhaoDia.values()) {
+    ls.sort((a, b) => a.rotaInicio.getTime() - b.rotaInicio.getTime());
+    for (let i = 1; i < ls.length; i++) {
+      // Rotas sobrepostas no CheckNow (fim da anterior depois do início da seguinte): vale o início.
+      const corte = new Date(Math.min(ls[i - 1].rotaFim?.getTime() ?? Infinity, ls[i].rotaInicio.getTime()));
+      ls[i - 1].janela.fim = corte;
+      ls[i].janela.inicio = corte;
+    }
+  }
+  return linhas.map(({ rotaInicio, rotaFim, ...l }) => l);
 }
 
 function kmInformado(e: Entrega): number | null {

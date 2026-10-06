@@ -42,16 +42,33 @@ describe("montarLinhas", () => {
 
     const r1Linhas = linhas.filter(l => l.routeId === "R1");
     expect(r1Linhas.map(l => l.data)).toEqual(["2026-10-02", "2026-10-03", "2026-10-04", "2026-10-05"]);
-    expect(r1Linhas[0].janela.inicio.toISOString()).toBe("2026-10-02T10:21:00.000Z");
+    expect(r1Linhas[0].janela.inicio.toISOString()).toBe("2026-10-02T03:00:00.000Z"); // dia inteiro: 00:00, não o início no app
+    expect(r1Linhas[0].janela.fim.toISOString()).toBe("2026-10-03T02:59:59.000Z");
     const r1Dia5 = r1Linhas[3];
     expect(r1Dia5.janela.inicio.toISOString()).toBe("2026-10-05T03:00:00.000Z");
     expect(r1Dia5.janela.fim.toISOString()).toBe("2026-10-05T09:51:00.000Z");
     expect(r1Dia5.fechaRota).toBe(true);
 
     const [r2Dia5] = linhas.filter(l => l.routeId === "R2");
-    expect(r2Dia5.janela.inicio.toISOString()).toBe("2026-10-05T09:52:00.000Z");
+    expect(r2Dia5.janela.inicio.toISOString()).toBe("2026-10-05T09:51:00.000Z");
     expect(r2Dia5.janela.fim.toISOString()).toBe("2026-10-05T21:00:00.000Z"); // agora
     expect(r2Dia5.fechaRota).toBe(false);
+  });
+
+  it("rota que fecha no meio do dia, sem outra rota no caminhão, usa o dia inteiro (pega o retorno à base)", () => {
+    const [l] = montarLinhas([entrega({ rotaInicio: brt("2026-10-05T08:44"), rotaFim: brt("2026-10-05T13:00") })], brt("2026-10-06T12:00"));
+    expect(l.janela.inicio.toISOString()).toBe("2026-10-05T03:00:00.000Z");
+    expect(l.janela.fim.toISOString()).toBe("2026-10-06T02:59:59.000Z");
+  });
+
+  it("troca de motorista sem fim registrado na rota anterior: corta no início da rota seguinte", () => {
+    const linhas = montarLinhas([
+      entrega({ routeId: "R1", motorista: "A", rotaInicio: brt("2026-10-05T06:00"), rotaFim: null, baixaEm: brt("2026-10-05T09:00") }),
+      entrega({ routeId: "R2", motorista: "B", rotaInicio: brt("2026-10-05T12:00"), rotaFim: null, baixaEm: brt("2026-10-05T14:00") }),
+    ], brt("2026-10-05T18:00"));
+    const [a, b] = ["R1", "R2"].map(id => linhas.find(l => l.routeId === id)!);
+    expect(a.janela.fim.toISOString()).toBe("2026-10-05T15:00:00.000Z");
+    expect(b.janela.inicio.toISOString()).toBe("2026-10-05T15:00:00.000Z");
   });
 
   it("rota não iniciada não gera linha", () => {
