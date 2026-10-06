@@ -2,7 +2,7 @@
  * MetricFlow — Relatório Gerencial de Entregas (CheckNow × Infleet)
  *
  *   POST /api/relatorio-entregas/gerar
- *     Body: { xlsxBase64: string, analise?: string, data?: "aaaa-mm-dd" }
+ *     Body: { xlsxBase64: string, analise?: string, data?: "aaaa-mm-dd", cercaId?: string }
  *     → PDF (1 dia, ou só `data` quando informada) ou ZIP (vários dias).
  *     Sem banco: tudo calculado no request. A tela usa o tRPC entregas.processar.
  */
@@ -16,14 +16,14 @@ import { gerarPDFEntregas } from "../services/pdfEntregas";
 export const relatorioEntregasRouter = Router();
 
 relatorioEntregasRouter.post("/gerar", async (req: Request, res: Response) => {
-  const { xlsxBase64, analise, data: soData } = (req.body ?? {}) as { xlsxBase64?: unknown; analise?: unknown; data?: unknown };
+  const { xlsxBase64, analise, data: soData, cercaId } = (req.body ?? {}) as { xlsxBase64?: unknown; analise?: unknown; data?: unknown; cercaId?: unknown };
   if (typeof xlsxBase64 !== "string" || !xlsxBase64) {
     res.status(400).json({ error: "Campo xlsxBase64 obrigatório." });
     return;
   }
 
   try {
-    let resultados = await processarPlanilha(Buffer.from(xlsxBase64, "base64"), new Date());
+    let resultados = await processarPlanilha(Buffer.from(xlsxBase64, "base64"), new Date(), typeof cercaId === "string" && cercaId ? cercaId : undefined);
     if (typeof soData === "string" && soData) resultados = resultados.filter(r => r.linha.data === soData);
     if (!resultados.length) {
       res.status(400).json({ error: "Nenhuma rota iniciada na planilha para o período pedido." });

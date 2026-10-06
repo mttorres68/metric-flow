@@ -24,6 +24,7 @@ export interface GpsLinha {
   erro: string | null; // "sem rastreador" | "sem sinal GPS" | "falha no Infleet: ..."
   paradas: Parada[];
   saida: Date | null;
+  saidaOrigem: "gps" | "cerca"; // "cerca" = evento Saiu da cerca; "gps" = 1º trecho em movimento
   retorno: Date | null;
   kmGps: number | null;
 }
@@ -39,6 +40,7 @@ export interface ResultadoLinha {
   linha: LinhaDia;
   semGps: string | null;
   saida: Date | null;
+  saidaOrigem: "gps" | "cerca";
   retorno: Date | null;
   entregasDia: number;
   totalRota: number;
@@ -130,6 +132,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha):
     linha,
     semGps: gps.erro,
     saida: null,
+    saidaOrigem: gps.saidaOrigem,
     retorno: null,
     entregasDia: entregues.length,
     totalRota: entregasRota.length,

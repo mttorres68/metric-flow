@@ -50,6 +50,36 @@ describe("buscarGpsLinha", () => {
     expect(r.kmGps).toBe(123.5);
   });
 
+  describe("saída pela cerca", () => {
+    const movimento = [p(0, 0), p(10, 0), p(11, 40), p(20, 40), p(21, 0), p(30, 0)]; // GPS: saída aos 11 min
+    const responder = (eventos: { reportedAt: string; geofenceId: string }[]) =>
+      q.mockImplementation(async (query: string) =>
+        query.includes("routeVehicleDetails") ? { routeVehicleDetails: { totalDistanceTraveled: 10 } }
+          : query.includes("listEvents") ? { listEvents: eventos }
+          : { listVehiclePositions: movimento });
+
+    it("usa a 1ª saída da cerca escolhida e marca a origem", async () => {
+      responder([{ reportedAt: em(8), geofenceId: "sede" }, { reportedAt: em(5), geofenceId: "outra" }, { reportedAt: em(25), geofenceId: "sede" }]);
+      const r = await buscarGpsLinha("v1", janela, "sede");
+      expect(r.saida?.toISOString()).toBe(em(8));
+      expect(r.saidaOrigem).toBe("cerca");
+    });
+
+    it("sem saída da cerca na janela, volta para o GPS", async () => {
+      responder([{ reportedAt: em(5), geofenceId: "outra" }]);
+      const r = await buscarGpsLinha("v1", janela, "sede");
+      expect(r.saida?.toISOString()).toBe(em(11));
+      expect(r.saidaOrigem).toBe("gps");
+    });
+
+    it("sem cerca escolhida, nem consulta eventos", async () => {
+      responder([{ reportedAt: em(8), geofenceId: "sede" }]);
+      const r = await buscarGpsLinha("v1", janela);
+      expect(r.saidaOrigem).toBe("gps");
+      expect(q.mock.calls.some(c => String(c[0]).includes("listEvents"))).toBe(false);
+    });
+  });
+
   it("sem posições → 'sem sinal GPS'", async () => {
     q.mockResolvedValue({ listVehiclePositions: [] });
     expect((await buscarGpsLinha("v1", janela)).erro).toBe("sem sinal GPS");

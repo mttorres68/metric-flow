@@ -28,7 +28,7 @@ const linha = (o: Record<string, unknown>): Record<string, unknown> => ({
 
 const inicio = new Date("2026-10-05T09:55:00-03:00");
 const gpsNoCliente = {
-  erro: null, kmGps: 50, saida: new Date("2026-10-05T07:30:00-03:00"), retorno: new Date("2026-10-05T17:00:00-03:00"),
+  erro: null, kmGps: 50, saidaOrigem: "gps" as const, saida: new Date("2026-10-05T07:30:00-03:00"), retorno: new Date("2026-10-05T17:00:00-03:00"),
   paradas: [{ lat: -7, lon: -43, inicio, fim: new Date(inicio.getTime() + 10 * 60000), min: 10 }],
 };
 
@@ -52,6 +52,13 @@ describe("processarPlanilha", () => {
     ]);
     expect(rs[1].noRaio).toBe(1);
     expect((buscarGpsLinha as Mock).mock.calls.map(c => c[0])).toEqual(["v1"]);
+  });
+
+  it("repassa a cerca escolhida para a busca do GPS", async () => {
+    (mapaVeiculos as Mock).mockResolvedValue(new Map([["SOL6B13", "v1"]]));
+    (buscarGpsLinha as Mock).mockResolvedValue(gpsNoCliente);
+    await processarPlanilha(planilha([linha({})]), new Date("2026-10-06T12:00:00-03:00"), "sede");
+    expect((buscarGpsLinha as Mock).mock.calls[0][2]).toBe("sede");
   });
 
   it("planilha sem rota iniciada devolve lista vazia sem chamar o Infleet", async () => {

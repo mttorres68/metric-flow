@@ -17,7 +17,7 @@ const parada = (lat: number, lon: number, inicio: string, min: number): Parada =
   ({ lat, lon, inicio: brt(inicio), fim: new Date(brt(inicio).getTime() + min * 60000), min });
 
 const gps = (paradas: Parada[], o: Partial<GpsLinha> = {}): GpsLinha => ({
-  erro: null, paradas, kmGps: 120,
+  erro: null, paradas, kmGps: 120, saidaOrigem: "gps",
   saida: brt("2026-10-05T07:30"), retorno: brt("2026-10-05T18:00"), ...o,
 });
 

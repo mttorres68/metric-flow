@@ -20,8 +20,8 @@ async function emParalelo<T, R>(itens: T[], n: number, fn: (t: T) => Promise<R>)
   return out;
 }
 
-/** Resultados de todos os dias, ordenados por dia, placa e motorista. */
-export async function processarPlanilha(buffer: Buffer, agora: Date): Promise<ResultadoLinha[]> {
+/** Resultados de todos os dias, ordenados por dia, placa e motorista. cercaId: cerca da base para a saída. */
+export async function processarPlanilha(buffer: Buffer, agora: Date, cercaId?: string): Promise<ResultadoLinha[]> {
   const entregas = parseCheckNow(buffer);
   const linhas = montarLinhas(entregas, agora);
   if (!linhas.length) return [];
@@ -30,7 +30,7 @@ export async function processarPlanilha(buffer: Buffer, agora: Date): Promise<Re
   const porRota = agruparPorRota(entregas);
   const resultados = await emParalelo(linhas, 3, async l => {
     const vId = veiculos.get(normalizarPlaca(l.placa));
-    const gps = vId ? await buscarGpsLinha(vId, l.janela) : gpsErro("sem rastreador");
+    const gps = vId ? await buscarGpsLinha(vId, l.janela, cercaId) : gpsErro("sem rastreador");
     return cruzar(l, porRota.get(l.routeId)!, gps);
   });
   return resultados.sort((a, b) =>

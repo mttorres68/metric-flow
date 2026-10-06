@@ -12,7 +12,7 @@ const entrega: Entrega = {
 const base: ResultadoLinha = {
   linha: { data: "2026-10-05", placa: "SOL-6B13", motorista: "ANTONIO", routeId: "R1",
     janela: { inicio: brt("2026-10-05T07:00"), fim: brt("2026-10-05T23:59") }, fechaRota: false },
-  semGps: null, saida: brt("2026-10-05T08:44"), retorno: brt("2026-10-05T17:10"),
+  semGps: null, saidaOrigem: "gps", saida: brt("2026-10-05T08:44"), retorno: brt("2026-10-05T17:10"),
   entregasDia: 33, totalRota: 60, apos14h: 10, baixasComCoord: 35, noRaio: 30, relampago: 2, semParada: 3,
   paradasSemCliente: { qtd: 2, min: 75 }, kmGps: 210.4, pendentes: null, kmInformado: null,
   baixas: [{ entrega, status: "sem_parada", permanenciaMin: 0, distMaisProximaM: 774.4 }, { entrega, status: "no_raio", permanenciaMin: 12, distMaisProximaM: 30 }],

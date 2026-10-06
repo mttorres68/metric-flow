@@ -23,8 +23,8 @@ const CE = { placa: 150, cliente: 220, cod: 60, baixa: 50, status: 100, dist: 80
 
 const LEGENDA = [
   { desc: `Entregas confirmadas por parada do GPS a até ${LIMITES.raioM}m do cliente` },
-  { label: "Saída", desc: `Primeiro movimento do dia (vermelho se > ${LIMITES.saidaAte})` },
-  { label: "Retorno", desc: "Último movimento do dia" },
+  { label: "Saída", desc: `Início do 1º trecho em movimento de 3 min ou mais; * = saída da cerca da base (vermelho se > ${LIMITES.saidaAte})` },
+  { label: "Retorno", desc: "Fim do último trecho em movimento de 3 min ou mais" },
   { label: "Entregas", desc: "Entregues no dia / total de clientes da rota" },
   { label: "Após às 14h", desc: `% das entregas do dia com baixa após as 14h (vermelho se < ${LIMITES.apos14hMinPct}%)` },
   // Sem "≥": a Helvetica padrão do PDF não tem o glifo.
@@ -103,7 +103,7 @@ const PaginaLinhas = ({ d }: { d: PDFEntregasData }) => {
               return (
                 <View key={i} style={i % 2 === 1 ? s.tblRowAlt : s.tblRow}>
                   <Text style={[s.td, { width: C.placa, textAlign: "left" }]}>{r.linha.placa} · {r.linha.motorista}</Text>
-                  <Text style={[saidaAlerta ? s.tdAlert : s.td, { width: C.saida }]}>{gps ? hora(r.saida) : "—"}</Text>
+                  <Text style={[saidaAlerta ? s.tdAlert : s.td, { width: C.saida }]}>{gps ? `${hora(r.saida)}${r.saidaOrigem === "cerca" ? "*" : ""}` : "—"}</Text>
                   <Text style={[s.td, { width: C.retorno }]}>{gps ? hora(r.retorno) : "—"}</Text>
                   <Text style={[s.td, { width: C.entregas }]}>{r.entregasDia}/{r.totalRota}</Text>
                   <Text style={[r.entregasDia > 0 && pTarde < LIMITES.apos14hMinPct ? s.tdAlert : s.td, { width: C.tarde }]}>

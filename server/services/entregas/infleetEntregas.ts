@@ -28,7 +28,24 @@ export function blocos(inicio: Date, fim: Date): { startAt: string; endAt: strin
 }
 
 export const gpsErro = (erro: string): GpsLinha =>
-  ({ erro, paradas: [], saida: null, retorno: null, kmGps: null });
+  ({ erro, paradas: [], saida: null, saidaOrigem: "gps", retorno: null, kmGps: null });
+
+const Q_SAIDA_CERCA = `query($filter: ListEventsFilterInput!) {
+  listEvents(filter: $filter) { reportedAt geofenceId }
+}`;
+
+/** 1ª saída do veículo da cerca escolhida dentro da janela (evento "Saiu da cerca" do Infleet). */
+async function saidaDaCerca(vehicleId: string, janela: { inicio: Date; fim: Date }, cercaId: string): Promise<Date | null> {
+  const { listEvents } = await infleetQuery<{ listEvents: { reportedAt: string; geofenceId: string | null }[] }>(Q_SAIDA_CERCA, {
+    filter: {
+      vehicleIds: [vehicleId],
+      slugNames: ["geofenceExit"],
+      reportedAt: { startAt: janela.inicio.toISOString(), endAt: janela.fim.toISOString() },
+    },
+  });
+  const tempos = listEvents.filter(e => e.geofenceId === cercaId).map(e => new Date(e.reportedAt).getTime());
+  return tempos.length ? new Date(Math.min(...tempos)) : null;
+}
 
 const Q_POSICOES = `query($filter: ListVehiclePositionsFilterInput!) {
   listVehiclePositions(filter: $filter) { latitude longitude fixTime speed valid }
@@ -39,7 +56,8 @@ const Q_KM = `query($filter: ListVehiclePositionsFilterInput!) {
 
 type PosicaoInfleet = { latitude: number; longitude: number; fixTime: string; speed: number; valid: boolean };
 
-export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; fim: Date }): Promise<GpsLinha> {
+/** cercaId: quando informado, a saída é a 1ª saída dessa cerca na janela (se houver); senão, o GPS. */
+export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; fim: Date }, cercaId?: string): Promise<GpsLinha> {
   try {
     const posicoes: Posicao[] = [];
     for (const fixTime of blocos(janela.inicio, janela.fim)) {
@@ -57,7 +75,11 @@ export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; 
     // Mesma conversão de unidade do resumoDiario (infleetRouter.ts).
     const kmGps = raw === null ? null : Math.round((raw > 1000 ? raw / 1000 : raw) * 10) / 10;
 
-    return { erro: null, ...detectarParadas(posicoes), kmGps };
+    const gps = detectarParadas(posicoes);
+    const pelaCerca = cercaId ? await saidaDaCerca(vehicleId, janela, cercaId) : null;
+    return pelaCerca
+      ? { erro: null, ...gps, saida: pelaCerca, saidaOrigem: "cerca", kmGps }
+      : { erro: null, ...gps, saidaOrigem: "gps", kmGps };
   } catch (e) {
     return gpsErro(`falha no Infleet: ${(e as Error).message}`);
   }
