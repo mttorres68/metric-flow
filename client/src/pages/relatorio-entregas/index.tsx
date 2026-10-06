@@ -11,6 +11,7 @@ import { Th, Td } from "@/pages/analise/components/TablePrimitives";
 import { Badge } from "@/pages/analise/components/Badge";
 import { blobToBase64 } from "@/pages/analise/lib/pdf";
 import { ConfigEntregasModal } from "./ConfigEntregasModal";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc";
 import { LIMITES, horaBRT, minParaHM } from "@shared/entregas";
 import type { inferRouterOutputs } from "@trpc/server";
@@ -52,6 +53,42 @@ function MomentoBaixa({ m }: { m: Baixa["momentoBaixa"] }) {
   return <span title="Baixa dada antes de o caminhão chegar ao cliente"><Badge color="red">{duracao(m.min)} antes</Badge></span>;
 }
 
+/** Passagens do caminhão pelo cliente: 1 = horário; várias = selo com a quantidade que abre a lista ao clicar. */
+function ParadasNoCliente({ b }: { b: Baixa }) {
+  const ps = b.paradasNoRaio;
+  if (ps.length === 1) return <span className="font-semibold text-slate-700 dark:text-slate-200">{faixa(ps[0])}</span>;
+  if (ps.length > 1) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button type="button" title="Clique para ver todas as paradas" className="cursor-pointer">
+            <Badge color="indigo">{ps.length} paradas</Badge>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-3">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+            Paradas no cliente (GPS)
+          </p>
+          <table className="text-xs font-mono">
+            <tbody>
+              {ps.map((p, i) => (
+                <tr key={i}>
+                  <td className="pr-3 py-0.5 font-semibold text-slate-700 dark:text-slate-200">{faixa(p)}</td>
+                  <td className="pr-3 py-0.5 text-slate-500">{duracao(Math.round((p.fim.getTime() - p.inicio.getTime()) / 60000))}</td>
+                  <td className="py-0.5 text-slate-400">{Math.round(p.distM)} m</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+  return b.maisProxima
+    ? <span className="text-slate-400" title="Nenhuma parada no raio; horário da parada mais próxima">— (mais próxima {faixa(b.maisProxima)})</span>
+    : vazio;
+}
+
 /** Tabela de baixas — usada no detalhe da linha e na lista de exceções do dia. */
 function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Baixa }[]; comPlaca?: boolean; raioM: number }) {
   return (
@@ -76,13 +113,7 @@ function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Ba
             <Td>{b.entrega.cliente}</Td>
             <Td mono className="text-slate-500 dark:text-slate-400">{b.entrega.codCliente}</Td>
             <Td center mono>{hora(b.entrega.baixaEm)}</Td>
-            <Td center mono>
-              {b.paradasNoRaio.length
-                ? <span className="font-semibold text-slate-700 dark:text-slate-200">{b.paradasNoRaio.map(faixa).join(" · ")}</span>
-                : b.maisProxima
-                  ? <span className="text-slate-400" title="Nenhuma parada no raio; horário da parada mais próxima">— (mais próxima {faixa(b.maisProxima)})</span>
-                  : vazio}
-            </Td>
+            <Td center mono><ParadasNoCliente b={b} /></Td>
             <Td center><MomentoBaixa m={b.momentoBaixa} /></Td>
             <Td center><Badge color={STATUS[b.status].cor}>{STATUS[b.status].label}</Badge></Td>
             <Td center mono>{b.distMaisProximaM === null ? vazio : `${Math.round(b.distMaisProximaM)} m`}</Td>
