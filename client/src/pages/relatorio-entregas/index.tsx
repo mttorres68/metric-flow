@@ -111,7 +111,8 @@ export default function RelatorioEntregas() {
   const processar = trpc.entregas.processar.useMutation({
     onSuccess: rs => {
       if (!rs.length) toast.warning("Nenhuma rota iniciada na planilha.");
-      setDia(rs.length ? rs[rs.length - 1].linha.data : null);
+      // Recalcular (GPS, cerca, raio) mantém o dia aberto; planilha nova abre no último dia.
+      setDia(d => (d && rs.some(r => r.linha.data === d) ? d : rs.length ? rs[rs.length - 1].linha.data : null));
       setAbertas(new Set());
     },
     onError: e => toast.error(e.message),
@@ -122,6 +123,7 @@ export default function RelatorioEntregas() {
     if (!file) return;
     const base64 = await blobToBase64(file);
     setArquivo({ nome: file.name, base64 });
+    setDia(null); // planilha nova: abre no último dia
     processar.mutate({ xlsxBase64: base64, cercaId: cercaId || undefined });
   }
 
