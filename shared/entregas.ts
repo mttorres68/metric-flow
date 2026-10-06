@@ -12,6 +12,7 @@ export const LIMITES = {
   apos14h: "14:00",
   apos14hMinPct: 25,
   relampagoMaxPct: 10,
+  momentoTolMin: 15, // baixa até 15 min antes da chegada ou depois da saída do caminhão ainda conta como "na parada"
 } as const;
 
 const H3 = 3 * 3600000;

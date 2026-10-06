@@ -30,11 +30,26 @@ export interface GpsLinha {
   kmGps: number | null;
 }
 
+export interface ParadaNoCliente { inicio: Date; fim: Date; distM: number }
+
 export interface EntregaCruzada {
   entrega: Entrega;
   status: Status;
   permanenciaMin: number;
   distMaisProximaM: number | null;
+  paradasNoRaio: ParadaNoCliente[]; // a "entrega de fato": quando o caminhão esteve a até raioM do cliente
+  maisProxima: ParadaNoCliente | null; // parada mais próxima do cliente, a qualquer distância
+  momentoBaixa: { tipo: "na_parada" | "depois" | "antes"; min: number } | null; // null sem parada no raio
+}
+
+/** Compara a hora da baixa no app com as passagens do caminhão pelo cliente. */
+function momentoDaBaixa(baixa: Date, paradas: ParadaNoCliente[]): EntregaCruzada["momentoBaixa"] {
+  if (!paradas.length) return null;
+  const t = baixa.getTime(), tol = LIMITES.momentoTolMin * 60000;
+  if (paradas.some(p => t >= p.inicio.getTime() - tol && t <= p.fim.getTime() + tol)) return { tipo: "na_parada", min: 0 };
+  const anteriores = paradas.filter(p => p.fim.getTime() <= t);
+  if (anteriores.length) return { tipo: "depois", min: Math.round((t - anteriores[anteriores.length - 1].fim.getTime()) / 60000) };
+  return { tipo: "antes", min: Math.round((paradas[0].inicio.getTime() - t) / 60000) };
 }
 
 export interface ResultadoLinha {
@@ -158,17 +173,29 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha):
 
   for (const e of baixasDia) {
     if (!temCoord(e)) {
-      r.baixas.push({ entrega: e, status: "sem_coordenada", permanenciaMin: 0, distMaisProximaM: null });
+      r.baixas.push({
+        entrega: e, status: "sem_coordenada", permanenciaMin: 0, distMaisProximaM: null,
+        paradasNoRaio: [], maisProxima: null, momentoBaixa: null,
+      });
       continue;
     }
     r.baixasComCoord++;
-    const dists = gps.paradas.map(p => distM(p.lat, p.lon, e.lat, e.lon));
-    const perm = gps.paradas.reduce((s, p, i) => (dists[i] <= LIMITES.raioM ? s + p.min : s), 0);
+    const comDist = gps.paradas.map(p => ({ inicio: p.inicio, fim: p.fim, min: p.min, distM: distM(p.lat, p.lon, e.lat, e.lon) }));
+    const noRaio = comDist.filter(p => p.distM <= LIMITES.raioM).sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
+    const perm = noRaio.reduce((s, p) => s + p.min, 0);
+    const maisProxima = comDist.reduce<(typeof comDist)[number] | null>((m, p) => (!m || p.distM < m.distM ? p : m), null);
     const status: Status = perm >= LIMITES.relampagoMin ? "no_raio" : perm > 0 ? "relampago" : "sem_parada";
     if (status === "no_raio") r.noRaio++;
     else if (status === "relampago") r.relampago++;
     else r.semParada++;
-    r.baixas.push({ entrega: e, status, permanenciaMin: perm, distMaisProximaM: dists.length ? Math.min(...dists) : null });
+    const semMin = ({ inicio, fim, distM }: ParadaNoCliente): ParadaNoCliente => ({ inicio, fim, distM });
+    const paradasNoRaio = noRaio.map(semMin);
+    r.baixas.push({
+      entrega: e, status, permanenciaMin: perm, distMaisProximaM: maisProxima?.distM ?? null,
+      paradasNoRaio,
+      maisProxima: maisProxima && semMin(maisProxima),
+      momentoBaixa: momentoDaBaixa(e.baixaEm!, paradasNoRaio),
+    });
   }
 
   const clientes = entregasRota.filter(temCoord);

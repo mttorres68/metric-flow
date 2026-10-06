@@ -40,6 +40,17 @@ const STATUS: Record<Baixa["status"], { label: string; cor: string }> = {
   sem_coordenada: { label: "Sem coordenada", cor: "slate" },
 };
 
+const faixa = (p: { inicio: Date; fim: Date }) => `${horaBRT(p.inicio)}–${horaBRT(p.fim)}`;
+const duracao = (min: number) => (min < 60 ? `${min} min` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}`);
+
+/** Hora da baixa no app × passagem do caminhão pelo cliente. */
+function MomentoBaixa({ m }: { m: Baixa["momentoBaixa"] }) {
+  if (!m) return vazio;
+  if (m.tipo === "na_parada") return <span title="Baixa dada enquanto o caminhão estava no cliente"><Badge color="green">Na parada</Badge></span>;
+  if (m.tipo === "depois") return <span title="Baixa dada depois que o caminhão já tinha saído do cliente (baixa em lote)"><Badge color="amber">{duracao(m.min)} depois</Badge></span>;
+  return <span title="Baixa dada antes de o caminhão chegar ao cliente"><Badge color="red">{duracao(m.min)} antes</Badge></span>;
+}
+
 /** Tabela de baixas — usada no detalhe da linha e na lista de exceções do dia. */
 function TabelaBaixas({ itens, comPlaca }: { itens: { r: Resultado; b: Baixa }[]; comPlaca?: boolean }) {
   return (
@@ -49,7 +60,9 @@ function TabelaBaixas({ itens, comPlaca }: { itens: { r: Resultado; b: Baixa }[]
           {comPlaca && <th className="px-2 py-1.5">Placa · Motorista</th>}
           <th className="px-2 py-1.5">Cliente</th>
           <th className="px-2 py-1.5">Código</th>
-          <th className="px-2 py-1.5 text-center">Baixa</th>
+          <th className="px-2 py-1.5 text-center" title="Hora da baixa no app do CheckNow">Baixa (app)</th>
+          <th className="px-2 py-1.5 text-center" title={`Quando o caminhão esteve parado a até ${LIMITES.raioM} m do cliente (chegada–saída pelo GPS)`}>Parada no cliente (GPS)</th>
+          <th className="px-2 py-1.5 text-center" title={`Hora da baixa comparada com a parada no cliente (tolerância de ${LIMITES.momentoTolMin} min)`}>Momento da baixa</th>
           <th className="px-2 py-1.5 text-center">Status</th>
           <th className="px-2 py-1.5 text-center">Parada mais próxima</th>
           <th className="px-2 py-1.5 text-center">Permanência no raio</th>
@@ -62,6 +75,14 @@ function TabelaBaixas({ itens, comPlaca }: { itens: { r: Resultado; b: Baixa }[]
             <Td>{b.entrega.cliente}</Td>
             <Td mono className="text-slate-500 dark:text-slate-400">{b.entrega.codCliente}</Td>
             <Td center mono>{hora(b.entrega.baixaEm)}</Td>
+            <Td center mono>
+              {b.paradasNoRaio.length
+                ? <span className="font-semibold text-slate-700 dark:text-slate-200">{b.paradasNoRaio.map(faixa).join(" · ")}</span>
+                : b.maisProxima
+                  ? <span className="text-slate-400" title="Nenhuma parada no raio; horário da parada mais próxima">— (mais próxima {faixa(b.maisProxima)})</span>
+                  : vazio}
+            </Td>
+            <Td center><MomentoBaixa m={b.momentoBaixa} /></Td>
             <Td center><Badge color={STATUS[b.status].cor}>{STATUS[b.status].label}</Badge></Td>
             <Td center mono>{b.distMaisProximaM === null ? vazio : `${Math.round(b.distMaisProximaM)} m`}</Td>
             <Td center mono>{b.status === "sem_coordenada" ? vazio : minParaHM(b.permanenciaMin)}</Td>

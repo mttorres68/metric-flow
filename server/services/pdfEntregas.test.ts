@@ -15,7 +15,8 @@ const base: ResultadoLinha = {
   semGps: null, saidaOrigem: "gps", retornoOrigem: "cerca", saida: brt("2026-10-05T08:44"), retorno: brt("2026-10-05T17:10"),
   entregasDia: 33, totalRota: 60, apos14h: 10, baixasComCoord: 35, noRaio: 30, relampago: 2, semParada: 3,
   paradasSemCliente: { qtd: 2, min: 75 }, kmGps: 210.4, pendentes: null, kmInformado: null,
-  baixas: [{ entrega, status: "sem_parada", permanenciaMin: 0, distMaisProximaM: 774.4 }, { entrega, status: "no_raio", permanenciaMin: 12, distMaisProximaM: 30 }],
+  baixas: [{ entrega, status: "sem_parada", permanenciaMin: 0, distMaisProximaM: 774.4, paradasNoRaio: [], maisProxima: null, momentoBaixa: null },
+    { entrega, status: "no_raio", permanenciaMin: 12, distMaisProximaM: 30, paradasNoRaio: [], maisProxima: null, momentoBaixa: { tipo: "na_parada", min: 0 } }],
 };
 const semGps: ResultadoLinha = {
   ...base, linha: { ...base.linha, placa: "SOO-8D81", motorista: "ISRAEL" }, semGps: "sem rastreador",

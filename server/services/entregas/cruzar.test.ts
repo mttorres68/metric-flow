@@ -122,6 +122,49 @@ describe("cruzar", () => {
     expect(r.baixas.map(b => [b.entrega.codCliente, b.status])).toEqual([["1", "no_raio"], ["2", "sem_parada"]]);
   });
 
+  describe("entrega de fato: paradas no cliente e momento da baixa", () => {
+    const baixaAs = (hora: string, ...paradas: Parada[]) =>
+      cruzar(linha(), [entrega({ baixaEm: brt(`2026-10-05T${hora}`) })], gps(paradas)).baixas[0];
+    const hhmm = (d: Date) => d.toISOString().slice(11, 16); // em UTC (BRT + 3h)
+
+    it("lista as paradas no raio (chegada, saída, distância) em ordem", () => {
+      const b = baixaAs("10:00", parada(CINQUENTA_M, -43, "2026-10-05T15:10", 2), parada(-7, -43, "2026-10-05T09:55", 5));
+      expect(b.paradasNoRaio.map(p => [hhmm(p.inicio), hhmm(p.fim), Math.round(p.distM)])).toEqual([["12:55", "13:00", 0], ["18:10", "18:12", 50]]);
+    });
+
+    it("baixa durante a parada (com 15 min de tolerância) = na_parada", () => {
+      expect(baixaAs("10:00", parada(-7, -43, "2026-10-05T09:55", 5)).momentoBaixa).toEqual({ tipo: "na_parada", min: 0 });
+      expect(baixaAs("10:15", parada(-7, -43, "2026-10-05T09:55", 5)).momentoBaixa).toEqual({ tipo: "na_parada", min: 0 });
+    });
+
+    it("baixa depois que o caminhão foi embora = depois (baixa em lote)", () => {
+      expect(baixaAs("16:20", parada(-7, -43, "2026-10-05T09:00", 13)).momentoBaixa).toEqual({ tipo: "depois", min: 427 });
+      expect(baixaAs("10:16", parada(-7, -43, "2026-10-05T09:55", 5)).momentoBaixa).toEqual({ tipo: "depois", min: 16 });
+    });
+
+    it("baixa antes de o caminhão chegar = antes", () => {
+      expect(baixaAs("10:00", parada(-7, -43, "2026-10-05T11:00", 10)).momentoBaixa).toEqual({ tipo: "antes", min: 60 });
+    });
+
+    it("entre duas passagens, compara com a passagem anterior", () => {
+      const b = baixaAs("12:00", parada(-7, -43, "2026-10-05T09:00", 10), parada(-7, -43, "2026-10-05T15:00", 10));
+      expect(b.momentoBaixa).toEqual({ tipo: "depois", min: 170 });
+    });
+
+    it("baixa sem parada: sem paradas no raio, mas com o horário da parada mais próxima", () => {
+      const b = baixaAs("10:00", parada(UM_KM, -43, "2026-10-05T10:05", 10));
+      expect(b.paradasNoRaio).toEqual([]);
+      expect(b.momentoBaixa).toBeNull();
+      expect(b.maisProxima && [hhmm(b.maisProxima.inicio), hhmm(b.maisProxima.fim)]).toEqual(["13:05", "13:15"]);
+      expect(b.maisProxima!.distM).toBeGreaterThan(990);
+    });
+
+    it("sem coordenada: nada de GPS na baixa", () => {
+      const b = cruzar(linha(), [entrega({ lat: null, lon: null })], gps([parada(-7, -43, "2026-10-05T09:55", 5)])).baixas[0];
+      expect([b.paradasNoRaio, b.maisProxima, b.momentoBaixa]).toEqual([[], null, null]);
+    });
+  });
+
   it("excecoes() devolve só as baixas que não ficaram no raio", () => {
     const r = cruzar(linha(), [entrega(), entrega({ codCliente: "2", lat: UM_KM })],
       gps([parada(CINQUENTA_M, -43, "2026-10-05T09:55", 5)]));

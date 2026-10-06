@@ -218,6 +218,15 @@ Diária). Upload → tRPC `entregas.processar` (pipeline em
 - tabela com as mesmas colunas e regras de vermelho do PDF. Clicar na placa ·
   motorista abre todas as baixas daquele dia com o status de cada uma;
 - botão "Exceções" com a lista do dia;
+- **entrega de fato** (adicionado em 2026-10-06), em cada baixa do detalhe e
+  das exceções:
+  - **Parada no cliente (GPS)**: chegada–saída de cada parada a até `raioM` do
+    cliente, em ordem. Na baixa sem parada, mostra o horário da parada mais
+    próxima;
+  - **Momento da baixa**: hora da baixa no app × passagem do caminhão (com
+    `momentoTolMin` = 15 min de tolerância): "Na parada"; "X depois" (baixa
+    depois que o caminhão saiu, ou seja, baixa em lote; compara com a
+    passagem anterior); "X antes" (baixa antes de o caminhão chegar);
 - editor de análise e "Baixar PDF do dia" (`POST /gerar` com `data`) ou
   "Baixar todos (ZIP)".
 
