@@ -25,6 +25,7 @@ export interface GpsLinha {
   paradas: Parada[];
   saida: Date | null;
   saidaOrigem: "gps" | "cerca"; // "cerca" = evento Saiu da cerca; "gps" = 1º trecho em movimento
+  retornoOrigem: "gps" | "cerca"; // "cerca" = evento Entrou na cerca (depois da saída); "gps" = fim do último trecho
   retorno: Date | null;
   kmGps: number | null;
 }
@@ -41,6 +42,7 @@ export interface ResultadoLinha {
   semGps: string | null;
   saida: Date | null;
   saidaOrigem: "gps" | "cerca";
+  retornoOrigem: "gps" | "cerca";
   retorno: Date | null;
   entregasDia: number;
   totalRota: number;
@@ -133,6 +135,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha):
     semGps: gps.erro,
     saida: null,
     saidaOrigem: gps.saidaOrigem,
+    retornoOrigem: gps.retornoOrigem,
     retorno: null,
     entregasDia: entregues.length,
     totalRota: entregasRota.length,

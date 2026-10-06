@@ -169,10 +169,13 @@ Para cada entrega com baixa (ENTREGUE ou PROBLEMA) no dia da linha:
   da última); só contam os de **3 min ou mais**, para ignorar manobra de pátio;
 - saída = início do 1º trecho assim; retorno = fim do último (início da
   última parada);
-- **opção cerca**: com uma cerca da base escolhida na tela (padrão: a cerca
-  "Sede", se existir), a saída é o 1º evento `geofenceExit` ("Saiu da cerca")
-  dessa cerca na janela. Sem esse evento, vale o GPS. A origem fica marcada
-  (ícone na tela, `*` no PDF).
+- **opção cerca** (saída e retorno): com uma cerca da base escolhida na tela
+  (padrão: a cerca "Sede", se existir):
+  - a saída é o 1º evento `geofenceExit` ("Saiu da cerca") dessa cerca na
+    janela;
+  - o retorno é o último `geofenceEnter` ("Entrou na cerca") **depois da
+    saída**. Uma entrada antes da saída é chegada de madrugada e não conta.
+  - Sem o evento, vale o GPS. A origem fica marcada (ícone na tela, `*` no PDF).
 
 **Paradas sem cliente:** paradas com duração ≥ `paradaSemClienteMin`, que
 começam depois da saída e antes do retorno, cujo centro fica a > `raioM` de

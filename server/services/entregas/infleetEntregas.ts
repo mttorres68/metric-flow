@@ -28,23 +28,25 @@ export function blocos(inicio: Date, fim: Date): { startAt: string; endAt: strin
 }
 
 export const gpsErro = (erro: string): GpsLinha =>
-  ({ erro, paradas: [], saida: null, saidaOrigem: "gps", retorno: null, kmGps: null });
+  ({ erro, paradas: [], saida: null, saidaOrigem: "gps", retorno: null, retornoOrigem: "gps", kmGps: null });
 
-const Q_SAIDA_CERCA = `query($filter: ListEventsFilterInput!) {
-  listEvents(filter: $filter) { reportedAt geofenceId }
+const Q_EVENTOS_CERCA = `query($filter: ListEventsFilterInput!) {
+  listEvents(filter: $filter) { slugName reportedAt geofenceId }
 }`;
 
-/** 1ª saída do veículo da cerca escolhida dentro da janela (evento "Saiu da cerca" do Infleet). */
-async function saidaDaCerca(vehicleId: string, janela: { inicio: Date; fim: Date }, cercaId: string): Promise<Date | null> {
-  const { listEvents } = await infleetQuery<{ listEvents: { reportedAt: string; geofenceId: string | null }[] }>(Q_SAIDA_CERCA, {
+/** Eventos "Saiu da cerca" / "Entrou na cerca" da cerca escolhida na janela, em ms. */
+async function eventosDaCerca(vehicleId: string, janela: { inicio: Date; fim: Date }, cercaId: string) {
+  const { listEvents } = await infleetQuery<{ listEvents: { slugName: string; reportedAt: string; geofenceId: string | null }[] }>(Q_EVENTOS_CERCA, {
     filter: {
       vehicleIds: [vehicleId],
-      slugNames: ["geofenceExit"],
+      slugNames: ["geofenceExit", "geofenceEnter"],
       reportedAt: { startAt: janela.inicio.toISOString(), endAt: janela.fim.toISOString() },
     },
   });
-  const tempos = listEvents.filter(e => e.geofenceId === cercaId).map(e => new Date(e.reportedAt).getTime());
-  return tempos.length ? new Date(Math.min(...tempos)) : null;
+  const da = (slug: string) => listEvents
+    .filter(e => e.geofenceId === cercaId && e.slugName === slug)
+    .map(e => new Date(e.reportedAt).getTime());
+  return { saidas: da("geofenceExit"), entradas: da("geofenceEnter") };
 }
 
 const Q_POSICOES = `query($filter: ListVehiclePositionsFilterInput!) {
@@ -56,7 +58,10 @@ const Q_KM = `query($filter: ListVehiclePositionsFilterInput!) {
 
 type PosicaoInfleet = { latitude: number; longitude: number; fixTime: string; speed: number; valid: boolean };
 
-/** cercaId: quando informado, a saída é a 1ª saída dessa cerca na janela (se houver); senão, o GPS. */
+/**
+ * cercaId: quando informado, saída = 1ª "Saiu da cerca" na janela e retorno = última "Entrou na cerca"
+ * depois da saída (entrada antes da saída é chegada de madrugada, não retorno). Sem o evento, vale o GPS.
+ */
 export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; fim: Date }, cercaId?: string): Promise<GpsLinha> {
   try {
     const posicoes: Posicao[] = [];
@@ -76,10 +81,20 @@ export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; 
     const kmGps = raw === null ? null : Math.round((raw > 1000 ? raw / 1000 : raw) * 10) / 10;
 
     const gps = detectarParadas(posicoes);
-    const pelaCerca = cercaId ? await saidaDaCerca(vehicleId, janela, cercaId) : null;
-    return pelaCerca
-      ? { erro: null, ...gps, saida: pelaCerca, saidaOrigem: "cerca", kmGps }
-      : { erro: null, ...gps, saidaOrigem: "gps", kmGps };
+    const r: GpsLinha = { erro: null, ...gps, saidaOrigem: "gps", retornoOrigem: "gps", kmGps };
+    if (!cercaId) return r;
+
+    const { saidas, entradas } = await eventosDaCerca(vehicleId, janela, cercaId);
+    if (saidas.length) {
+      r.saida = new Date(Math.min(...saidas));
+      r.saidaOrigem = "cerca";
+    }
+    const depoisDaSaida = entradas.filter(t => !r.saida || t > r.saida.getTime());
+    if (depoisDaSaida.length) {
+      r.retorno = new Date(Math.max(...depoisDaSaida));
+      r.retornoOrigem = "cerca";
+    }
+    return r;
   } catch (e) {
     return gpsErro(`falha no Infleet: ${(e as Error).message}`);
   }

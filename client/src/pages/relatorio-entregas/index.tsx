@@ -204,8 +204,8 @@ export default function RelatorioEntregas() {
               {/* ── Filtro de dia + KPIs ── */}
               <div className="bg-white dark:bg-[var(--card)] rounded-2xl px-5 py-3 flex items-center gap-4 mx-6 mt-4 border border-slate-100 dark:border-[var(--border)]">
                 <span className="text-xs text-slate-500 dark:text-slate-400">Planilha: <b className="text-slate-700 dark:text-slate-200">{arquivo.nome}</b></span>
-                <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" title="Quando o caminhão sai da cerca escolhida, esse evento vira o horário de saída; sem saída da cerca, vale o GPS">
-                  Saída pela cerca
+                <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" title="Saiu da cerca escolhida = horário de saída; entrou nela depois da saída = horário de retorno. Sem esses eventos no dia, vale o GPS">
+                  Saída / retorno pela cerca
                   <select value={cercaId} disabled={processar.isPending}
                     onChange={e => { setCercaSel(e.target.value); processar.mutate({ xlsxBase64: arquivo.base64, cercaId: e.target.value || undefined }); }}
                     className="text-xs font-semibold bg-transparent border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-200">
@@ -273,7 +273,7 @@ export default function RelatorioEntregas() {
                         <tr>
                           <Th title="Clique na linha para ver as baixas">Placa · Motorista</Th>
                           <Th center title={`Saída da cerca escolhida ou, sem ela, início do 1º trecho em movimento de 3 min ou mais (vermelho se > ${LIMITES.saidaAte})`}>Saída</Th>
-                          <Th center title="Fim do último trecho em movimento de 3 min ou mais">Retorno</Th>
+                          <Th center title="Entrada na cerca escolhida depois da saída ou, sem ela, fim do último trecho em movimento de 3 min ou mais">Retorno</Th>
                           <Th center title="Entregues no dia / total de clientes da rota">Entregas</Th>
                           <Th center title={`% das entregas com baixa após as 14h (vermelho se < ${LIMITES.apos14hMinPct}%)`}>Após 14h</Th>
                           <Th center title={`Baixas com parada de ${LIMITES.relampagoMin} min ou mais a até ${LIMITES.raioM} m do cliente`}>No raio</Th>
@@ -310,7 +310,13 @@ export default function RelatorioEntregas() {
                                     </span>
                                   ) : vazio}
                                 </Td>
-                                <Td center mono className={neutro}>{gps ? hora(r.retorno) : vazio}</Td>
+                                <Td center mono className={neutro}>
+                                  {gps ? (
+                                    <span title={r.retornoOrigem === "cerca" ? "Retorno registrado pela cerca (evento Entrou na cerca)" : "Retorno pelo GPS (fim do último trecho em movimento)"}>
+                                      {hora(r.retorno)}{r.retornoOrigem === "cerca" && <MapPin size={10} className="inline ml-0.5 -mt-0.5 text-indigo-400" />}
+                                    </span>
+                                  ) : vazio}
+                                </Td>
                                 <Td center mono className={neutro}>{r.entregasDia}/{r.totalRota}</Td>
                                 <Td center mono>
                                   {r.entregasDia > 0 ? (

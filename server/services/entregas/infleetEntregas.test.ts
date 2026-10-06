@@ -50,32 +50,55 @@ describe("buscarGpsLinha", () => {
     expect(r.kmGps).toBe(123.5);
   });
 
-  describe("saída pela cerca", () => {
-    const movimento = [p(0, 0), p(10, 0), p(11, 40), p(20, 40), p(21, 0), p(30, 0)]; // GPS: saída aos 11 min
-    const responder = (eventos: { reportedAt: string; geofenceId: string }[]) =>
+
+  describe("saída e retorno pela cerca", () => {
+    // GPS: parado 0–11, anda 11–21, parado 21–30 → saída GPS aos 11, retorno GPS aos 21
+    const movimento = [p(0, 0), p(10, 0), p(11, 40), p(20, 40), p(21, 0), p(30, 0)];
+    type Ev = { slugName: "geofenceExit" | "geofenceEnter"; reportedAt: string; geofenceId: string };
+    const saiu = (min: number, cerca = "sede"): Ev => ({ slugName: "geofenceExit", reportedAt: em(min), geofenceId: cerca });
+    const entrou = (min: number, cerca = "sede"): Ev => ({ slugName: "geofenceEnter", reportedAt: em(min), geofenceId: cerca });
+    const responder = (eventos: Ev[]) =>
       q.mockImplementation(async (query: string) =>
         query.includes("routeVehicleDetails") ? { routeVehicleDetails: { totalDistanceTraveled: 10 } }
           : query.includes("listEvents") ? { listEvents: eventos }
           : { listVehiclePositions: movimento });
 
-    it("usa a 1ª saída da cerca escolhida e marca a origem", async () => {
-      responder([{ reportedAt: em(8), geofenceId: "sede" }, { reportedAt: em(5), geofenceId: "outra" }, { reportedAt: em(25), geofenceId: "sede" }]);
+    it("saída = 1ª saída da cerca escolhida; retorno = última entrada depois da saída", async () => {
+      responder([entrou(2), saiu(8), saiu(5, "outra"), entrou(25), entrou(27, "outra")]);
       const r = await buscarGpsLinha("v1", janela, "sede");
       expect(r.saida?.toISOString()).toBe(em(8));
       expect(r.saidaOrigem).toBe("cerca");
+      expect(r.retorno?.toISOString()).toBe(em(25));
+      expect(r.retornoOrigem).toBe("cerca");
     });
 
-    it("sem saída da cerca na janela, volta para o GPS", async () => {
-      responder([{ reportedAt: em(5), geofenceId: "outra" }]);
+    it("entrada só antes da saída não é retorno: retorno volta para o GPS", async () => {
+      responder([entrou(2), saiu(8)]);
+      const r = await buscarGpsLinha("v1", janela, "sede");
+      expect(r.saidaOrigem).toBe("cerca");
+      expect(r.retorno?.toISOString()).toBe(em(21));
+      expect(r.retornoOrigem).toBe("gps");
+    });
+
+    it("sem eventos da cerca escolhida, saída e retorno pelo GPS", async () => {
+      responder([saiu(5, "outra"), entrou(25, "outra")]);
       const r = await buscarGpsLinha("v1", janela, "sede");
       expect(r.saida?.toISOString()).toBe(em(11));
-      expect(r.saidaOrigem).toBe("gps");
+      expect(r.retorno?.toISOString()).toBe(em(21));
+      expect([r.saidaOrigem, r.retornoOrigem]).toEqual(["gps", "gps"]);
+    });
+
+    it("entrou na cerca sem ter saído dela no dia (saída pelo GPS): retorno pela cerca se for depois da saída", async () => {
+      responder([entrou(25)]);
+      const r = await buscarGpsLinha("v1", janela, "sede");
+      expect([r.saidaOrigem, r.retornoOrigem]).toEqual(["gps", "cerca"]);
+      expect(r.retorno?.toISOString()).toBe(em(25));
     });
 
     it("sem cerca escolhida, nem consulta eventos", async () => {
-      responder([{ reportedAt: em(8), geofenceId: "sede" }]);
+      responder([saiu(8), entrou(25)]);
       const r = await buscarGpsLinha("v1", janela);
-      expect(r.saidaOrigem).toBe("gps");
+      expect([r.saidaOrigem, r.retornoOrigem]).toEqual(["gps", "gps"]);
       expect(q.mock.calls.some(c => String(c[0]).includes("listEvents"))).toBe(false);
     });
   });
