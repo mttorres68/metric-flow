@@ -88,8 +88,10 @@ server/routes/relatorioEntregas.ts
 | `server/services/entregas/parseCheckNow.ts` | lê o xlsx, valida colunas, deduplica e converte datas |
 | `server/services/entregas/detectarParadas.ts` | **puro**: posições → paradas |
 | `server/services/entregas/cruzar.ts` | **puro**: linhas, janelas, status, KPIs, exceções; contém `LIMITES` |
+| `server/services/entregas/infleetEntregas.ts` | placa → `vehicleId`; posições em blocos de 6 h; km; converte para `GpsLinha` |
 | `server/services/pdfEntregas.tsx` | as duas páginas do PDF (`@react-pdf/renderer`) |
-| `server/routes/relatorioEntregas.ts` | rota express; orquestra o Infleet; registrada em `server/_core/index.ts` |
+| `server/routes/relatorioEntregas.ts` | rota express; orquestra parse → Infleet → cruzar → PDF; registrada em `server/_core/index.ts` |
+| `script/sondaInfleet.ts` | sonda da §9 (descartável, fica como referência) |
 | `server/routers/infleetRouter.ts` | só passa a **exportar** `infleetQuery` |
 | `server/services/pdfService.tsx` | só passa a **exportar** cores, estilos e `FooterBar` para reuso |
 | `client/src/pages/relatorio-entregas/` + `Sidebar.tsx` + `App.tsx` | tela e rota |
@@ -139,10 +141,7 @@ Distância: haversine (raio da Terra de 6.371 km).
 
 Para cada entrega com baixa (ENTREGUE ou PROBLEMA) no dia da linha:
 - **Paradas candidatas** = paradas da janela cujo centro está a ≤ `raioM` do
-  cliente.
-  - permanência = soma das durações;
-  - chegada GPS = início da primeira;
-  - saída GPS = fim da última.
+  cliente. Permanência = soma das durações delas.
 - Uma mesma parada pode atender clientes vizinhos. Isso é permitido.
 - **Status**, nesta ordem:
 
@@ -152,15 +151,17 @@ Para cada entrega com baixa (ENTREGUE ou PROBLEMA) no dia da linha:
 | `no_raio` | permanência ≥ `relampagoMin` | sim |
 | `relampago` | 0 < permanência < `relampagoMin` | sim |
 | `sem_parada` | nenhuma parada candidata | sim |
-| `sem_gps` | linha sem rastreador ou sem posições | não; colunas de GPS ficam "—" |
 
 - Para as exceções, guardo também a **distância da parada mais próxima** (de
   qualquer distância) do cliente.
+- **Linha sem GPS** (sem rastreador, sem posições ou falha do Infleet): não
+  calcula status por entrega. As colunas de GPS ficam "—", a linha não gera
+  exceções e o motivo vai para o rodapé de avisos.
 
 **Saída / retorno do dia:**
-- saída = fim da primeira parada da janela (primeiro movimento);
-- retorno = início da última parada da janela.
-- Se a janela começa em movimento, a saída é a primeira posição.
+- saída = primeira posição em movimento da janela;
+- retorno = última posição em movimento da janela (equivale ao início da
+  última parada).
 
 **Paradas sem cliente:** paradas com duração ≥ `paradaSemClienteMin`, que
 começam depois da saída e antes do retorno, cujo centro fica a > `raioM` de
@@ -189,7 +190,7 @@ análise do gestor e rodapé "MetricFlow · data · Gerado em".
 | Pendentes · Km informado | só no dia em que a rota fecha: AGUARDANDO da rota · (odômetro final − inicial informado) | pendentes > 0 |
 
 **Página 2 — Exceções:** uma linha para cada baixa do dia com status diferente
-de `no_raio`. Colunas: placa, motorista, cliente, código, hora da baixa, status,
+de `no_raio` (linhas sem GPS não entram; ver §6). Colunas: placa, motorista, cliente, código, hora da baixa, status,
 distância da parada mais próxima (m) e permanência no raio.
 
 Rodapé de avisos: placas sem rastreador e falhas do Infleet por linha.
@@ -202,7 +203,7 @@ Rodapé de avisos: placas sem rastreador e falhas do Infleet por linha.
 | Placa ausente no Infleet (comparada em maiúsculas, sem `-` e espaços) | linha `sem_gps` com aviso "sem rastreador"; Entregas e Após 14h são calculados normalmente |
 | Erro ou timeout do Infleet numa linha | linha `sem_gps` + aviso no rodapé; as demais seguem |
 | Janela sem posições | linha `sem_gps` ("sem sinal GPS") |
-| Resposta de posições truncada (ver sonda) | dividir a janela em blocos de 6 h e concatenar |
+| Possível truncamento de posições (limite não documentado) | a janela é sempre buscada em blocos de 6 h, concatenados |
 | `INFLEET_TOKEN` ausente | HTTP 500 com a mensagem do `infleetQuery` |
 
 O body JSON já aceita 50 MB (`server/_core/index.ts`); a planilha tem cerca de
@@ -221,7 +222,7 @@ chamada real ao Infleet para SOO-8D21 em 05/10, para confirmar:
 - `detectarParadas`: parada simples; descarte abaixo de 1 min; fusão abaixo de
   50 m / 2 min; intervalo longo com o motor desligado; janela que termina parada.
 - `cruzar`:
-  - status `no_raio`, `relampago`, `sem_parada`, `sem_coordenada`, `sem_gps`;
+  - status `no_raio`, `relampago`, `sem_parada`, `sem_coordenada` e linha sem GPS;
   - clientes vizinhos atendidos pela mesma parada;
   - parada sem cliente fora do intervalo entre saída e retorno não conta;
   - troca de motorista no mesmo caminhão no mesmo dia (janelas separadas);
@@ -231,8 +232,11 @@ chamada real ao Infleet para SOO-8D21 em 05/10, para confirmar:
   `RouteId`+`Código do Cliente`; colunas faltantes → erro com a lista.
 
 **Validação com dados reais:** gerar o relatório com a planilha de
-`Projetos/rota/dados/`. A maior parte das 57 baixas a mais de 500 m do cliente
-deve sair como `sem_parada`, e os limites devem ser revisados com base nisso.
+`Projetos/rota/dados/` e cruzar o status do GPS com a distância da baixa
+informada pelo próprio CheckNow (`Distância do Ponto (MT)`). Uma baixa longe do
+cliente pode ter parada GPS no raio (baixa em lote feita depois). Isso é
+justamente o que o relatório revela, então não existe resultado "esperado"
+fixo. A tabela cruzada é revisada junto com o gestor para calibrar os limites.
 
 ## 10. Ordem de construção
 
