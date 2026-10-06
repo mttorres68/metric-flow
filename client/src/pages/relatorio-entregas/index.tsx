@@ -80,6 +80,9 @@ export default function RelatorioEntregas() {
   const [verExcecoes, setVerExcecoes] = useState(false);
   const [analise, setAnalise] = useState("");
   const [baixando, setBaixando] = useState<"dia" | "zip" | null>(null);
+  const [cercaSel, setCercaSel] = useState<string | null>(null); // null = padrão (cerca "Sede", se existir)
+  const cercas = trpc.infleet.listarCercas.useQuery(undefined, { staleTime: Infinity }).data ?? [];
+  const cercaId = cercaSel ?? cercas.find(c => /sede/i.test(c.name))?.id ?? "";
 
   const processar = trpc.entregas.processar.useMutation({
     onSuccess: rs => {
@@ -95,7 +98,7 @@ export default function RelatorioEntregas() {
     if (!file) return;
     const base64 = await blobToBase64(file);
     setArquivo({ nome: file.name, base64 });
-    processar.mutate({ xlsxBase64: base64 });
+    processar.mutate({ xlsxBase64: base64, cercaId: cercaId || undefined });
   }
 
   const dias = useMemo(() => [...new Set(resultados.map(r => r.linha.data))], [resultados]);
@@ -127,7 +130,7 @@ export default function RelatorioEntregas() {
       const resp = await fetch("/api/relatorio-entregas/gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ xlsxBase64: arquivo.base64, analise, ...(tipo === "dia" ? { data: dia } : {}) }),
+        body: JSON.stringify({ xlsxBase64: arquivo.base64, analise, cercaId: cercaId || undefined, ...(tipo === "dia" ? { data: dia } : {}) }),
       });
       if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error ?? "Erro ao gerar o PDF");
       const nome = resp.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "entregas.pdf";
@@ -167,7 +170,7 @@ export default function RelatorioEntregas() {
                 <FileUp size={12} /> Trocar planilha
                 <input type="file" accept=".xlsx" className="hidden" onChange={e => { carregar(e.target.files?.[0]); e.target.value = ""; }} />
               </label>
-              <button onClick={() => processar.mutate({ xlsxBase64: arquivo.base64 })} disabled={processar.isPending}
+              <button onClick={() => processar.mutate({ xlsxBase64: arquivo.base64, cercaId: cercaId || undefined })} disabled={processar.isPending}
                 className={`${botao} bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-700`}>
                 <RefreshCw size={12} className={processar.isPending ? "animate-spin" : ""} /> Atualizar GPS
               </button>
@@ -201,6 +204,15 @@ export default function RelatorioEntregas() {
               {/* ── Filtro de dia + KPIs ── */}
               <div className="bg-white dark:bg-[var(--card)] rounded-2xl px-5 py-3 flex items-center gap-4 mx-6 mt-4 border border-slate-100 dark:border-[var(--border)]">
                 <span className="text-xs text-slate-500 dark:text-slate-400">Planilha: <b className="text-slate-700 dark:text-slate-200">{arquivo.nome}</b></span>
+                <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" title="Quando o caminhão sai da cerca escolhida, esse evento vira o horário de saída; sem saída da cerca, vale o GPS">
+                  Saída pela cerca
+                  <select value={cercaId} disabled={processar.isPending}
+                    onChange={e => { setCercaSel(e.target.value); processar.mutate({ xlsxBase64: arquivo.base64, cercaId: e.target.value || undefined }); }}
+                    className="text-xs font-semibold bg-transparent border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-200">
+                    <option value="">Nenhuma (só GPS)</option>
+                    {cercas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </label>
                 <div className="flex items-center gap-1 ml-auto">
                   <button aria-label="Dia anterior" disabled={idxDia <= 0} onClick={() => setDia(dias[idxDia - 1])}
                     className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700/50 disabled:opacity-30"><ChevronLeft size={16} /></button>
@@ -260,8 +272,8 @@ export default function RelatorioEntregas() {
                       <thead className="bg-green-950 text-slate-100">
                         <tr>
                           <Th title="Clique na linha para ver as baixas">Placa · Motorista</Th>
-                          <Th center title={`Primeiro movimento do dia (vermelho se > ${LIMITES.saidaAte})`}>Saída</Th>
-                          <Th center title="Último movimento do dia">Retorno</Th>
+                          <Th center title={`Saída da cerca escolhida ou, sem ela, início do 1º trecho em movimento de 3 min ou mais (vermelho se > ${LIMITES.saidaAte})`}>Saída</Th>
+                          <Th center title="Fim do último trecho em movimento de 3 min ou mais">Retorno</Th>
                           <Th center title="Entregues no dia / total de clientes da rota">Entregas</Th>
                           <Th center title={`% das entregas com baixa após as 14h (vermelho se < ${LIMITES.apos14hMinPct}%)`}>Após 14h</Th>
                           <Th center title={`Baixas com parada de ${LIMITES.relampagoMin} min ou mais a até ${LIMITES.raioM} m do cliente`}>No raio</Th>
@@ -291,7 +303,13 @@ export default function RelatorioEntregas() {
                                   </span>
                                   {!gps && <span className="ml-2"><Badge color="slate">sem GPS: {r.semGps}</Badge></span>}
                                 </Td>
-                                <Td center mono className={saidaAlerta ? vermelho : neutro}>{gps ? hora(r.saida) : vazio}</Td>
+                                <Td center mono className={saidaAlerta ? vermelho : neutro}>
+                                  {gps ? (
+                                    <span title={r.saidaOrigem === "cerca" ? "Saída registrada pela cerca (evento Saiu da cerca)" : "Saída pelo GPS (1º trecho em movimento)"}>
+                                      {hora(r.saida)}{r.saidaOrigem === "cerca" && <MapPin size={10} className="inline ml-0.5 -mt-0.5 text-indigo-400" />}
+                                    </span>
+                                  ) : vazio}
+                                </Td>
                                 <Td center mono className={neutro}>{gps ? hora(r.retorno) : vazio}</Td>
                                 <Td center mono className={neutro}>{r.entregasDia}/{r.totalRota}</Td>
                                 <Td center mono>

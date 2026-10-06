@@ -116,9 +116,13 @@ export const LIMITES = {
 - **Linha = placa · motorista · dia.** Uma rota de 3 dias gera 3 linhas.
 - O dia de uma entrega é a `Data de Chegada` da baixa. Entregas AGUARDANDO não
   têm dia; só entram em "Pendentes".
-- **Janela de GPS da linha** = [maior entre 00:00 do dia e o início realizado
-  da rota, menor entre 23:59:59 do dia e o fim realizado da rota]. Se a rota
-  estiver aberta, o fim é o momento da geração.
+- **Janela de GPS da linha** = o dia inteiro (00:00–23:59:59; para o dia de
+  hoje, até o momento da geração), mesmo antes do início ou depois do fim da
+  rota no app. Assim a saída real e o retorno à base entram, mesmo que o
+  motorista inicie a rota no app atrasado (caso real: SOL-6B13 em 05/10 saiu às
+  07:26, mas iniciou a rota no app às 08:44). A janela só é cortada quando o
+  mesmo caminhão troca de motorista no dia: no fim da rota anterior, ou no
+  início da seguinte se a anterior não tiver fim (vale o menor dos dois).
 - Os dias da linha vão do início da rota até o fim dela (ou até o dia da última
   baixa, se aberta). Dia sem baixa, mas dentro da rota, também gera linha.
 
@@ -160,10 +164,15 @@ Para cada entrega com baixa (ENTREGUE ou PROBLEMA) no dia da linha:
   calcula status por entrega. As colunas de GPS ficam "—", a linha não gera
   exceções e o motivo vai para o rodapé de avisos.
 
-**Saída / retorno do dia:**
-- saída = primeira posição em movimento da janela;
-- retorno = última posição em movimento da janela (equivale ao início da
-  última parada).
+**Saída / retorno do dia** (revisado em 2026-10-06):
+- trechos em movimento = intervalos entre as paradas (e antes da 1ª / depois
+  da última); só contam os de **3 min ou mais**, para ignorar manobra de pátio;
+- saída = início do 1º trecho assim; retorno = fim do último (início da
+  última parada);
+- **opção cerca**: com uma cerca da base escolhida na tela (padrão: a cerca
+  "Sede", se existir), a saída é o 1º evento `geofenceExit` ("Saiu da cerca")
+  dessa cerca na janela. Sem esse evento, vale o GPS. A origem fica marcada
+  (ícone na tela, `*` no PDF).
 
 **Paradas sem cliente:** paradas com duração ≥ `paradaSemClienteMin`, que
 começam depois da saída e antes do retorno, cujo centro fica a > `raioM` de
