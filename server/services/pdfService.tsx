@@ -94,9 +94,9 @@ export interface PDFReportData {
 // Cores (baseadas no Word)
 // ---------------------------------------------------------------------------
 
-const VERDE_TITULO = "#205527";
+export const VERDE_TITULO = "#205527";
 const VERDE_RESUMO = "#009900";
-const VERMELHO = "#CC2200";
+export const VERMELHO = "#CC2200";
 const CINZA_CLARO = "#F2F2F2";
 const TEXTO_NORMAL = "#121212";
 const TEXTO_BRANCO = "#FFFFFF";
@@ -151,7 +151,7 @@ const CG = {
 // Estilos
 // ---------------------------------------------------------------------------
 
-const s = StyleSheet.create({
+export const s = StyleSheet.create({
   page: {
     fontFamily: "Helvetica",
     backgroundColor: "#ffffff",
@@ -356,7 +356,7 @@ const s = StyleSheet.create({
 // ---------------------------------------------------------------------------
 
 /** Remove tags HTML, retornando texto simples para o PDF. */
-function stripHtml(html: string): string {
+export function stripHtml(html: string): string {
   if (!html) return "";
   return html
     .replace(/<br\s*\/?>/gi, "\n")
@@ -374,7 +374,7 @@ function stripHtml(html: string): string {
 }
 
 /** Renderiza texto de análise linha a linha para evitar espaçamento excessivo do lineHeight. */
-function renderAnalise(text: string): React.ReactNode {
+export function renderAnalise(text: string): React.ReactNode {
   const linhas = text.split("\n").filter(l => l.trim() !== "");
   if (!linhas.length) return null;
   return linhas.map((linha, i) => (
@@ -382,12 +382,12 @@ function renderAnalise(text: string): React.ReactNode {
   ));
 }
 
-function fmtDate(iso: string): string {
+export function fmtDate(iso: string): string {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
 }
 
-function fmtPct(v: number, decimals = 0): string {
+export function fmtPct(v: number, decimals = 0): string {
   return `${v.toFixed(decimals)}%`;
 }
 
@@ -432,7 +432,7 @@ function statusLabel(s: string): string {
 // Rodapé fixo
 // ---------------------------------------------------------------------------
 
-const FooterBar = ({ data, revenda }: { data: string; revenda: string }) => (
+export const FooterBar = ({ data, revenda }: { data: string; revenda: string }) => (
   <View style={s.footer} fixed>
     <Text style={s.footerText}>
       MetricFlow · {revenda} · {fmtDate(data)} · Gerado em {new Date().toLocaleDateString("pt-BR")}
