@@ -19,6 +19,7 @@ import { crmRouter } from "./routers/crmRouter";
 import { configRouter } from "./routers/configRouter";
 import { appCampeaoRouter } from "./routers/appCampeaoRouter";
 import { agendaGaRouter } from "./routers/agendaGaRouter";
+import { entregasRouter } from "./routers/entregasRouter";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -40,6 +41,7 @@ export const appRouter = router({
   config: configRouter,
   appCampeao: appCampeaoRouter,
   agendaGa: agendaGaRouter,
+  entregas: entregasRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
