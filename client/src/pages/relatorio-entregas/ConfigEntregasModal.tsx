@@ -1,12 +1,13 @@
 /*
  * MetricFlow — Configuração do Relatório de Entregas (tabela entregas_config).
- * Raio do cliente e limites dos gatilhos de desvio e trecho lento. Mesmo visual do ConfigMetricasModal.
+ * Abas: Limites (raio, desvio e trecho lento) e Contas (CheckNow/Infleet por revenda). Mesmo visual do ConfigMetricasModal.
  */
 import { useEffect, useState } from "react";
 import { Loader2, RotateCcw, Save, Settings2, X } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { CONFIG_ENTREGAS_PADRAO, type ConfigEntregas } from "@shared/entregas";
+import { ContasEntregas } from "./ContasEntregas";
 
 interface Campo { chave: keyof ConfigEntregas; rotulo: string; un: string; min: number; max: number; step: number; inteiro: boolean; ajuda: string }
 
@@ -32,12 +33,17 @@ const GRUPOS: { titulo: string; campos: Campo[] }[] = [
 
 const valido = (c: Campo, v: number) => Number.isFinite(v) && v >= c.min && v <= c.max && (!c.inteiro || Number.isInteger(v));
 
-export function ConfigEntregasModal({ open, onClose, onSalvo }: { open: boolean; onClose: () => void; onSalvo: () => void }) {
+type Aba = "limites" | "contas";
+
+export function ConfigEntregasModal({ open, onClose, onSalvo, abaInicial = "limites" }: { open: boolean; onClose: () => void; onSalvo: () => void; abaInicial?: Aba }) {
   const utils = trpc.useUtils();
   const { data: salvo, isLoading } = trpc.config.getEntregasConfig.useQuery(undefined, { enabled: open });
   const salvar = trpc.config.saveEntregasConfig.useMutation();
   const restaurar = trpc.config.resetEntregasConfig.useMutation();
   const [cfg, setCfg] = useState<ConfigEntregas>(CONFIG_ENTREGAS_PADRAO);
+  const [aba, setAba] = useState<Aba>(abaInicial);
+
+  useEffect(() => { if (open) setAba(abaInicial); }, [open, abaInicial]);
 
   useEffect(() => { if (salvo) setCfg(salvo); }, [salvo, open]);
 
@@ -60,7 +66,7 @@ export function ConfigEntregasModal({ open, onClose, onSalvo }: { open: boolean;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col border border-slate-100 dark:border-[var(--border)]">
+      <div className="bg-white dark:bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col border border-slate-100 dark:border-[var(--border)]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-[var(--border)]">
           <div className="flex items-center gap-2">
             <Settings2 className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
@@ -74,8 +80,19 @@ export function ConfigEntregasModal({ open, onClose, onSalvo }: { open: boolean;
           </button>
         </div>
 
+        <div className="px-6 pt-3">
+          <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-600 p-0.5">
+            {([["limites", "Limites"], ["contas", "Contas"]] as const).map(([v, rotulo]) => (
+              <button key={v} onClick={() => setAba(v)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${aba === v ? "bg-indigo-500 text-white" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50"}`}>
+                {rotulo}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="px-6 py-5 overflow-y-auto">
-          {isLoading ? (
+          {aba === "contas" ? <ContasEntregas onMudou={onSalvo} /> : isLoading ? (
             <div className="flex items-center justify-center py-6 text-slate-400 text-sm gap-2">
               <Loader2 className="w-4 h-4 animate-spin" /> Carregando configuração…
             </div>
@@ -112,7 +129,7 @@ export function ConfigEntregasModal({ open, onClose, onSalvo }: { open: boolean;
           )}
         </div>
 
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-[var(--border)]">
+        {aba === "limites" && <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-[var(--border)]">
           <button
             onClick={() => aplicar(() => restaurar.mutateAsync(), "Configuração restaurada para o padrão.")}
             disabled={ocupado}
@@ -134,7 +151,7 @@ export function ConfigEntregasModal({ open, onClose, onSalvo }: { open: boolean;
               {salvar.isPending ? "Salvando…" : "Salvar"}
             </button>
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   );

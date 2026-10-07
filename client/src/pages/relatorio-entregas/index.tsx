@@ -1,8 +1,7 @@
 /*
  * MetricFlow — Relatório Gerencial de Entregas
- * Upload da planilha do CheckNow → painel por dia (placa · motorista) com o cruzamento
- * das baixas com o GPS (Infleet), no mesmo padrão visual da Análise. Sem banco: a planilha
- * fica na memória da página e é reenviada para baixar os PDFs.
+ * Entregas do CheckNow guardadas por revenda (coleta automática, botão ou planilha) → painel por dia
+ * (placa · motorista) com o cruzamento com o GPS (Infleet da revenda), no mesmo padrão visual da Análise.
  */
 import Sidebar from "@/components/Sidebar";
 import { EditorAnalise } from "@/components/EditorAnalise";
@@ -12,16 +11,17 @@ import { Badge } from "@/pages/analise/components/Badge";
 import { blobToBase64 } from "@/pages/analise/lib/pdf";
 import { ConfigEntregasModal } from "./ConfigEntregasModal";
 import { PainelRota } from "./PainelRota";
+import { SituacaoColeta } from "./SituacaoColeta";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc";
-import { CONFIG_ENTREGAS_PADRAO, LIMITES, horaBRT } from "@shared/entregas";
+import { CONFIG_ENTREGAS_PADRAO, LIMITES, diaBRT, horaBRT } from "@shared/entregas";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../server/routers";
 import {
-  AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, FileUp, Loader2,
+  AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, CloudDownload, FileUp, Loader2,
   MapPin, PenLine, Printer, RefreshCw, Settings2, Timer, Truck, Zap,
 } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 type Saida = inferRouterOutputs<AppRouter>["entregas"]["processar"];
@@ -198,25 +198,29 @@ function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Ba
 
 export default function RelatorioEntregas() {
   const { isCollapsed } = useSidebarCollapse();
-  const [arquivo, setArquivo] = useState<{ nome: string; base64: string } | null>(null);
   const [dia, setDia] = useState<string | null>(null);
   const [abertas, setAbertas] = useState<Set<string>>(new Set());
   const [verExcecoes, setVerExcecoes] = useState(false);
   const [analise, setAnalise] = useState("");
   const [baixando, setBaixando] = useState<"dia" | "zip" | null>(null);
-  const [configAberto, setConfigAberto] = useState(false);
+  const [configAberto, setConfigAberto] = useState<false | "limites" | "contas">(false);
   const cfg = trpc.config.getEntregasConfig.useQuery().data ?? CONFIG_ENTREGAS_PADRAO;
   const raioM = cfg.raioM;
   const [cercaSel, setCercaSel] = useState<string | null>(null); // null = padrão (cerca "Sede", se existir)
-  const cercasQ = trpc.infleet.listarCercas.useQuery(undefined, { staleTime: Infinity });
+  const contasQ = trpc.entregas.contas.listar.useQuery();
+  const contasAtivas = (contasQ.data ?? []).filter(c => c.ativo);
+  const hoje = diaBRT(new Date());
+  const [revendaId, setRevendaId] = useState<number | null>(() => { try { return Number(localStorage.getItem("entregas.revenda")) || null; } catch { return null; } });
+  const revenda = contasAtivas.find(c => c.revendaId === revendaId) ?? contasAtivas[0] ?? null;
+  const [periodo, setPeriodo] = useState({ de: hoje, ate: hoje });
+  const cercasQ = trpc.entregas.cercas.useQuery({ revendaId: revenda?.revendaId ?? 0 }, { enabled: !!revenda, staleTime: Infinity });
   const cercas = cercasQ.data ?? [];
   const cercaPadrao = (lista: { id: string; name: string }[]) => cercaSel ?? lista.find(c => /sede/i.test(c.name))?.id ?? "";
   const cercaId = cercaPadrao(cercas);
 
   const processar = trpc.entregas.processar.useMutation({
     onSuccess: ({ linhas: rs }) => {
-      if (!rs.length) toast.warning("Nenhuma rota iniciada na planilha.");
-      // Recalcular (GPS, cerca, raio) mantém o dia aberto; planilha nova abre no último dia.
+      // Recalcular (GPS, cerca, raio) mantém o dia aberto; período novo abre no último dia.
       setDia(d => (d && rs.some(r => r.linha.data === d) ? d : rs.length ? rs[rs.length - 1].linha.data : null));
       setAbertas(new Set());
     },
@@ -226,14 +230,29 @@ export default function RelatorioEntregas() {
   const rotas = processar.data?.rotas ?? [];
   const [aba, setAba] = useState<"dia" | "rota">("dia");
 
-  async function carregar(file: File | undefined) {
-    if (!file) return;
-    const base64 = await blobToBase64(file);
-    setArquivo({ nome: file.name, base64 });
-    setDia(null); // planilha nova: abre no último dia
-    // Espera a lista de cercas: sem ela, a cerca padrão (Sede) ficaria de fora do 1º cálculo.
-    const lista = cercasQ.data ?? (await cercasQ.refetch()).data ?? [];
-    processar.mutate({ xlsxBase64: base64, cercaId: cercaPadrao(lista) || undefined });
+  const utils = trpc.useUtils();
+  const recalcular = (cerca = cercaId) => { if (revenda) processar.mutate({ revendaId: revenda.revendaId, ...periodo, cercaId: cerca || undefined }); };
+  // Revenda, período ou lista de cercas mudou: recarrega (a cerca padrão "Sede" depende da lista da conta Infleet).
+  useEffect(() => { if (revenda && cercasQ.isFetched) recalcular(); }, [revenda?.revendaId, periodo.de, periodo.ate, cercasQ.isFetched]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const coletar = trpc.entregas.coletar.useMutation({
+    onSuccess: r => { toast.success(r.status === "ok" ? `${r.rotas} rotas, ${r.linhas} entregas atualizadas` : "CheckNow sem entregas no período"); recalcular(); },
+    onError: e => toast.error(e.message),
+    onSettled: () => utils.entregas.coletas.invalidate(),
+  });
+  const importar = trpc.entregas.importar.useMutation({
+    onSuccess: r => { toast.success(`Planilha importada: ${r.linhas} entregas`); recalcular(); },
+    onError: e => toast.error(e.message),
+    onSettled: () => utils.entregas.coletas.invalidate(),
+  });
+  async function importarArquivo(file: File | undefined) {
+    if (file && revenda) importar.mutate({ revendaId: revenda.revendaId, xlsxBase64: await blobToBase64(file) });
+  }
+  function escolherRevenda(id: number) {
+    setRevendaId(id);
+    setCercaSel(null);
+    setDia(null);
+    try { localStorage.setItem("entregas.revenda", String(id)); } catch { /* sem storage: só não lembra a revenda */ }
   }
 
   const dias = useMemo(() => [...new Set(resultados.map(r => r.linha.data))], [resultados]);
@@ -259,13 +278,13 @@ export default function RelatorioEntregas() {
   const toggle = (c: string) => setAbertas(s => { const n = new Set(s); n.has(c) ? n.delete(c) : n.add(c); return n; });
 
   async function baixar(tipo: "dia" | "zip") {
-    if (!arquivo) return;
+    if (!revenda) return;
     setBaixando(tipo);
     try {
       const resp = await fetch("/api/relatorio-entregas/gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ xlsxBase64: arquivo.base64, analise, cercaId: cercaId || undefined, ...(tipo === "dia" ? { data: dia } : {}) }),
+        body: JSON.stringify({ revendaId: revenda.revendaId, ...periodo, analise, cercaId: cercaId || undefined, ...(tipo === "dia" ? { data: dia } : {}) }),
       });
       if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error ?? "Erro ao gerar o PDF");
       const nome = resp.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "entregas.pdf";
@@ -300,17 +319,29 @@ export default function RelatorioEntregas() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setConfigAberto(true)} title={`Configurar o relatório (raio atual: ${raioM} m)`}
+            <button onClick={() => setConfigAberto("limites")} title={`Configurar o relatório (raio atual: ${raioM} m)`}
               className={`${botao} border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50`}>
               <Settings2 size={12} /> Configurar
             </button>
-          {arquivo && (
+          {revenda && (
             <>
+              <select value={revenda.revendaId} onChange={e => escolherRevenda(Number(e.target.value))} aria-label="Revenda"
+                className="text-xs font-semibold bg-transparent border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-slate-700 dark:text-slate-200">
+                {contasAtivas.map(c => <option key={c.revendaId} value={c.revendaId}>{c.revenda}</option>)}
+              </select>
+              <input type="date" value={periodo.de} max={periodo.ate} aria-label="De" onChange={e => { const v = e.target.value; if (v) { setDia(null); setPeriodo(p => ({ ...p, de: v })); } }}
+                className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-transparent text-slate-700 dark:text-slate-200" />
+              <input type="date" value={periodo.ate} min={periodo.de} max={hoje} aria-label="Até" onChange={e => { const v = e.target.value; if (v) { setDia(null); setPeriodo(p => ({ ...p, ate: v })); } }}
+                className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-transparent text-slate-700 dark:text-slate-200" />
+              <button onClick={() => coletar.mutate({ revendaId: revenda.revendaId, ...periodo })} disabled={coletar.isPending}
+                className={`${botao} bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-500`}>
+                <CloudDownload size={12} className={coletar.isPending ? "animate-pulse" : ""} /> {coletar.isPending ? "Buscando…" : "Buscar do CheckNow"}
+              </button>
               <label className={`${botao} border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer`}>
-                <FileUp size={12} /> Trocar planilha
-                <input type="file" accept=".xlsx" className="hidden" onChange={e => { carregar(e.target.files?.[0]); e.target.value = ""; }} />
+                <FileUp size={12} /> {importar.isPending ? "Importando…" : "Importar planilha"}
+                <input type="file" accept=".xlsx" className="hidden" onChange={e => { importarArquivo(e.target.files?.[0]); e.target.value = ""; }} />
               </label>
-              <button onClick={() => processar.mutate({ xlsxBase64: arquivo.base64, cercaId: cercaId || undefined })} disabled={processar.isPending}
+              <button onClick={() => recalcular()} disabled={processar.isPending} title="Busca o GPS de novo"
                 className={`${botao} bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-700`}>
                 <RefreshCw size={12} className={processar.isPending ? "animate-spin" : ""} /> Atualizar GPS
               </button>
@@ -324,30 +355,50 @@ export default function RelatorioEntregas() {
         </div>
 
         <ConfigEntregasModal
-          open={configAberto}
+          open={!!configAberto}
+          abaInicial={configAberto || "limites"}
           onClose={() => setConfigAberto(false)}
-          onSalvo={() => { if (arquivo) processar.mutate({ xlsxBase64: arquivo.base64, cercaId: cercaId || undefined }); }}
+          onSalvo={() => { contasQ.refetch(); recalcular(); }}
         />
 
+        {revenda && (
+          <div className="px-6 pt-3">
+            <SituacaoColeta revendaId={revenda.revendaId} />
+          </div>
+        )}
+
         <div className="flex-1 min-h-0 overflow-auto">
-          {/* ── Upload ── */}
-          {!arquivo && (
-            <label className="m-6 flex flex-col items-center justify-center gap-2 p-12 rounded-xl border-2 border-dashed border-slate-200 dark:border-[var(--border)] bg-white dark:bg-[var(--card)] cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
-              <FileUp size={28} className="text-indigo-400" />
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Selecione a planilha do CheckNow (Geracao_Dado_BI.xlsx)</span>
-              <span className="text-xs text-slate-400 dark:text-slate-500">O cruzamento com o GPS leva alguns segundos</span>
-              <input type="file" accept=".xlsx" className="hidden" onChange={e => carregar(e.target.files?.[0])} />
-            </label>
+          {/* ── Sem conta / carregando / período vazio ── */}
+          {contasQ.isFetched && !revenda && (
+            <div className="m-6 flex flex-col items-center justify-center gap-2 p-12 rounded-xl border-2 border-dashed border-slate-200 dark:border-[var(--border)] bg-white dark:bg-[var(--card)]">
+              <Truck size={28} className="text-indigo-400" />
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Nenhuma conta do CheckNow cadastrada.</span>
+              <button onClick={() => setConfigAberto("contas")} className={`${botao} bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-500`}>
+                <Settings2 size={12} /> Cadastrar conta
+              </button>
+            </div>
           )}
 
-          {arquivo && processar.isPending && (
+          {revenda && processar.isPending && (
             <div className="flex items-center justify-center h-40 text-slate-400 dark:text-slate-500 text-sm">
-              <Loader2 size={16} className="animate-spin mr-2" /> Cruzando {arquivo.nome} com o GPS...
+              <Loader2 size={16} className="animate-spin mr-2" /> Cruzando as entregas de {revenda.revenda} com o GPS...
+            </div>
+          )}
+
+          {revenda && !processar.isPending && processar.data && !resultados.length && (
+            <div className="m-6 flex flex-col items-center justify-center gap-2 p-12 rounded-xl border-2 border-dashed border-slate-200 dark:border-[var(--border)] bg-white dark:bg-[var(--card)]">
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Nenhuma entrega de {revenda.revenda} {periodo.de === periodo.ate ? `em ${fmtDia(periodo.de)}` : `entre ${fmtDia(periodo.de)} e ${fmtDia(periodo.ate)}`}.
+              </span>
+              <button onClick={() => coletar.mutate({ revendaId: revenda.revendaId, ...periodo })} disabled={coletar.isPending}
+                className={`${botao} bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-500`}>
+                <CloudDownload size={12} /> {coletar.isPending ? "Buscando…" : "Buscar do CheckNow"}
+              </button>
             </div>
           )}
 
           {/* ── Abas: por dia × por rota ── */}
-          {arquivo && !processar.isPending && dia && (
+          {revenda && !processar.isPending && dia && (
             <div className="mx-6 mt-4 inline-flex rounded-xl border border-slate-200 dark:border-slate-600 p-0.5 bg-white dark:bg-[var(--card)]">
               {([["dia", "Por dia"], ["rota", "Por rota"]] as const).map(([v, rotulo]) => (
                 <button key={v} onClick={() => setAba(v)}
@@ -358,18 +409,18 @@ export default function RelatorioEntregas() {
             </div>
           )}
 
-          {arquivo && !processar.isPending && dia && aba === "rota" && <PainelRota rotas={rotas} />}
+          {revenda && !processar.isPending && dia && aba === "rota" && <PainelRota rotas={rotas} />}
 
-          {arquivo && !processar.isPending && dia && aba === "dia" && (
+          {revenda && !processar.isPending && dia && aba === "dia" && (
             <>
               {/* ── Filtro de dia + KPIs ── */}
               <div className="bg-white dark:bg-[var(--card)] rounded-2xl px-5 py-3 flex items-center gap-4 mx-6 mt-4 border border-slate-100 dark:border-[var(--border)]">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Planilha: <b className="text-slate-700 dark:text-slate-200">{arquivo.nome}</b></span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Revenda: <b className="text-slate-700 dark:text-slate-200">{revenda.revenda}</b></span>
                 <span className="text-xs text-slate-500 dark:text-slate-400">Raio: <b className="text-slate-700 dark:text-slate-200">{raioM} m</b></span>
                 <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" title="Saiu da cerca escolhida = horário de saída; entrou nela depois da saída = horário de retorno. Sem esses eventos no dia, vale o GPS">
                   Saída / retorno pela cerca
                   <select value={cercaId} disabled={processar.isPending}
-                    onChange={e => { setCercaSel(e.target.value); processar.mutate({ xlsxBase64: arquivo.base64, cercaId: e.target.value || undefined }); }}
+                    onChange={e => { setCercaSel(e.target.value); recalcular(e.target.value); }}
                     className="text-xs font-semibold bg-transparent border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-200">
                     <option value="">Nenhuma (só GPS)</option>
                     {cercas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
