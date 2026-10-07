@@ -39,6 +39,14 @@ describe("mapaVeiculos", () => {
   });
 });
 
+describe("token por revenda", () => {
+  it("repassa o token da conta em todas as consultas", async () => {
+    q.mockResolvedValueOnce({ listVehicles: [] });
+    await mapaVeiculos("tok-fl");
+    expect(q.mock.calls[0][2]).toBe("tok-fl");
+  });
+});
+
 describe("blocos", () => {
   it("divide a janela em blocos de 6 h", () => {
     const b = blocos(new Date("2026-10-05T07:00:00-03:00"), new Date("2026-10-05T23:59:59-03:00"));
@@ -79,7 +87,7 @@ describe("buscarGpsLinha", () => {
 
     it("dormiu na cerca: saída = quando saiu dela; retorno = quando entrou para ficar", async () => {
       responder(movimento, [saiu(8), saiu(5, "outra"), entrou(25), entrou(27, "outra")]);
-      const r = await buscarGpsLinha("v1", janela, "sede");
+      const r = await buscarGpsLinha("v1", janela, { cercaId: "sede" });
       expect(r.saida?.toISOString()).toBe(em(8));
       expect(r.saidaOrigem).toBe("cerca");
       expect(r.retorno?.toISOString()).toBe(em(25));
@@ -89,27 +97,27 @@ describe("buscarGpsLinha", () => {
     it("dormiu fora e manobrou na borda da cerca (saiu e entrou em 1 min): saída pelo GPS, retorno na 1ª entrada", async () => {
       // caso real: SOO-8D21 em 06/10 — entrou 11:33, saiu 12:02, entrou 12:03
       responder(movimento, [entrou(22), saiu(24), entrou(25)]);
-      const r = await buscarGpsLinha("v1", janela, "sede");
+      const r = await buscarGpsLinha("v1", janela, { cercaId: "sede" });
       expect([r.saidaOrigem, r.saida?.toISOString()]).toEqual(["gps", em(11)]);
       expect([r.retornoOrigem, r.retorno?.toISOString()]).toEqual(["cerca", em(22)]);
     });
 
     it("saiu e voltou rápido logo cedo (menos de 15 min fora): a saída é a última", async () => {
       responder(movimento, [saiu(5), entrou(7), saiu(9)]);
-      const r = await buscarGpsLinha("v1", janela, "sede");
+      const r = await buscarGpsLinha("v1", janela, { cercaId: "sede" });
       expect([r.saidaOrigem, r.saida?.toISOString()]).toEqual(["cerca", em(9)]);
     });
 
     it("passou pela cerca no meio do dia e saiu de novo: não é retorno", async () => {
       responder(movimento, [saiu(8), entrou(40), saiu(60)]);
-      const r = await buscarGpsLinha("v1", janela, "sede");
+      const r = await buscarGpsLinha("v1", janela, { cercaId: "sede" });
       expect(r.saidaOrigem).toBe("cerca");
       expect(r.retornoOrigem).toBe("gps");
     });
 
     it("sem eventos da cerca escolhida, saída e retorno pelo GPS", async () => {
       responder(movimento, [saiu(5, "outra"), entrou(25, "outra")]);
-      const r = await buscarGpsLinha("v1", janela, "sede");
+      const r = await buscarGpsLinha("v1", janela, { cercaId: "sede" });
       expect(r.saida?.toISOString()).toBe(em(11));
       expect(r.retorno?.toISOString()).toBe(em(21));
       expect([r.saidaOrigem, r.retornoOrigem]).toEqual(["gps", "gps"]);
@@ -117,7 +125,7 @@ describe("buscarGpsLinha", () => {
 
     it("entrou na cerca sem ter saído dela no dia (saída pelo GPS): retorno pela cerca se for depois da saída", async () => {
       responder(movimento, [entrou(25)]);
-      const r = await buscarGpsLinha("v1", janela, "sede");
+      const r = await buscarGpsLinha("v1", janela, { cercaId: "sede" });
       expect([r.saidaOrigem, r.retornoOrigem]).toEqual(["gps", "cerca"]);
       expect(r.retorno?.toISOString()).toBe(em(25));
     });

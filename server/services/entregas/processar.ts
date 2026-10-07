@@ -34,7 +34,7 @@ export async function processarPlanilha(
   const porRota = agruparPorRota(entregas);
   const resultados = await emParalelo(linhas, 3, async l => {
     const vId = veiculos.get(normalizarPlaca(l.placa));
-    const gps = vId ? await buscarGpsLinha(vId, l.janela, cercaId) : gpsErro("sem rastreador");
+    const gps = vId ? await buscarGpsLinha(vId, l.janela, { cercaId }) : gpsErro("sem rastreador");
     return cruzar(l, porRota.get(l.routeId)!, gps, config);
   });
   resultados.sort((a, b) =>

@@ -59,7 +59,7 @@ describe("processarPlanilha", () => {
     (mapaVeiculos as Mock).mockResolvedValue(new Map([["SOL6B13", "v1"]]));
     (buscarGpsLinha as Mock).mockResolvedValue(gpsNoCliente);
     await processarPlanilha(planilha([linha({})]), new Date("2026-10-06T12:00:00-03:00"), { cercaId: "sede" });
-    expect((buscarGpsLinha as Mock).mock.calls[0][2]).toBe("sede");
+    expect((buscarGpsLinha as Mock).mock.calls[0][2]).toEqual({ cercaId: "sede" });
   });
 
   it("usa o raio informado no cruzamento", async () => {

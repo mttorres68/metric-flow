@@ -15,8 +15,7 @@ import { publicProcedure, router } from "../_core/trpc";
 const INFLEET_ENDPOINT = "https://api.infleet.com.br/v1/graphql";
 
 // ── Helper: executa query GraphQL no Infleet ──────────────────────────────────
-export async function infleetQuery<T>(query: string, variables: Record<string, any>): Promise<T> {
-    const token = process.env.INFLEET_TOKEN;
+export async function infleetQuery<T>(query: string, variables: Record<string, any>, token = process.env.INFLEET_TOKEN): Promise<T> {
     if (!token) throw new Error("INFLEET_TOKEN não configurado no ambiente.");
 
     const res = await fetch(INFLEET_ENDPOINT, {

@@ -13,20 +13,21 @@ export const SPEED_PARA_KMH = 1;
 const BLOCO_MS = 6 * 3600000;
 
 /** infleetQuery com uma nova tentativa: o Infleet às vezes devolve 502 passageiro. */
-async function consultar<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+async function consultar<T>(query: string, variables: Record<string, unknown>, token?: string): Promise<T> {
   try {
-    return await infleetQuery<T>(query, variables);
+    return await infleetQuery<T>(query, variables, token);
   } catch {
     await new Promise(r => setTimeout(r, 500)); // ponytail: 1 nova tentativa fixa; backoff se o Infleet piorar
-    return infleetQuery<T>(query, variables);
+    return infleetQuery<T>(query, variables, token);
   }
 }
 
 export const normalizarPlaca =(p: string) => p.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-export async function mapaVeiculos(): Promise<Map<string, string>> {
+/** token: conta Infleet da revenda (sem = INFLEET_TOKEN do .env). */
+export async function mapaVeiculos(token?: string): Promise<Map<string, string>> {
   const { listVehicles } = await consultar<{ listVehicles: { id: string; plate: string }[] }>(
-    `query { listVehicles { id plate } }`, {});
+    `query { listVehicles { id plate } }`, {}, token);
   return new Map(listVehicles.map(v => [normalizarPlaca(v.plate), v.id]));
 }
 
@@ -36,6 +37,12 @@ export function blocos(inicio: Date, fim: Date): { startAt: string; endAt: strin
     out.push({ startAt: new Date(t).toISOString(), endAt: new Date(Math.min(t + BLOCO_MS, fim.getTime())).toISOString() });
   }
   return out;
+}
+
+/** Cercas da conta Infleet da revenda (sem token = INFLEET_TOKEN). */
+export async function listarCercasInfleet(token?: string): Promise<{ id: string; name: string }[]> {
+  const { listGeofences } = await consultar<{ listGeofences: { id: string; name: string }[] }>(`query { listGeofences { id name } }`, {}, token);
+  return listGeofences;
 }
 
 export const gpsErro = (erro: string): GpsLinha =>
@@ -51,14 +58,14 @@ type EventoInfleet = {
 };
 
 /** Eventos do veículo na janela (só os tipos que a análise usa), em ordem de horário. */
-async function eventosDoDia(vehicleId: string, janela: { inicio: Date; fim: Date }): Promise<EventoGps[]> {
+async function eventosDoDia(vehicleId: string, janela: { inicio: Date; fim: Date }, token?: string): Promise<EventoGps[]> {
   const { listEvents } = await consultar<{ listEvents: EventoInfleet[] }>(Q_EVENTOS, {
     filter: {
       vehicleIds: [vehicleId],
       slugNames: TIPOS_EVENTO,
       reportedAt: { startAt: janela.inicio.toISOString(), endAt: janela.fim.toISOString() },
     },
-  });
+  }, token);
   return (listEvents ?? [])
     .filter(e => (TIPOS_EVENTO as string[]).includes(e.slugName))
     .map(e => {
@@ -117,11 +124,13 @@ function periodosNaCerca(eventos: EventoGps[], cercaId: string, inicioJanela: Da
  * retorno = entrada do período em que o caminhão termina o dia dentro da cerca. Manobras na borda
  * (saiu e entrou em menos de LIMITES.cercaManobraMin) não contam. Sem o evento, vale o GPS.
  */
-export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; fim: Date }, cercaId?: string): Promise<GpsLinha> {
+export async function buscarGpsLinha(
+  vehicleId: string, janela: { inicio: Date; fim: Date }, { cercaId, token }: { cercaId?: string; token?: string } = {},
+): Promise<GpsLinha> {
   try {
     const posicoes: Posicao[] = [];
     for (const fixTime of blocos(janela.inicio, janela.fim)) {
-      const r = await consultar<{ listVehiclePositions: PosicaoInfleet[] }>(Q_POSICOES, { filter: { vehicleId, fixTime } });
+      const r = await consultar<{ listVehiclePositions: PosicaoInfleet[] }>(Q_POSICOES, { filter: { vehicleId, fixTime } }, token);
       for (const p of r.listVehiclePositions) {
         posicoes.push({ lat: p.latitude, lon: p.longitude, em: new Date(p.fixTime), kmh: p.speed * SPEED_PARA_KMH, valida: p.valid });
       }
@@ -130,13 +139,13 @@ export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; 
 
     const km = await consultar<{ routeVehicleDetails: { totalDistanceTraveled: number } | null }>(Q_KM, {
       filter: { vehicleId, fixTime: { startAt: janela.inicio.toISOString(), endAt: janela.fim.toISOString() } },
-    });
+    }, token);
     const raw = km.routeVehicleDetails?.totalDistanceTraveled ?? null;
     // Mesma conversão de unidade do resumoDiario (infleetRouter.ts).
     const kmGps = raw === null ? null : Math.round((raw > 1000 ? raw / 1000 : raw) * 10) / 10;
 
     const gps = detectarParadas(posicoes);
-    const eventos = await eventosDoDia(vehicleId, janela);
+    const eventos = await eventosDoDia(vehicleId, janela, token);
     const r: GpsLinha = { erro: null, ...gps, saidaOrigem: "gps", retornoOrigem: "gps", kmGps, eventos, trajeto: trajetoAcumulado(posicoes) };
     if (!cercaId) return r;
 
