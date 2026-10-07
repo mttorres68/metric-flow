@@ -6,15 +6,26 @@
 import { infleetQuery } from "../../routers/infleetRouter";
 import { detectarParadas, trajetoAcumulado, type Posicao } from "./detectarParadas";
 import type { EventoGps, GpsLinha, TipoEvento } from "./cruzar";
+import { LIMITES } from "@shared/entregas";
 
 /** Fator do `speed` do Infleet para km/h — medido na sonda (spec §2): já vem em km/h. */
 export const SPEED_PARA_KMH = 1;
 const BLOCO_MS = 6 * 3600000;
 
-export const normalizarPlaca = (p: string) => p.toUpperCase().replace(/[^A-Z0-9]/g, "");
+/** infleetQuery com uma nova tentativa: o Infleet às vezes devolve 502 passageiro. */
+async function consultar<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+  try {
+    return await infleetQuery<T>(query, variables);
+  } catch {
+    await new Promise(r => setTimeout(r, 500)); // ponytail: 1 nova tentativa fixa; backoff se o Infleet piorar
+    return infleetQuery<T>(query, variables);
+  }
+}
+
+export const normalizarPlaca =(p: string) => p.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 export async function mapaVeiculos(): Promise<Map<string, string>> {
-  const { listVehicles } = await infleetQuery<{ listVehicles: { id: string; plate: string }[] }>(
+  const { listVehicles } = await consultar<{ listVehicles: { id: string; plate: string }[] }>(
     `query { listVehicles { id plate } }`, {});
   return new Map(listVehicles.map(v => [normalizarPlaca(v.plate), v.id]));
 }
@@ -41,7 +52,7 @@ type EventoInfleet = {
 
 /** Eventos do veículo na janela (só os tipos que a análise usa), em ordem de horário. */
 async function eventosDoDia(vehicleId: string, janela: { inicio: Date; fim: Date }): Promise<EventoGps[]> {
-  const { listEvents } = await infleetQuery<{ listEvents: EventoInfleet[] }>(Q_EVENTOS, {
+  const { listEvents } = await consultar<{ listEvents: EventoInfleet[] }>(Q_EVENTOS, {
     filter: {
       vehicleIds: [vehicleId],
       slugNames: TIPOS_EVENTO,
@@ -76,21 +87,48 @@ const Q_KM = `query($filter: ListVehiclePositionsFilterInput!) {
 type PosicaoInfleet = { latitude: number; longitude: number; fixTime: string; speed: number; valid: boolean };
 
 /**
- * cercaId: quando informado, saída = 1ª "Saiu da cerca" na janela e retorno = última "Entrou na cerca"
- * depois da saída (entrada antes da saída é chegada de madrugada, não retorno). Sem o evento, vale o GPS.
+ * Períodos do caminhão dentro da cerca no dia (ms; `ate` null = ainda dentro no fim da janela).
+ * Uma saída sem entrada antes = o dia começou dentro. Saídas de menos de LIMITES.cercaManobraMin
+ * (manobra na borda da cerca) são juntadas ao período.
+ */
+function periodosNaCerca(eventos: EventoGps[], cercaId: string, inicioJanela: Date) {
+  const ps: { de: number; ate: number | null }[] = [];
+  for (const e of eventos) {
+    if (e.cercaId !== cercaId) continue;
+    const t = e.em.getTime(), atual = ps[ps.length - 1];
+    if (e.tipo === "geofenceEnter" && (!atual || atual.ate !== null)) ps.push({ de: t, ate: null });
+    else if (e.tipo === "geofenceExit") {
+      if (!atual) ps.push({ de: inicioJanela.getTime(), ate: t });
+      else if (atual.ate === null) atual.ate = t;
+    }
+  }
+  const tol = LIMITES.cercaManobraMin * 60000;
+  const juntos: typeof ps = [];
+  for (const p of ps) {
+    const ant = juntos[juntos.length - 1];
+    if (ant && ant.ate !== null && p.de - ant.ate < tol) ant.ate = p.ate;
+    else juntos.push({ ...p });
+  }
+  return juntos;
+}
+
+/**
+ * cercaId: quando informado, saída = quando saiu da cerca, se o dia começou dentro dela (dormiu na revenda);
+ * retorno = entrada do período em que o caminhão termina o dia dentro da cerca. Manobras na borda
+ * (saiu e entrou em menos de LIMITES.cercaManobraMin) não contam. Sem o evento, vale o GPS.
  */
 export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; fim: Date }, cercaId?: string): Promise<GpsLinha> {
   try {
     const posicoes: Posicao[] = [];
     for (const fixTime of blocos(janela.inicio, janela.fim)) {
-      const r = await infleetQuery<{ listVehiclePositions: PosicaoInfleet[] }>(Q_POSICOES, { filter: { vehicleId, fixTime } });
+      const r = await consultar<{ listVehiclePositions: PosicaoInfleet[] }>(Q_POSICOES, { filter: { vehicleId, fixTime } });
       for (const p of r.listVehiclePositions) {
         posicoes.push({ lat: p.latitude, lon: p.longitude, em: new Date(p.fixTime), kmh: p.speed * SPEED_PARA_KMH, valida: p.valid });
       }
     }
     if (!posicoes.length) return gpsErro("sem sinal GPS");
 
-    const km = await infleetQuery<{ routeVehicleDetails: { totalDistanceTraveled: number } | null }>(Q_KM, {
+    const km = await consultar<{ routeVehicleDetails: { totalDistanceTraveled: number } | null }>(Q_KM, {
       filter: { vehicleId, fixTime: { startAt: janela.inicio.toISOString(), endAt: janela.fim.toISOString() } },
     });
     const raw = km.routeVehicleDetails?.totalDistanceTraveled ?? null;
@@ -102,19 +140,22 @@ export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; 
     const r: GpsLinha = { erro: null, ...gps, saidaOrigem: "gps", retornoOrigem: "gps", kmGps, eventos, trajeto: trajetoAcumulado(posicoes) };
     if (!cercaId) return r;
 
-    const daCerca = (tipo: TipoEvento) => eventos.filter(e => e.cercaId === cercaId && e.tipo === tipo).map(e => e.em.getTime());
-    const saidas = daCerca("geofenceExit"), entradas = daCerca("geofenceEnter");
-    if (saidas.length) {
-      r.saida = new Date(Math.min(...saidas));
+    const ps = periodosNaCerca(eventos, cercaId, janela.inicio);
+    const primeiro = ps[0], ultimo = ps[ps.length - 1];
+    // Saída pela cerca só se o dia começou dentro dela (dormiu na revenda).
+    if (primeiro && primeiro.de === janela.inicio.getTime() && primeiro.ate !== null) {
+      r.saida = new Date(primeiro.ate);
       r.saidaOrigem = "cerca";
     }
-    const depoisDaSaida = entradas.filter(t => !r.saida || t > r.saida.getTime());
-    if (depoisDaSaida.length) {
-      r.retorno = new Date(Math.max(...depoisDaSaida));
+    // Retorno pela cerca: a entrada do período em que o caminhão termina o dia dentro dela.
+    if (ultimo && ultimo.ate === null && (!r.saida || ultimo.de > r.saida.getTime())) {
+      r.retorno = new Date(ultimo.de);
       r.retornoOrigem = "cerca";
     }
     return r;
   } catch (e) {
-    return gpsErro(`falha no Infleet: ${(e as Error).message}`);
+    // Só a 1ª linha, sem a página HTML que o Infleet devolve em erro de gateway.
+    const msg = (e as Error).message.split("\n")[0].replace(/:\s*<.*$/, "").slice(0, 160);
+    return gpsErro(`falha no Infleet: ${msg}`);
   }
 }

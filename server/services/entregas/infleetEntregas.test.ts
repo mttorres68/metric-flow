@@ -77,8 +77,8 @@ describe("buscarGpsLinha", () => {
     const saiu = (min: number, cerca = "sede"): Ev => ({ slugName: "geofenceExit", reportedAt: em(min), geofenceId: cerca });
     const entrou = (min: number, cerca = "sede"): Ev => ({ slugName: "geofenceEnter", reportedAt: em(min), geofenceId: cerca });
 
-    it("saída = 1ª saída da cerca escolhida; retorno = última entrada depois da saída", async () => {
-      responder(movimento, [entrou(2), saiu(8), saiu(5, "outra"), entrou(25), entrou(27, "outra")]);
+    it("dormiu na cerca: saída = quando saiu dela; retorno = quando entrou para ficar", async () => {
+      responder(movimento, [saiu(8), saiu(5, "outra"), entrou(25), entrou(27, "outra")]);
       const r = await buscarGpsLinha("v1", janela, "sede");
       expect(r.saida?.toISOString()).toBe(em(8));
       expect(r.saidaOrigem).toBe("cerca");
@@ -86,11 +86,24 @@ describe("buscarGpsLinha", () => {
       expect(r.retornoOrigem).toBe("cerca");
     });
 
-    it("entrada só antes da saída não é retorno: retorno volta para o GPS", async () => {
-      responder(movimento, [entrou(2), saiu(8)]);
+    it("dormiu fora e manobrou na borda da cerca (saiu e entrou em 1 min): saída pelo GPS, retorno na 1ª entrada", async () => {
+      // caso real: SOO-8D21 em 06/10 — entrou 11:33, saiu 12:02, entrou 12:03
+      responder(movimento, [entrou(22), saiu(24), entrou(25)]);
+      const r = await buscarGpsLinha("v1", janela, "sede");
+      expect([r.saidaOrigem, r.saida?.toISOString()]).toEqual(["gps", em(11)]);
+      expect([r.retornoOrigem, r.retorno?.toISOString()]).toEqual(["cerca", em(22)]);
+    });
+
+    it("saiu e voltou rápido logo cedo (menos de 15 min fora): a saída é a última", async () => {
+      responder(movimento, [saiu(5), entrou(7), saiu(9)]);
+      const r = await buscarGpsLinha("v1", janela, "sede");
+      expect([r.saidaOrigem, r.saida?.toISOString()]).toEqual(["cerca", em(9)]);
+    });
+
+    it("passou pela cerca no meio do dia e saiu de novo: não é retorno", async () => {
+      responder(movimento, [saiu(8), entrou(40), saiu(60)]);
       const r = await buscarGpsLinha("v1", janela, "sede");
       expect(r.saidaOrigem).toBe("cerca");
-      expect(r.retorno?.toISOString()).toBe(em(21));
       expect(r.retornoOrigem).toBe("gps");
     });
 
@@ -122,8 +135,16 @@ describe("buscarGpsLinha", () => {
     expect((await buscarGpsLinha("v1", janela)).erro).toBe("sem sinal GPS");
   });
 
-  it("erro do Infleet não lança: vira GpsLinha com erro", async () => {
-    q.mockRejectedValue(new Error("Infleet API HTTP 502"));
+  it("erro do Infleet não lança: vira GpsLinha com erro curto (sem a página HTML)", async () => {
+    q.mockRejectedValue(new Error("Infleet API HTTP 502: <!DOCTYPE html>\n<html>…página enorme…</html>"));
     expect((await buscarGpsLinha("v1", janela)).erro).toBe("falha no Infleet: Infleet API HTTP 502");
+  });
+
+  it("falha passageira do Infleet: tenta de novo uma vez", async () => {
+    responder([p(0, 0), p(10, 0)]);
+    const real = q.getMockImplementation()!;
+    q.mockImplementationOnce(async () => { throw new Error("Infleet API HTTP 502"); });
+    q.mockImplementation(real);
+    expect((await buscarGpsLinha("v1", janela)).erro).toBeNull();
   });
 });

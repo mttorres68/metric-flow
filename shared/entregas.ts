@@ -20,6 +20,7 @@ export const LIMITES = {
   desvioMinKm: 3, // …e pelo menos 3 km a mais = desvio
   lentoMinMin: 20, // trecho com mais de 20 min…
   lentoMaxKmh: 15, // …a menos de 15 km/h de média = parou no caminho
+  cercaManobraMin: 15, // saiu e entrou na cerca em menos disso = manobra na borda, não saída/retorno
 } as const;
 
 const H3 = 3 * 3600000;

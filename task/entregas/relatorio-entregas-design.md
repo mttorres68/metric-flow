@@ -171,10 +171,16 @@ Para cada entrega com baixa (ENTREGUE ou PROBLEMA) no dia da linha:
   última parada);
 - **opção cerca** (saída e retorno): com uma cerca da base escolhida na tela
   (padrão: a cerca "Sede", se existir):
-  - a saída é o 1º evento `geofenceExit` ("Saiu da cerca") dessa cerca na
-    janela;
-  - o retorno é o último `geofenceEnter` ("Entrou na cerca") **depois da
-    saída**. Uma entrada antes da saída é chegada de madrugada e não conta.
+  - os eventos viram **períodos dentro da cerca** (uma saída sem entrada
+    antes = o dia começou dentro). Saídas de menos de `cercaManobraMin`
+    (15 min fora) são juntadas ao período: é manobra na borda da cerca;
+  - a saída pela cerca só vale se **o dia começou dentro dela** (dormiu na
+    revenda): é a saída desse 1º período. Se dormiu fora, vale o GPS;
+  - o retorno é a **entrada do último período**, aquele em que o caminhão
+    termina o dia dentro da cerca;
+  - caso real (06/10, SOO-8D21): dormiu em Amarante, entrou na Sede às 11:33
+    e manobrou às 12:02–12:03 → saída 06:17 (GPS) e retorno 11:33 (cerca).
+    A regra anterior dava 12:02–12:03.
   - Sem o evento, vale o GPS. A origem fica marcada (ícone na tela, `*` no PDF).
 
 **Paradas sem cliente:** paradas com duração ≥ `paradaSemClienteMin`, que
