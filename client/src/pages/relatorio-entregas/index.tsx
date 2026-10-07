@@ -32,6 +32,7 @@ const pct = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0);
 const fmtPct = (v: number) => `${v.toFixed(0)}%`;
 const fmtDia = (iso: string) => iso.split("-").reverse().join("/");
 const hora = (d: Date | null) => (d ? horaBRT(d) : "—");
+const num1 = (v: number | null) => (v === null ? "—" : v.toLocaleString("pt-BR", { maximumFractionDigits: 1 }));
 const chave = (r: Resultado) => `${r.linha.routeId}|${r.linha.data}`;
 const vermelho = "text-red-500 font-bold";
 const neutro = "text-slate-600 dark:text-slate-300";
@@ -96,6 +97,31 @@ function ParadasNoCliente({ b }: { b: Baixa }) {
     : vazio;
 }
 
+/** Ordem real de visita: chegada da parada mais próxima (GPS); sem parada, a hora da baixa no app. */
+const ordemVisita = (b: Baixa) =>
+  b.paradasNoRaio.length
+    ? b.paradasNoRaio.reduce((m, p) => (p.distM < m.distM ? p : m)).inicio.getTime()
+    : b.entrega.baixaEm?.getTime() ?? 0;
+
+/** Deslocamento até o cliente: km pela estrada · tempo, com os gatilhos de desvio e lentidão. */
+function TrechoAteAqui({ t }: { t: Baixa["trecho"] }) {
+  if (!t) return vazio;
+  const dica = [
+    t.deCodCliente ? `Desde o cliente ${t.deCodCliente}` : "Desde a saída",
+    t.retaKm !== null ? `linha reta: ${num1(Math.round(t.retaKm * 10) / 10)} km` : null,
+    t.desvio ? "DESVIO: caminho bem maior que a linha reta" : null,
+    t.lento ? "LENTO: demorou e andou devagar (parou no caminho?)" : null,
+  ].filter(Boolean).join(" · ");
+  return (
+    <span title={dica} className="inline-flex items-center gap-1 whitespace-nowrap">
+      {t.deCodCliente === null && <span className="text-slate-400">saída →</span>}
+      {num1(t.km)} km · {minParaHM(t.min)}
+      {t.desvio && <Badge color="red">🚩 desvio</Badge>}
+      {t.lento && <Badge color="amber">🐢 lento</Badge>}
+    </span>
+  );
+}
+
 /** Tabela de baixas — usada no detalhe da linha e na lista de exceções do dia. */
 function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Baixa }[]; comPlaca?: boolean; raioM: number }) {
   return (
@@ -105,23 +131,27 @@ function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Ba
           {comPlaca && <th className="px-2 py-1.5">Placa · Motorista</th>}
           <th className="px-2 py-1.5">Cliente</th>
           <th className="px-2 py-1.5">Código</th>
+          <th className="px-2 py-1.5">Cidade</th>
           <th className="px-2 py-1.5 text-center" title="Hora da baixa no app do CheckNow">Baixa (app)</th>
           <th className="px-2 py-1.5 text-center" title={`Quando o caminhão esteve parado a até ${raioM} m do cliente (chegada–saída pelo GPS)`}>Parada no cliente (GPS)</th>
           <th className="px-2 py-1.5 text-center" title={`Hora da baixa comparada com a parada no cliente (tolerância de ${LIMITES.momentoTolMin} min)`}>Momento da baixa</th>
+          <th className="px-2 py-1.5 text-center" title="Deslocamento do caminhão até este cliente (desde o anterior visitado, ou desde a saída): km pela estrada · tempo">Trecho até aqui (GPS)</th>
           <th className="px-2 py-1.5 text-center">Status</th>
           <th className="px-2 py-1.5 text-center">Parada mais próxima</th>
           <th className="px-2 py-1.5 text-center">Permanência no raio</th>
         </tr>
       </thead>
       <tbody>
-        {[...itens].sort((x, y) => (x.b.entrega.baixaEm?.getTime() ?? 0) - (y.b.entrega.baixaEm?.getTime() ?? 0)).map(({ r, b }, i) => (
+        {[...itens].sort((x, y) => ordemVisita(x.b) - ordemVisita(y.b)).map(({ r, b }, i) => (
           <tr key={i} className="border-b border-slate-100 dark:border-slate-700/40">
             {comPlaca && <Td>{r.linha.placa} · {r.linha.motorista}</Td>}
             <Td>{b.entrega.cliente}</Td>
             <Td mono className="text-slate-500 dark:text-slate-400">{b.entrega.codCliente}</Td>
+            <Td className="text-slate-500 dark:text-slate-400">{b.entrega.cidade || "—"}</Td>
             <Td center mono>{hora(b.entrega.baixaEm)}</Td>
             <Td center mono><ParadasNoCliente b={b} /></Td>
             <Td center><MomentoBaixa m={b.momentoBaixa} /></Td>
+            <Td center mono><TrechoAteAqui t={b.trecho} /></Td>
             <Td center><Badge color={STATUS[b.status].cor}>{STATUS[b.status].label}</Badge></Td>
             <Td center mono>{b.distMaisProximaM === null ? vazio : `${Math.round(b.distMaisProximaM)} m`}</Td>
             <Td center mono>{b.status === "sem_coordenada" ? vazio : minParaHM(b.permanenciaMin)}</Td>
@@ -143,8 +173,10 @@ export default function RelatorioEntregas() {
   const [configAberto, setConfigAberto] = useState(false);
   const raioM = trpc.config.getEntregasConfig.useQuery().data?.raioM ?? LIMITES.raioM;
   const [cercaSel, setCercaSel] = useState<string | null>(null); // null = padrão (cerca "Sede", se existir)
-  const cercas = trpc.infleet.listarCercas.useQuery(undefined, { staleTime: Infinity }).data ?? [];
-  const cercaId = cercaSel ?? cercas.find(c => /sede/i.test(c.name))?.id ?? "";
+  const cercasQ = trpc.infleet.listarCercas.useQuery(undefined, { staleTime: Infinity });
+  const cercas = cercasQ.data ?? [];
+  const cercaPadrao = (lista: { id: string; name: string }[]) => cercaSel ?? lista.find(c => /sede/i.test(c.name))?.id ?? "";
+  const cercaId = cercaPadrao(cercas);
 
   const processar = trpc.entregas.processar.useMutation({
     onSuccess: ({ linhas: rs }) => {
@@ -164,7 +196,9 @@ export default function RelatorioEntregas() {
     const base64 = await blobToBase64(file);
     setArquivo({ nome: file.name, base64 });
     setDia(null); // planilha nova: abre no último dia
-    processar.mutate({ xlsxBase64: base64, cercaId: cercaId || undefined });
+    // Espera a lista de cercas: sem ela, a cerca padrão (Sede) ficaria de fora do 1º cálculo.
+    const lista = cercasQ.data ?? (await cercasQ.refetch()).data ?? [];
+    processar.mutate({ xlsxBase64: base64, cercaId: cercaPadrao(lista) || undefined });
   }
 
   const dias = useMemo(() => [...new Set(resultados.map(r => r.linha.data))], [resultados]);
@@ -367,13 +401,18 @@ export default function RelatorioEntregas() {
                           <Th title="Clique na linha para ver as baixas">Placa · Motorista</Th>
                           <Th center title={`Saída da cerca escolhida ou, sem ela, início do 1º trecho em movimento de 3 min ou mais (vermelho se > ${LIMITES.saidaAte})`}>Saída</Th>
                           <Th center title="Entrada na cerca escolhida depois da saída ou, sem ela, fim do último trecho em movimento de 3 min ou mais">Retorno</Th>
+                          <Th center title="1ª e última baixa no app do CheckNow × chegada ao 1º cliente e saída do último pelo GPS">1º → último cliente</Th>
+                          <Th center title="Tempo em cliente: soma de (saída − chegada) no app × paradas no raio pelo GPS">Em cliente</Th>
+                          <Th center title="Da saída (revenda 📍 quando pela cerca, ou pernoite) até chegar ao 1º cliente: tempo · km pela estrada">Saída → 1º PDV</Th>
+                          <Th center title="Do último cliente até o retorno (revenda 📍 quando pela cerca): tempo · km pela estrada">Último PDV → retorno</Th>
                           <Th center title="Entregues no dia / total de clientes da rota">Entregas</Th>
                           <Th center title={`% das entregas com baixa após as 14h (vermelho se < ${LIMITES.apos14hMinPct}%)`}>Após 14h</Th>
                           <Th center title={`Baixas com parada de ${LIMITES.relampagoMin} min ou mais a até ${raioM} m do cliente`}>No raio</Th>
                           <Th center title="Baixas sem nenhuma parada do GPS no raio">Sem parada</Th>
                           <Th center title={`Paradas no raio com menos de ${LIMITES.relampagoMin} min (vermelho se > ${LIMITES.relampagoMaxPct}%)`}>Relâmpago</Th>
                           <Th center title={`Paradas de ${LIMITES.paradaSemClienteMin} min ou mais longe de todo cliente, entre a saída e o retorno`}>Paradas s/ cliente</Th>
-                          <Th center title="Km rodado pelo GPS no dia">Km GPS</Th>
+                          <Th center title={`Trechos entre clientes com desvio (km pela estrada > ${LIMITES.desvioFator}× a linha reta e +${LIMITES.desvioMinKm} km) e lentos (> ${LIMITES.lentoMinMin} min a < ${LIMITES.lentoMaxKmh} km/h)`}>Desvios · lentos</Th>
+                          <Th center title="Km rodado pelo GPS no dia · distância real informada no CheckNow (total da rota)">Km GPS · informado</Th>
                           <Th center title="Só no dia em que a rota fecha">Pendentes · Km inf.</Th>
                         </tr>
                       </thead>
@@ -395,6 +434,7 @@ export default function RelatorioEntregas() {
                                     {r.linha.placa} · {r.linha.motorista}
                                   </span>
                                   {!gps && <span className="ml-2"><Badge color="slate">sem GPS: {r.semGps}</Badge></span>}
+                                  {r.cidades.length > 0 && <div className="text-[10px] text-slate-400 pl-4 mt-0.5">{r.cidades.join(" · ")}</div>}
                                 </Td>
                                 <Td center mono className={saidaAlerta ? vermelho : neutro}>
                                   {gps ? (
@@ -407,6 +447,30 @@ export default function RelatorioEntregas() {
                                   {gps ? (
                                     <span title={r.retornoOrigem === "cerca" ? "Retorno registrado pela cerca (evento Entrou na cerca)" : "Retorno pelo GPS (fim do último trecho em movimento)"}>
                                       {hora(r.retorno)}{r.retornoOrigem === "cerca" && <MapPin size={10} className="inline ml-0.5 -mt-0.5 text-indigo-400" />}
+                                    </span>
+                                  ) : vazio}
+                                </Td>
+                                <Td center mono className={neutro}>
+                                  <div title="1ª e última baixa no app">app {hora(r.app.primeira)}–{hora(r.app.ultima)}</div>
+                                  <div className="text-slate-400" title="Chegada ao 1º cliente e saída do último pelo GPS">
+                                    GPS {gps && r.gpsClientes.primeiraChegada ? `${hora(r.gpsClientes.primeiraChegada)}–${hora(r.gpsClientes.ultimaSaida)}` : "—"}
+                                  </div>
+                                </Td>
+                                <Td center mono className={neutro}>
+                                  <div title="Soma de (saída − chegada) no app">app {minParaHM(r.app.emClienteMin)}</div>
+                                  <div className="text-slate-400" title="Paradas a até o raio de algum cliente, pelo GPS">GPS {r.tempo ? minParaHM(r.tempo.emClienteMin) : "—"}</div>
+                                </Td>
+                                <Td center mono className={neutro}>
+                                  {r.ida ? (
+                                    <span title={r.saidaOrigem === "cerca" ? "Desde a saída da revenda (cerca)" : "Desde a saída (GPS) — revenda ou pernoite"}>
+                                      {minParaHM(r.ida.min)} · {num1(r.ida.km)} km{r.saidaOrigem === "cerca" && <MapPin size={10} className="inline ml-0.5 -mt-0.5 text-indigo-400" />}
+                                    </span>
+                                  ) : vazio}
+                                </Td>
+                                <Td center mono className={neutro}>
+                                  {r.volta ? (
+                                    <span title={r.retornoOrigem === "cerca" ? "Até entrar na revenda (cerca)" : "Até o retorno (GPS)"}>
+                                      {minParaHM(r.volta.min)} · {num1(r.volta.km)} km{r.retornoOrigem === "cerca" && <MapPin size={10} className="inline ml-0.5 -mt-0.5 text-indigo-400" />}
                                     </span>
                                   ) : vazio}
                                 </Td>
@@ -438,7 +502,18 @@ export default function RelatorioEntregas() {
                                     ? <span className="inline-flex items-center gap-1"><Timer size={11} /> {r.paradasSemCliente.qtd} · {minParaHM(r.paradasSemCliente.min)}</span>
                                     : "0") : vazio}
                                 </Td>
-                                <Td center mono className={neutro}>{gps && r.kmGps !== null ? r.kmGps.toFixed(0) : vazio}</Td>
+                                <Td center>
+                                  {gps ? (r.desvios || r.trechosLentos ? (
+                                    <span className="inline-flex gap-1">
+                                      {r.desvios > 0 && <Badge color="red">🚩 {r.desvios}</Badge>}
+                                      {r.trechosLentos > 0 && <Badge color="amber">🐢 {r.trechosLentos}</Badge>}
+                                    </span>
+                                  ) : <span className="text-slate-300 dark:text-slate-600">0</span>) : vazio}
+                                </Td>
+                                <Td center mono className={neutro}>
+                                  {gps && r.kmGps !== null ? r.kmGps.toFixed(0) : vazio}
+                                  {r.kmInformado !== null && <div className="text-slate-400" title="Distância real informada no CheckNow (odômetro, total da rota)">inf. {r.kmInformado} (rota)</div>}
+                                </Td>
                                 <Td center mono>
                                   {r.pendentes === null ? vazio : (
                                     <span className={r.pendentes > 0 ? vermelho : neutro}>{r.pendentes} · {r.kmInformado ?? "—"} km</span>
@@ -447,7 +522,7 @@ export default function RelatorioEntregas() {
                               </tr>
                               {aberta && (
                                 <tr>
-                                  <td colSpan={11} className="bg-slate-50/60 dark:bg-slate-800/30 px-6 py-3 border-b border-slate-100 dark:border-slate-700/40">
+                                  <td colSpan={16} className="bg-slate-50/60 dark:bg-slate-800/30 px-6 py-3 border-b border-slate-100 dark:border-slate-700/40">
                                     {gps
                                       ? (r.baixas.length
                                         ? <TabelaBaixas itens={r.baixas.map(b => ({ r, b }))} raioM={raioM} />

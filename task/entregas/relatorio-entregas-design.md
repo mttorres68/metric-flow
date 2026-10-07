@@ -230,6 +230,29 @@ Diária). Upload → tRPC `entregas.processar` (pipeline em
 - editor de análise e "Baixar PDF do dia" (`POST /gerar` com `data`) ou
   "Baixar todos (ZIP)".
 
+**Por dia: desvios e produtividade** (adicionado em 2026-10-07):
+- **trajeto pela estrada:** km acumulado ao longo das posições do GPS, somando
+  só os trechos em movimento (o tremor do GPS parado não conta). Dá o km entre
+  dois horários quaisquer (`kmEntre`), sem chamada extra ao Infleet;
+- colunas novas:
+  - **1º → último cliente** (app × GPS);
+  - **Em cliente** (app: Σ saída − chegada; GPS: paradas no raio);
+  - **Saída → 1º PDV** e **Último PDV → retorno** (tempo · km pela estrada; 📍
+    quando vem da cerca da revenda);
+  - **Desvios · lentos**;
+  - **Km GPS · informado** (a distância real informada no CheckNow é o total
+    da rota, pelo odômetro);
+  - as cidades do dia, embaixo da placa;
+- no detalhe, cada baixa ganha **Cidade** e **Trecho até aqui (GPS)**, do
+  cliente anterior visitado (ou da saída): km pela estrada, tempo e linha reta,
+  com os gatilhos:
+  - 🚩 **desvio**: km acima de `desvioFator` (1,8×) a linha reta e pelo menos
+    `desvioMinKm` (3 km) a mais;
+  - 🐢 **lento**: mais de `lentoMinMin` (20 min) a menos de `lentoMaxKmh`
+    (15 km/h);
+- o detalhe fica na ordem real de visita (chegada pelo GPS);
+- a distância planejada do CheckNow vem zerada e não é usada.
+
 **Aba "Por rota"** (adicionada em 2026-10-06; `server/services/entregas/rota.ts`
 + `client/src/pages/relatorio-entregas/PainelRota.tsx`). Uma rota = um `RouteId`,
 podendo durar vários dias. O tRPC `entregas.processar` devolve
