@@ -1,9 +1,9 @@
 /*
- * MetricFlow — pipeline do relatório de entregas: planilha → linhas → GPS → cruzamento.
- * Usado pela tela (tRPC entregas.processar) e pelo download do PDF (REST).
- * Lança PlanilhaInvalidaError (parseCheckNow); devolve [] quando nenhuma rota foi iniciada.
+ * MetricFlow — pipeline do relatório de entregas: entregas → linhas → GPS → cruzamento.
+ * Usado pela tela (tRPC entregas.processar) e pelo download do PDF (REST), com as entregas lidas do banco.
+ * Devolve [] quando nenhuma rota foi iniciada.
  */
-import { parseCheckNow } from "./parseCheckNow";
+import type { Entrega } from "./parseCheckNow";
 import { montarLinhas, agruparPorRota, cruzar, type ResultadoLinha } from "./cruzar";
 import { analisarRotas, type AnaliseRota } from "./rota";
 import type { ConfigEntregas } from "@shared/entregas";
@@ -22,19 +22,20 @@ async function emParalelo<T, R>(itens: T[], n: number, fn: (t: T) => Promise<R>)
   return out;
 }
 
-/** Linhas por dia (ordenadas por dia, placa e motorista) e análise por rota. cercaId: cerca da base (saída/retorno); config: raio e limites do modal ⚙. */
-export async function processarPlanilha(
-  buffer: Buffer, agora: Date, { cercaId, config }: { cercaId?: string; config?: Partial<ConfigEntregas> } = {},
+/** Linhas por dia (ordenadas por dia, placa e motorista) e análise por rota. cercaId: cerca da base (saída/retorno);
+ * token: conta Infleet da revenda (sem = INFLEET_TOKEN); config: raio e limites do modal ⚙. */
+export async function processarEntregas(
+  entregas: Entrega[], agora: Date,
+  { cercaId, token, config }: { cercaId?: string; token?: string; config?: Partial<ConfigEntregas> } = {},
 ): Promise<{ linhas: ResultadoLinha[]; rotas: AnaliseRota[] }> {
-  const entregas = parseCheckNow(buffer);
   const linhas = montarLinhas(entregas, agora);
   if (!linhas.length) return { linhas: [], rotas: [] };
 
-  const veiculos = await mapaVeiculos();
+  const veiculos = await mapaVeiculos(token);
   const porRota = agruparPorRota(entregas);
   const resultados = await emParalelo(linhas, 3, async l => {
     const vId = veiculos.get(normalizarPlaca(l.placa));
-    const gps = vId ? await buscarGpsLinha(vId, l.janela, { cercaId }) : gpsErro("sem rastreador");
+    const gps = vId ? await buscarGpsLinha(vId, l.janela, { cercaId, token }) : gpsErro("sem rastreador");
     return cruzar(l, porRota.get(l.routeId)!, gps, config);
   });
   resultados.sort((a, b) =>

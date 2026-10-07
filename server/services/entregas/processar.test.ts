@@ -8,7 +8,8 @@ vi.mock("./infleetEntregas", async importOriginal => ({
   buscarGpsLinha: vi.fn(),
 }));
 import { mapaVeiculos, buscarGpsLinha } from "./infleetEntregas";
-import { processarPlanilha } from "./processar";
+import { processarEntregas } from "./processar";
+import { parseCheckNow } from "./parseCheckNow";
 
 function planilha(linhas: Record<string, unknown>[]): Buffer {
   const ws = XLSX.utils.json_to_sheet(linhas);
@@ -37,14 +38,14 @@ beforeEach(() => {
   (buscarGpsLinha as Mock).mockReset();
 });
 
-describe("processarPlanilha", () => {
+describe("processarEntregas", () => {
   it("cruza cada linha com o GPS, ordena por dia/placa/motorista e marca placa sem rastreador", async () => {
     (mapaVeiculos as Mock).mockResolvedValue(new Map([["SOL6B13", "v1"]]));
     (buscarGpsLinha as Mock).mockResolvedValue(gpsNoCliente);
-    const { linhas: rs, rotas } = await processarPlanilha(planilha([
+    const { linhas: rs, rotas } = await processarEntregas(parseCheckNow(planilha([
       linha({ "RouteId": 2, "Placa": "ABC-1234", "Motorista": "ZE", "Código do Cliente": 20 }),
       linha({}),
-    ]), new Date("2026-10-06T12:00:00-03:00"));
+    ])), new Date("2026-10-06T12:00:00-03:00"));
 
     expect(rs.map(r => [r.linha.data, r.linha.placa, r.semGps])).toEqual([
       ["2026-10-05", "ABC-1234", "sem rastreador"],
@@ -58,8 +59,16 @@ describe("processarPlanilha", () => {
   it("repassa a cerca escolhida para a busca do GPS", async () => {
     (mapaVeiculos as Mock).mockResolvedValue(new Map([["SOL6B13", "v1"]]));
     (buscarGpsLinha as Mock).mockResolvedValue(gpsNoCliente);
-    await processarPlanilha(planilha([linha({})]), new Date("2026-10-06T12:00:00-03:00"), { cercaId: "sede" });
+    await processarEntregas(parseCheckNow(planilha([linha({})])), new Date("2026-10-06T12:00:00-03:00"), { cercaId: "sede" });
     expect((buscarGpsLinha as Mock).mock.calls[0][2]).toEqual({ cercaId: "sede" });
+  });
+
+  it("usa o token do Infleet da revenda", async () => {
+    (mapaVeiculos as Mock).mockResolvedValue(new Map([["SOL6B13", "v1"]]));
+    (buscarGpsLinha as Mock).mockResolvedValue(gpsNoCliente);
+    await processarEntregas(parseCheckNow(planilha([linha({})])), new Date("2026-10-06T12:00:00-03:00"), { cercaId: "sede", token: "tok" });
+    expect((mapaVeiculos as Mock).mock.calls[0][0]).toBe("tok");
+    expect((buscarGpsLinha as Mock).mock.calls[0][2]).toEqual({ cercaId: "sede", token: "tok" });
   });
 
   it("usa o raio informado no cruzamento", async () => {
@@ -67,16 +76,16 @@ describe("processarPlanilha", () => {
     const a400m = { ...gpsNoCliente, paradas: [{ ...gpsNoCliente.paradas[0], lat: -7 + 0.0036 }] };
     (buscarGpsLinha as Mock).mockResolvedValue(a400m);
     const agora = new Date("2026-10-06T12:00:00-03:00");
-    expect((await processarPlanilha(planilha([linha({})]), agora)).linhas[0].noRaio).toBe(0);
-    expect((await processarPlanilha(planilha([linha({})]), agora, { config: { raioM: 500 } })).linhas[0].noRaio).toBe(1);
+    expect((await processarEntregas(parseCheckNow(planilha([linha({})])), agora)).linhas[0].noRaio).toBe(0);
+    expect((await processarEntregas(parseCheckNow(planilha([linha({})])), agora, { config: { raioM: 500 } })).linhas[0].noRaio).toBe(1);
   });
 
   it("planilha sem rota iniciada devolve lista vazia sem chamar o Infleet", async () => {
-    const { linhas: rs, rotas } = await processarPlanilha(planilha([linha({
+    const { linhas: rs, rotas } = await processarEntregas(parseCheckNow(planilha([linha({
       "Situação": "AGUARDANDO", "Data de Chegada": "", "Hora de Chegada": "",
       "Data Rota Inicio Realizada": "", "Hora Rota Inicio Realizada": "",
       "Data Rota Fim Realizada": "", "Hora Rota Fim Realizada": "",
-    })]), new Date());
+    })])), new Date());
     expect(rs).toEqual([]);
     expect(rotas).toEqual([]);
     expect(mapaVeiculos).not.toHaveBeenCalled();
