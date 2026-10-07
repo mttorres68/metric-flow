@@ -2,6 +2,7 @@ import {
   boolean,
   doublePrecision,
   date,
+  index,
   integer,
   jsonb,
   numeric,
@@ -12,6 +13,7 @@ import {
   time,
   timestamp,
   unique,
+  uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
 
@@ -352,6 +354,69 @@ export const entregasConfig = pgTable("entregas_config", {
   lentoMaxKmh: integer("lentoMaxKmh").notNull().default(15),         // …a menos que esta média = lento
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Relatório de Entregas — coleta do CheckNow por revenda (spec checknow-coleta §4).
+// Senha e token cifrados (server/services/checknow/cofre.ts).
+// ---------------------------------------------------------------------------
+export const entregasContas = pgTable("entregas_contas", {
+  id:               serial("id").primaryKey(),
+  revendaId:        integer("revendaId").notNull().unique().references(() => revendas.id),
+  ativo:            boolean("ativo").notNull().default(true),
+  checknowUsuario:  varchar("checknowUsuario", { length: 120 }).notNull(),
+  checknowSenha:    text("checknowSenha").notNull(),
+  infleetToken:     text("infleetToken"),
+  ultimaColetaEm:   timestamp("ultimaColetaEm", { withTimezone: true }),
+  ultimaColetaOk:   boolean("ultimaColetaOk"),
+  ultimaColetaErro: text("ultimaColetaErro"),
+  createdAt:        timestamp("createdAt").defaultNow().notNull(),
+  updatedAt:        timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export const checknowEntregas = pgTable("checknow_entregas", {
+  id:              serial("id").primaryKey(),
+  revendaId:       integer("revendaId").notNull().references(() => revendas.id),
+  dia:             date("dia", { mode: "string" }).notNull(),
+  routeId:         varchar("routeId", { length: 40 }).notNull(),
+  placa:           varchar("placa", { length: 20 }).notNull(),
+  motorista:       varchar("motorista", { length: 120 }).notNull(),
+  codCliente:      varchar("codCliente", { length: 40 }).notNull(),
+  cliente:         varchar("cliente", { length: 200 }).notNull(),
+  lat:             doublePrecision("lat"),
+  lon:             doublePrecision("lon"),
+  situacao:        varchar("situacao", { length: 20 }).notNull(),
+  baixaEm:         timestamp("baixaEm", { withTimezone: true }),
+  saidaApp:        timestamp("saidaApp", { withTimezone: true }),
+  rotaInicio:      timestamp("rotaInicio", { withTimezone: true }).notNull(),
+  rotaFim:         timestamp("rotaFim", { withTimezone: true }),
+  odoIniInformado: doublePrecision("odoIniInformado"),
+  odoFimInformado: doublePrecision("odoFimInformado"),
+  ordemPlanejada:  integer("ordemPlanejada"),
+  valor:           doublePrecision("valor").notNull().default(0),
+  pesoKg:          doublePrecision("pesoKg").notNull().default(0),
+  notas:           integer("notas").notNull().default(0),
+  motivoProblema:  text("motivoProblema"),
+  capacidadeKg:    doublePrecision("capacidadeKg"),
+  cidade:          varchar("cidade", { length: 120 }).notNull().default(""),
+  coletadoEm:      timestamp("coletadoEm", { withTimezone: true }).defaultNow().notNull(),
+}, t => [
+  uniqueIndex("uq_checknow_entregas").on(t.revendaId, t.routeId, t.codCliente),
+  index("ix_checknow_entregas_dia").on(t.revendaId, t.dia),
+]);
+
+export const checknowColetas = pgTable("checknow_coletas", {
+  id:          serial("id").primaryKey(),
+  revendaId:   integer("revendaId").notNull().references(() => revendas.id),
+  origem:      varchar("origem", { length: 10 }).notNull(),   // auto | botao | upload
+  periodoDe:   date("periodoDe", { mode: "string" }).notNull(),
+  periodoAte:  date("periodoAte", { mode: "string" }).notNull(),
+  iniciadoEm:  timestamp("iniciadoEm", { withTimezone: true }).defaultNow().notNull(),
+  terminadoEm: timestamp("terminadoEm", { withTimezone: true }),
+  status:      varchar("status", { length: 10 }).notNull(),   // rodando | ok | sem_dados | erro
+  rotas:       integer("rotas"),
+  linhas:      integer("linhas"),
+  erro:        text("erro"),
+}, t => [index("ix_checknow_coletas").on(t.revendaId, t.iniciadoEm)]);
 
 // ---------------------------------------------------------------------------
 // Análise Diária — flags de ocorrência por vendedor × dia
