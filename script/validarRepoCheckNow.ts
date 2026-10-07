@@ -1,0 +1,39 @@
+/*
+ * Valida o repositório da coleta do CheckNow contra o banco LOCAL (recusa outro host).
+ * Uso: pnpm tsx --env-file=../../../.env script/validarRepoCheckNow.ts
+ * Grava rotas de teste (placa TST-0001) e apaga no fim.
+ */
+import { randomBytes } from "crypto";
+
+const url = new URL(process.env.DATABASE_URL!);
+if (url.hostname !== "localhost") throw new Error(`Recusado: banco não é local (${url.hostname}).`);
+process.env.CHECKNOW_CHAVE ??= randomBytes(32).toString("base64");
+const { getDb } = await import("../server/db");
+const { revendas, checknowEntregas } = await import("../drizzle/schema");
+const repo = await import("../server/services/checknow/repo");
+const { eq } = await import("drizzle-orm");
+
+const db = (await getDb())!;
+const [rev] = await db.select().from(revendas).limit(1);
+const base = {
+  placa: "TST-0001", motorista: "TESTE", cliente: "C", lat: -7, lon: -43, situacao: "ENTREGUE" as const, baixaEm: null, saidaApp: null,
+  rotaFim: null, odoIniInformado: null, odoFimInformado: null, ordemPlanejada: null, valor: 0, pesoKg: 0, notas: 1, motivoProblema: null, capacidadeKg: null, cidade: "",
+};
+const ini = new Date("2026-01-01T10:00:00-03:00");
+try {
+  await repo.gravarEntregas(rev.id, [
+    { ...base, routeId: "T1", codCliente: "1", rotaInicio: ini },
+    { ...base, routeId: "T2", codCliente: "1", rotaInicio: ini },
+  ]);
+  await repo.gravarEntregas(rev.id, [{ ...base, routeId: "T1", codCliente: "2", rotaInicio: ini }]);
+  const lidas = await repo.entregasDoPeriodo(rev.id, "2026-01-01", "2026-01-01");
+  console.log("esperado T1/2 e T2/1:", lidas.map(e => `${e.routeId}/${e.codCliente}`).sort());
+  console.log("rotaInicio volta igual:", lidas[0].rotaInicio!.getTime() === ini.getTime());
+  console.log("gravar vazio não apaga:", await repo.gravarEntregas(rev.id, []), (await repo.entregasDoPeriodo(rev.id, "2026-01-01", "2026-01-01")).length === 2);
+  await repo.comTrava(rev.id, async () => {
+    await repo.comTrava(rev.id, async () => null).then(() => console.log("ERRO: trava não segurou"), e => console.log("trava ocupada:", e.message));
+  });
+} finally {
+  await db.delete(checknowEntregas).where(eq(checknowEntregas.placa, "TST-0001"));
+  process.exit(0);
+}
