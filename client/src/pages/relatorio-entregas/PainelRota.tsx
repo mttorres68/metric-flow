@@ -10,7 +10,15 @@ import type { AppRouter } from "../../../../server/routers";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Badge } from "@/pages/analise/components/Badge";
 import { Td, Th } from "@/pages/analise/components/TablePrimitives";
-import { LIMITES, diaBRT, horaBRT, minParaHM } from "@shared/entregas";
+import { LIMITES, diaBRT, horaBRT } from "@shared/entregas";
+
+/** Duração sempre com unidade, para não confundir com horário: "9 min", "1h 50min", "2h". */
+const dur = (min: number) => {
+  const t = Math.round(min);
+  if (t < 60) return `${t} min`;
+  const h = Math.floor(t / 60), m = t % 60;
+  return m ? `${h}h ${m}min` : `${h}h`;
+};
 
 type Rota = inferRouterOutputs<AppRouter>["entregas"]["processar"]["rotas"][number];
 
@@ -57,7 +65,7 @@ const LOCAL = {
 const diaSeguinte = (dia: string) => diaBRT(new Date(new Date(`${dia}T12:00:00-03:00`).getTime() + 86400000));
 
 const GPS_DEVOLUCAO = {
-  esteve: { cor: "green", texto: (m: number) => `Esteve ${minParaHM(m)}` },
+  esteve: { cor: "green", texto: (m: number) => `Esteve ${dur(m)}` },
   nao_parou: { cor: "red", texto: () => "Não parou no cliente" },
   sem_coordenada: { cor: "slate", texto: () => "Cliente sem coordenada" },
   sem_gps: { cor: "slate", texto: () => "Sem GPS" },
@@ -126,8 +134,8 @@ export function PainelRota({ rotas }: { rotas: Rota[] }) {
                 <tr>
                   <Th>Noite</Th>
                   <Th title="Endereço do Infleet no horário em que o caminhão parou">Onde dormiu</Th>
-                  <Th center>Parou</Th>
-                  <Th center>Saiu</Th>
+                  <Th center>Parou (hora)</Th>
+                  <Th center>Saiu (hora)</Th>
                   <Th center title={`Lei 13.103/2015: ${LIMITES.descansoMinH} h de descanso entre jornadas`}>Descanso</Th>
                   <Th center title="Do horário em que parou até desligar a chave">Chave ligada após parar</Th>
                   <Th title={`Chave ligada ou caminhão andando entre ${LIMITES.noturnoDe} e ${LIMITES.noturnoAte}`}>Fora de hora</Th>
@@ -152,13 +160,13 @@ export function PainelRota({ rotas }: { rotas: Rota[] }) {
                     <Td center mono>{p.saiu ? horaBRT(p.saiu) : "—"}</Td>
                     <Td center>
                       {p.descansoMin === null ? "—" : p.descansoCurto
-                        ? <Badge color="red">{minParaHM(p.descansoMin)} — abaixo de {LIMITES.descansoMinH} h</Badge>
-                        : <span className="font-mono">{minParaHM(p.descansoMin)}</span>}
+                        ? <Badge color="red">{dur(p.descansoMin)} — abaixo de {LIMITES.descansoMinH} h</Badge>
+                        : <span className="font-mono">{dur(p.descansoMin)}</span>}
                     </Td>
                     <Td center mono>
                       {p.chaveLigadaMin === null ? "—" : p.chaveLigadaMin > 30
-                        ? <span className="text-amber-600 dark:text-amber-400 font-bold">{minParaHM(p.chaveLigadaMin)}</span>
-                        : minParaHM(p.chaveLigadaMin)}
+                        ? <span className="text-amber-600 dark:text-amber-400 font-bold">{dur(p.chaveLigadaMin)}</span>
+                        : dur(p.chaveLigadaMin)}
                     </Td>
                     <Td>
                       {p.foraDeHora.length
@@ -196,7 +204,7 @@ export function PainelRota({ rotas }: { rotas: Rota[] }) {
             <table className="w-full text-xs">
               <thead className="bg-green-950 text-slate-100 sticky top-0">
                 <tr>
-                  <Th center>Ordem real</Th><Th center>Ordem planejada</Th><Th>Cliente</Th><Th center>Chegada (GPS)</Th><Th center>Sequência</Th>
+                  <Th center>Ordem real</Th><Th center>Ordem planejada</Th><Th>Cliente</Th><Th center>Chegada do caminhão (hora)</Th><Th center>Sequência</Th>
                 </tr>
               </thead>
               <tbody>
@@ -220,8 +228,8 @@ export function PainelRota({ rotas }: { rotas: Rota[] }) {
         {dadosTempo.length ? (
           <>
             <div className="grid grid-cols-3 gap-3 mb-4">
-              <Cartao rotulo="Parado com chave ligada" valor={minParaHM(chaveTotal)} sub={`${marchasLentas} "marcha lenta excessiva" na jornada — chave na ignição, não necessariamente motor`} />
-              <Cartao rotulo="Tempo médio por entrega" valor={r.tempoMedioEntregaMin === null ? "—" : minParaHM(r.tempoMedioEntregaMin)} sub="parado em cliente ÷ entregas" />
+              <Cartao rotulo="Parado com chave ligada" valor={dur(chaveTotal)} sub={`${marchasLentas} "marcha lenta excessiva" na jornada — chave na ignição, não necessariamente motor`} />
+              <Cartao rotulo="Tempo médio por entrega" valor={r.tempoMedioEntregaMin === null ? "—" : dur(r.tempoMedioEntregaMin)} sub="parado em cliente ÷ entregas" />
               <Cartao rotulo="Entregas por hora de jornada" valor={num(r.entregasPorHora, 1)} />
             </div>
             <div className="h-64">
@@ -229,8 +237,8 @@ export function PainelRota({ rotas }: { rotas: Rota[] }) {
                 <BarChart data={dadosTempo} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                   <CartesianGrid vertical={false} strokeOpacity={0.15} />
                   <XAxis dataKey="dia" tick={{ fontSize: 11 }} />
-                  <YAxis tickFormatter={v => minParaHM(Number(v))} tick={{ fontSize: 11 }} width={48} />
-                  <Tooltip formatter={(v: number, nome: string) => [minParaHM(v), nome]} cursor={{ fillOpacity: 0.08 }} />
+                  <YAxis tickFormatter={v => dur(Number(v))} tick={{ fontSize: 11 }} width={48} />
+                  <Tooltip formatter={(v: number, nome: string) => [dur(v), nome]} cursor={{ fillOpacity: 0.08 }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Bar dataKey="rodando" name="Rodando" stackId="t" fill={cores.rodando} stroke="var(--card)" strokeWidth={2} />
                   <Bar dataKey="emCliente" name="Parado em cliente" stackId="t" fill={cores.emCliente} stroke="var(--card)" strokeWidth={2} />
@@ -246,8 +254,8 @@ export function PainelRota({ rotas }: { rotas: Rota[] }) {
               <tbody className="font-mono text-slate-700 dark:text-slate-200">
                 {r.tempoPorDia.map(t => (
                   <tr key={t.data} className="border-t border-slate-100 dark:border-slate-700/40">
-                    <td className="py-1">{ddmm(t.data)}</td><td>{minParaHM(t.jornadaMin)}</td><td>{minParaHM(t.rodandoMin)}</td>
-                    <td>{minParaHM(t.emClienteMin)}</td><td>{minParaHM(t.paradoSemClienteMin)}</td><td>{t.chaveLigadaMin === null ? "—" : minParaHM(t.chaveLigadaMin)}</td>
+                    <td className="py-1">{ddmm(t.data)}</td><td>{dur(t.jornadaMin)}</td><td>{dur(t.rodandoMin)}</td>
+                    <td>{dur(t.emClienteMin)}</td><td>{dur(t.paradoSemClienteMin)}</td><td>{t.chaveLigadaMin === null ? "—" : dur(t.chaveLigadaMin)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -284,7 +292,7 @@ export function PainelRota({ rotas }: { rotas: Rota[] }) {
             </div>
             <table className="w-full text-xs">
               <thead className="bg-green-950 text-slate-100">
-                <tr><Th>Cliente</Th><Th>Motivo</Th><Th center>Valor</Th><Th center>Peso</Th><Th center>Baixa</Th><Th center>Caminhão no cliente?</Th></tr>
+                <tr><Th>Cliente</Th><Th>Motivo</Th><Th center>Valor</Th><Th center>Peso</Th><Th center>Entrega no app (hora)</Th><Th center>Caminhão no cliente?</Th></tr>
               </thead>
               <tbody>
                 {r.devolucoes.itens.map(x => (

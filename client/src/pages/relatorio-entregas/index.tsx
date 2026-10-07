@@ -14,7 +14,7 @@ import { ConfigEntregasModal } from "./ConfigEntregasModal";
 import { PainelRota } from "./PainelRota";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc";
-import { LIMITES, horaBRT, minParaHM } from "@shared/entregas";
+import { LIMITES, horaBRT } from "@shared/entregas";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../server/routers";
 import {
@@ -38,28 +38,35 @@ const vermelho = "text-red-500 font-bold";
 const neutro = "text-slate-600 dark:text-slate-300";
 const vazio = <span className="text-slate-300 dark:text-slate-600">—</span>;
 
-const STATUS: Record<Baixa["status"], { label: string; cor: string }> = {
-  no_raio: { label: "No raio", cor: "green" },
-  relampago: { label: "Relâmpago", cor: "amber" },
-  sem_parada: { label: "Baixa sem parada", cor: "red" },
-  sem_coordenada: { label: "Sem coordenada", cor: "slate" },
+const STATUS: Record<Baixa["status"], { label: string; cor: string; dica: string }> = {
+  no_raio: { label: "No raio", cor: "green", dica: "O caminhão ficou parado perto do cliente (3 min ou mais)" },
+  relampago: { label: "Relâmpago", cor: "amber", dica: "O caminhão parou perto do cliente, mas por menos de 3 min" },
+  sem_parada: { label: "Entrega sem parada", cor: "red", dica: "Entrega registrada no app sem o caminhão ter parado perto do cliente" },
+  sem_coordenada: { label: "Sem coordenada", cor: "slate", dica: "Cliente sem latitude/longitude no cadastro: não dá para conferir" },
 };
 
 const faixa = (p: { inicio: Date; fim: Date }) => `${horaBRT(p.inicio)}–${horaBRT(p.fim)}`;
-const duracao = (min: number) => (min < 60 ? `${min} min` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}`);
+/** Duração sempre com unidade, para não confundir com horário: "9 min", "1h 50min", "2h". */
+const dur = (min: number) => {
+  const t = Math.round(min);
+  if (t < 60) return `${t} min`;
+  const h = Math.floor(t / 60), m = t % 60;
+  return m ? `${h}h ${m}min` : `${h}h`;
+};
+const primeiroNome = (nome: string) => nome.trim().split(/\s+/)[0] || nome;
 
-/** Hora da baixa no app × passagem do caminhão pelo cliente. */
-function MomentoBaixa({ m }: { m: Baixa["momentoBaixa"] }) {
+/** Hora da entrega no app × passagem do caminhão pelo cliente. */
+function MomentoEntrega({ m }: { m: Baixa["momentoBaixa"] }) {
   if (!m) return vazio;
-  if (m.tipo === "na_parada") return <span title="Baixa dada enquanto o caminhão estava no cliente"><Badge color="green">Na parada</Badge></span>;
-  if (m.tipo === "depois") return <span title="Baixa dada depois que o caminhão já tinha saído do cliente (baixa em lote)"><Badge color="amber">{duracao(m.min)} depois</Badge></span>;
-  return <span title="Baixa dada antes de o caminhão chegar ao cliente"><Badge color="red">{duracao(m.min)} antes</Badge></span>;
+  if (m.tipo === "na_parada") return <span title="Entrega registrada no app enquanto o caminhão estava no cliente"><Badge color="green">Na hora</Badge></span>;
+  if (m.tipo === "depois") return <span title="Entrega registrada no app depois que o caminhão já tinha saído do cliente (registro em lote)"><Badge color="amber">{dur(m.min)} depois</Badge></span>;
+  return <span title="Entrega registrada no app antes de o caminhão chegar ao cliente"><Badge color="red">{dur(m.min)} antes</Badge></span>;
 }
 
 /** Passagens do caminhão pelo cliente: 1 = horário; várias = selo com a quantidade que abre a lista ao clicar. */
 function ParadasNoCliente({ b }: { b: Baixa }) {
   const ps = b.paradasNoRaio;
-  if (ps.length === 1) return <span className="font-semibold text-slate-700 dark:text-slate-200">{faixa(ps[0])}</span>;
+  if (ps.length === 1) return <span className="font-semibold text-slate-700 dark:text-slate-200" title="Chegada e saída do caminhão pelo GPS">{faixa(ps[0])}</span>;
   if (ps.length > 1) {
     const maisPerto = ps.reduce((m, p) => (p.distM < m.distM ? p : m));
     return (
@@ -82,8 +89,8 @@ function ParadasNoCliente({ b }: { b: Baixa }) {
               {ps.map((p, i) => (
                 <tr key={i} className={p === maisPerto ? "text-indigo-600 dark:text-indigo-400" : ""} title={p === maisPerto ? "A mais próxima do cliente (exibida na tabela)" : undefined}>
                   <td className="pr-3 py-0.5 font-semibold">{faixa(p)}</td>
-                  <td className="pr-3 py-0.5 text-slate-500">{duracao(Math.round((p.fim.getTime() - p.inicio.getTime()) / 60000))}</td>
-                  <td className="py-0.5 text-slate-400">{Math.round(p.distM)} m</td>
+                  <td className="pr-3 py-0.5 text-slate-500">{dur((p.fim.getTime() - p.inicio.getTime()) / 60000)}</td>
+                  <td className="py-0.5 text-slate-400">a {Math.round(p.distM)} m</td>
                 </tr>
               ))}
             </tbody>
@@ -93,72 +100,95 @@ function ParadasNoCliente({ b }: { b: Baixa }) {
     );
   }
   return b.maisProxima
-    ? <span className="text-slate-400" title="Nenhuma parada no raio; horário da parada mais próxima">— (mais próxima {faixa(b.maisProxima)})</span>
+    ? <span className="text-slate-400" title="Nenhuma parada perto do cliente; horário da parada mais próxima">não parou (mais próxima {faixa(b.maisProxima)})</span>
     : vazio;
 }
 
-/** Ordem real de visita: chegada da parada mais próxima (GPS); sem parada, a hora da baixa no app. */
+/** Ordem real de visita: chegada da parada mais próxima (GPS); sem parada, a hora da entrega no app. */
 const ordemVisita = (b: Baixa) =>
   b.paradasNoRaio.length
     ? b.paradasNoRaio.reduce((m, p) => (p.distM < m.distM ? p : m)).inicio.getTime()
     : b.entrega.baixaEm?.getTime() ?? 0;
 
-/** Deslocamento até o cliente: km pela estrada · tempo, com os gatilhos de desvio e lentidão. */
-function TrechoAteAqui({ t }: { t: Baixa["trecho"] }) {
-  if (!t) return vazio;
+/** Faixa entre duas linhas: deslocamento do caminhão até o próximo cliente (km pela estrada · tempo). */
+function LinhaTrecho({ t, colunas }: { t: NonNullable<Baixa["trecho"]>; colunas: number }) {
+  const mesmaParada = t.min === 0 && (t.km ?? 0) < 0.1;
   const dica = [
-    t.deCodCliente ? `Desde o cliente ${t.deCodCliente}` : "Desde a saída",
+    t.deCodCliente ? `Do cliente ${t.deCodCliente} até o próximo` : "Da saída até o 1º cliente",
+    "distância pela estrada (GPS) · tempo de deslocamento",
     t.retaKm !== null ? `linha reta: ${num1(Math.round(t.retaKm * 10) / 10)} km` : null,
     t.desvio ? "DESVIO: caminho bem maior que a linha reta" : null,
     t.lento ? "LENTO: demorou e andou devagar (parou no caminho?)" : null,
   ].filter(Boolean).join(" · ");
+  const cor = t.desvio ? "text-red-600 dark:text-red-400" : t.lento ? "text-amber-600 dark:text-amber-400" : "text-indigo-500 dark:text-indigo-400";
   return (
-    <span title={dica} className="inline-flex items-center gap-1 whitespace-nowrap">
-      {t.deCodCliente === null && <span className="text-slate-400">saída →</span>}
-      {num1(t.km)} km · {minParaHM(t.min)}
-      {t.desvio && <Badge color="red">🚩 desvio</Badge>}
-      {t.lento && <Badge color="amber">🐢 lento</Badge>}
-    </span>
+    <tr>
+      <td colSpan={colunas} className="py-0.5">
+        <div title={dica} className={`flex items-center justify-center gap-2 text-[11px] font-mono cursor-help ${cor}`}>
+          <span>{t.deCodCliente === null ? "saída →" : "↓"}</span>
+          {mesmaParada
+            ? <span className="text-slate-400">mesma parada (cliente vizinho)</span>
+            : <span className="font-semibold">{num1(t.km)} km · {dur(t.min)}</span>}
+          {t.retaKm !== null && !mesmaParada && <span className="text-slate-400">(linha reta {num1(Math.round(t.retaKm * 10) / 10)} km)</span>}
+          {t.desvio && <Badge color="red">🚩 desvio</Badge>}
+          {t.lento && <Badge color="amber">🐢 lento</Badge>}
+        </div>
+      </td>
+    </tr>
   );
 }
 
-/** Tabela de baixas — usada no detalhe da linha e na lista de exceções do dia. */
+/** Tabela de entregas — no detalhe da linha (com os trechos entre as linhas) e na lista de exceções do dia. */
 function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Baixa }[]; comPlaca?: boolean; raioM: number }) {
+  const colunas = comPlaca ? 9 : 8;
+  const ordenados = [...itens].sort((x, y) => ordemVisita(x.b) - ordemVisita(y.b));
   return (
-    <table className="w-full text-xs">
-      <thead className="bg-slate-100 dark:bg-slate-800/60">
-        <tr className="text-left text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-          {comPlaca && <th className="px-2 py-1.5">Placa · Motorista</th>}
-          <th className="px-2 py-1.5">Cliente</th>
-          <th className="px-2 py-1.5">Código</th>
-          <th className="px-2 py-1.5">Cidade</th>
-          <th className="px-2 py-1.5 text-center" title="Hora da baixa no app do CheckNow">Baixa (app)</th>
-          <th className="px-2 py-1.5 text-center" title={`Quando o caminhão esteve parado a até ${raioM} m do cliente (chegada–saída pelo GPS)`}>Parada no cliente (GPS)</th>
-          <th className="px-2 py-1.5 text-center" title={`Hora da baixa comparada com a parada no cliente (tolerância de ${LIMITES.momentoTolMin} min)`}>Momento da baixa</th>
-          <th className="px-2 py-1.5 text-center" title="Deslocamento do caminhão até este cliente (desde o anterior visitado, ou desde a saída): km pela estrada · tempo">Trecho até aqui (GPS)</th>
-          <th className="px-2 py-1.5 text-center">Status</th>
-          <th className="px-2 py-1.5 text-center">Parada mais próxima</th>
-          <th className="px-2 py-1.5 text-center">Permanência no raio</th>
-        </tr>
-      </thead>
-      <tbody>
-        {[...itens].sort((x, y) => ordemVisita(x.b) - ordemVisita(y.b)).map(({ r, b }, i) => (
-          <tr key={i} className="border-b border-slate-100 dark:border-slate-700/40">
-            {comPlaca && <Td>{r.linha.placa} · {r.linha.motorista}</Td>}
-            <Td>{b.entrega.cliente}</Td>
-            <Td mono className="text-slate-500 dark:text-slate-400">{b.entrega.codCliente}</Td>
-            <Td className="text-slate-500 dark:text-slate-400">{b.entrega.cidade || "—"}</Td>
-            <Td center mono>{hora(b.entrega.baixaEm)}</Td>
-            <Td center mono><ParadasNoCliente b={b} /></Td>
-            <Td center><MomentoBaixa m={b.momentoBaixa} /></Td>
-            <Td center mono><TrechoAteAqui t={b.trecho} /></Td>
-            <Td center><Badge color={STATUS[b.status].cor}>{STATUS[b.status].label}</Badge></Td>
-            <Td center mono>{b.distMaisProximaM === null ? vazio : `${Math.round(b.distMaisProximaM)} m`}</Td>
-            <Td center mono>{b.status === "sem_coordenada" ? vazio : minParaHM(b.permanenciaMin)}</Td>
+    <>
+      {!comPlaca && (
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+          Na ordem em que o caminhão passou. Entre as linhas: <b className="text-indigo-500">↓ distância pela estrada · tempo de deslocamento</b>
+          {" "}· 🚩 desvio (caminho bem maior que a linha reta) · 🐢 lento (parou no caminho). Passe o mouse para ver detalhes.
+        </p>
+      )}
+      {/* No detalhe, largura do conteúdo: a tabela principal é larga e esticaria as faixas de trecho para a direita. */}
+      <table className={`${comPlaca ? "w-full" : "w-auto"} text-xs`}>
+        <thead className="bg-slate-100 dark:bg-slate-800/60">
+          <tr className="text-left text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            {comPlaca && <th className="px-2 py-1.5">Placa · Motorista</th>}
+            <th className="px-2 py-1.5" title="Primeiro nome; passe o mouse para ver o nome completo">Cliente</th>
+            <th className="px-2 py-1.5">Código</th>
+            <th className="px-2 py-1.5">Cidade</th>
+            <th className="px-2 py-1.5 text-center" title="Hora em que o motorista registrou a entrega no app do CheckNow">Entrega no app (hora)</th>
+            <th className="px-2 py-1.5 text-center" title={`Chegada e saída do caminhão a até ${raioM} m do cliente, pelo GPS`}>Caminhão no cliente (hora)</th>
+            <th className="px-2 py-1.5 text-center" title={`Hora do registro no app × passagem do caminhão (tolerância de ${LIMITES.momentoTolMin} min)`}>Momento do registro</th>
+            <th className="px-2 py-1.5 text-center">Situação</th>
+            <th className="px-2 py-1.5 text-center" title="Tempo total do caminhão parado perto do cliente, pelo GPS">Tempo no cliente</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {ordenados.map(({ r, b }, i) => (
+            <React.Fragment key={i}>
+              {!comPlaca && b.trecho && <LinhaTrecho t={b.trecho} colunas={colunas} />}
+              <tr className="border-b border-slate-100 dark:border-slate-700/40 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10">
+                {comPlaca && <Td>{r.linha.placa} · {r.linha.motorista}</Td>}
+                <Td><span title={b.entrega.cliente} className="cursor-help underline decoration-dotted decoration-slate-300 underline-offset-2">{primeiroNome(b.entrega.cliente)}</span></Td>
+                <Td mono className="text-slate-500 dark:text-slate-400">{b.entrega.codCliente}</Td>
+                <Td className="text-slate-500 dark:text-slate-400">{b.entrega.cidade || "—"}</Td>
+                <Td center mono>{hora(b.entrega.baixaEm)}</Td>
+                <Td center mono><ParadasNoCliente b={b} /></Td>
+                <Td center><MomentoEntrega m={b.momentoBaixa} /></Td>
+                <Td center>
+                  <span title={`${STATUS[b.status].dica}${b.distMaisProximaM !== null ? ` · parada mais próxima a ${Math.round(b.distMaisProximaM)} m` : ""}`}>
+                    <Badge color={STATUS[b.status].cor}>{STATUS[b.status].label}</Badge>
+                  </span>
+                </Td>
+                <Td center mono>{b.status === "sem_coordenada" ? vazio : dur(b.permanenciaMin)}</Td>
+              </tr>
+            </React.Fragment>
+          ))}
+        </tbody>
+      </table>
+    </>
   );
 }
 
@@ -261,7 +291,7 @@ export default function RelatorioEntregas() {
               <Truck size={20} className="text-indigo-500 dark:text-indigo-400" /> Relatório de Entregas
             </h1>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-              Baixas do CheckNow × paradas do GPS (Infleet), por placa · motorista · dia
+              Entregas registradas no CheckNow × paradas do caminhão no GPS (Infleet), por placa · motorista · dia
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -356,8 +386,8 @@ export default function RelatorioEntregas() {
                 {[
                   { label: "Placas · motoristas", value: String(k.linhas), color: "text-slate-700 dark:text-slate-200", icon: <Truck size={16} className="text-indigo-400" /> },
                   { label: "Entregas no dia", value: String(k.entregas), color: "text-slate-700 dark:text-slate-200", icon: <MapPin size={16} className="text-green-400" /> },
-                  { label: "Baixas no raio", value: fmtPct(k.noRaioPct), color: k.noRaioPct < 100 ? "text-red-600" : "text-green-600", icon: <MapPin size={16} className="text-indigo-400" /> },
-                  { label: "Baixas sem parada", value: String(k.semParada), color: k.semParada > 0 ? "text-red-600" : "text-green-600", icon: <AlertTriangle size={16} className="text-red-400" /> },
+                  { label: "Entregas no raio", value: fmtPct(k.noRaioPct), color: k.noRaioPct < 100 ? "text-red-600" : "text-green-600", icon: <MapPin size={16} className="text-indigo-400" /> },
+                  { label: "Entregas sem parada", value: String(k.semParada), color: k.semParada > 0 ? "text-red-600" : "text-green-600", icon: <AlertTriangle size={16} className="text-red-400" /> },
                   { label: "Relâmpago", value: fmtPct(k.relampPct), color: k.relampPct > LIMITES.relampagoMaxPct ? "text-red-600" : "text-green-600", icon: <Zap size={16} className="text-amber-400" /> },
                 ].map(c => (
                   <div key={c.label} className="bg-white dark:bg-[var(--card)] rounded-xl border border-slate-100 dark:border-[var(--border)] px-4 py-3 flex items-center gap-3">
@@ -399,18 +429,18 @@ export default function RelatorioEntregas() {
                       <thead className="bg-green-950 text-slate-100">
                         <tr>
                           <Th title="Clique na linha para ver as baixas">Placa · Motorista</Th>
-                          <Th center title={`Saída da cerca escolhida ou, sem ela, início do 1º trecho em movimento de 3 min ou mais (vermelho se > ${LIMITES.saidaAte})`}>Saída</Th>
-                          <Th center title="Entrada na cerca escolhida depois da saída ou, sem ela, fim do último trecho em movimento de 3 min ou mais">Retorno</Th>
-                          <Th center title="1ª e última baixa no app do CheckNow × chegada ao 1º cliente e saída do último pelo GPS">1º → último cliente</Th>
-                          <Th center title="Tempo em cliente: soma de (saída − chegada) no app × paradas no raio pelo GPS">Em cliente</Th>
-                          <Th center title="Da saída (revenda 📍 quando pela cerca, ou pernoite) até chegar ao 1º cliente: tempo · km pela estrada">Saída → 1º PDV</Th>
-                          <Th center title="Do último cliente até o retorno (revenda 📍 quando pela cerca): tempo · km pela estrada">Último PDV → retorno</Th>
+                          <Th center title={`Saída da cerca escolhida ou, sem ela, início do 1º trecho em movimento de 3 min ou mais (vermelho se > ${LIMITES.saidaAte})`}>Saída (hora)</Th>
+                          <Th center title="Entrada na cerca escolhida depois da saída ou, sem ela, fim do último trecho em movimento de 3 min ou mais">Retorno (hora)</Th>
+                          <Th center title="1ª e última entrega no app do CheckNow × chegada ao 1º cliente e saída do último pelo GPS">1º → último cliente (hora)</Th>
+                          <Th center title="Tempo em cliente: soma de (saída − chegada) no app × paradas no raio pelo GPS">Em cliente (tempo)</Th>
+                          <Th center title="Da saída (revenda 📍 quando pela cerca, ou pernoite) até chegar ao 1º cliente: tempo · km pela estrada">Saída → 1º PDV (tempo · km)</Th>
+                          <Th center title="Do último cliente até o retorno (revenda 📍 quando pela cerca): tempo · km pela estrada">Último PDV → retorno (tempo · km)</Th>
                           <Th center title="Entregues no dia / total de clientes da rota">Entregas</Th>
-                          <Th center title={`% das entregas com baixa após as 14h (vermelho se < ${LIMITES.apos14hMinPct}%)`}>Após 14h</Th>
-                          <Th center title={`Baixas com parada de ${LIMITES.relampagoMin} min ou mais a até ${raioM} m do cliente`}>No raio</Th>
-                          <Th center title="Baixas sem nenhuma parada do GPS no raio">Sem parada</Th>
+                          <Th center title={`% das entregas registradas após as 14h (vermelho se < ${LIMITES.apos14hMinPct}%)`}>Após 14h</Th>
+                          <Th center title={`Entregas com o caminhão parado de ${LIMITES.relampagoMin} min ou mais a até ${raioM} m do cliente`}>No raio</Th>
+                          <Th center title="Entregas sem nenhuma parada do caminhão perto do cliente">Sem parada</Th>
                           <Th center title={`Paradas no raio com menos de ${LIMITES.relampagoMin} min (vermelho se > ${LIMITES.relampagoMaxPct}%)`}>Relâmpago</Th>
-                          <Th center title={`Paradas de ${LIMITES.paradaSemClienteMin} min ou mais longe de todo cliente, entre a saída e o retorno`}>Paradas s/ cliente</Th>
+                          <Th center title={`Paradas de ${LIMITES.paradaSemClienteMin} min ou mais longe de todo cliente, entre a saída e o retorno`}>Paradas s/ cliente (qtd · tempo)</Th>
                           <Th center title={`Trechos entre clientes com desvio (km pela estrada > ${LIMITES.desvioFator}× a linha reta e +${LIMITES.desvioMinKm} km) e lentos (> ${LIMITES.lentoMinMin} min a < ${LIMITES.lentoMaxKmh} km/h)`}>Desvios · lentos</Th>
                           <Th center title="Km rodado pelo GPS no dia · distância real informada no CheckNow (total da rota)">Km GPS · informado</Th>
                           <Th center title="Só no dia em que a rota fecha">Pendentes · Km inf.</Th>
@@ -451,26 +481,26 @@ export default function RelatorioEntregas() {
                                   ) : vazio}
                                 </Td>
                                 <Td center mono className={neutro}>
-                                  <div title="1ª e última baixa no app">app {hora(r.app.primeira)}–{hora(r.app.ultima)}</div>
+                                  <div title="1ª e última entrega registrada no app">app {hora(r.app.primeira)}–{hora(r.app.ultima)}</div>
                                   <div className="text-slate-400" title="Chegada ao 1º cliente e saída do último pelo GPS">
                                     GPS {gps && r.gpsClientes.primeiraChegada ? `${hora(r.gpsClientes.primeiraChegada)}–${hora(r.gpsClientes.ultimaSaida)}` : "—"}
                                   </div>
                                 </Td>
                                 <Td center mono className={neutro}>
-                                  <div title="Soma de (saída − chegada) no app">app {minParaHM(r.app.emClienteMin)}</div>
-                                  <div className="text-slate-400" title="Paradas a até o raio de algum cliente, pelo GPS">GPS {r.tempo ? minParaHM(r.tempo.emClienteMin) : "—"}</div>
+                                  <div title="Soma de (saída − chegada) no app">app {dur(r.app.emClienteMin)}</div>
+                                  <div className="text-slate-400" title="Paradas a até o raio de algum cliente, pelo GPS">GPS {r.tempo ? dur(r.tempo.emClienteMin) : "—"}</div>
                                 </Td>
                                 <Td center mono className={neutro}>
                                   {r.ida ? (
                                     <span title={r.saidaOrigem === "cerca" ? "Desde a saída da revenda (cerca)" : "Desde a saída (GPS) — revenda ou pernoite"}>
-                                      {minParaHM(r.ida.min)} · {num1(r.ida.km)} km{r.saidaOrigem === "cerca" && <MapPin size={10} className="inline ml-0.5 -mt-0.5 text-indigo-400" />}
+                                      {dur(r.ida.min)} · {num1(r.ida.km)} km{r.saidaOrigem === "cerca" && <MapPin size={10} className="inline ml-0.5 -mt-0.5 text-indigo-400" />}
                                     </span>
                                   ) : vazio}
                                 </Td>
                                 <Td center mono className={neutro}>
                                   {r.volta ? (
                                     <span title={r.retornoOrigem === "cerca" ? "Até entrar na revenda (cerca)" : "Até o retorno (GPS)"}>
-                                      {minParaHM(r.volta.min)} · {num1(r.volta.km)} km{r.retornoOrigem === "cerca" && <MapPin size={10} className="inline ml-0.5 -mt-0.5 text-indigo-400" />}
+                                      {dur(r.volta.min)} · {num1(r.volta.km)} km{r.retornoOrigem === "cerca" && <MapPin size={10} className="inline ml-0.5 -mt-0.5 text-indigo-400" />}
                                     </span>
                                   ) : vazio}
                                 </Td>
@@ -499,7 +529,7 @@ export default function RelatorioEntregas() {
                                 </Td>
                                 <Td center mono className={neutro}>
                                   {gps ? (r.paradasSemCliente.qtd > 0
-                                    ? <span className="inline-flex items-center gap-1"><Timer size={11} /> {r.paradasSemCliente.qtd} · {minParaHM(r.paradasSemCliente.min)}</span>
+                                    ? <span className="inline-flex items-center gap-1"><Timer size={11} /> {r.paradasSemCliente.qtd} · {dur(r.paradasSemCliente.min)}</span>
                                     : "0") : vazio}
                                 </Td>
                                 <Td center>
@@ -526,7 +556,7 @@ export default function RelatorioEntregas() {
                                     {gps
                                       ? (r.baixas.length
                                         ? <TabelaBaixas itens={r.baixas.map(b => ({ r, b }))} raioM={raioM} />
-                                        : <p className="text-xs text-slate-500">Nenhuma baixa neste dia.</p>)
+                                        : <p className="text-xs text-slate-500">Nenhuma entrega registrada neste dia.</p>)
                                       : <p className="text-xs text-slate-500">Sem GPS ({r.semGps}): não é possível conferir as baixas.</p>}
                                   </td>
                                 </tr>
