@@ -15,8 +15,8 @@ export const entregasRouter = router({
     .input(z.object({ xlsxBase64: z.string().min(1), cercaId: z.string().optional() }))
     .mutation(async ({ input }) => {
       try {
-        const { raioM } = await getConfigEntregas();
-        return await processarPlanilha(Buffer.from(input.xlsxBase64, "base64"), new Date(), { cercaId: input.cercaId, raioM });
+        const config = await getConfigEntregas();
+        return await processarPlanilha(Buffer.from(input.xlsxBase64, "base64"), new Date(), { cercaId: input.cercaId, config });
       } catch (e) {
         if (e instanceof PlanilhaInvalidaError) throw new TRPCError({ code: "BAD_REQUEST", message: e.message });
         throw e;

@@ -68,7 +68,7 @@ describe("processarPlanilha", () => {
     (buscarGpsLinha as Mock).mockResolvedValue(a400m);
     const agora = new Date("2026-10-06T12:00:00-03:00");
     expect((await processarPlanilha(planilha([linha({})]), agora)).linhas[0].noRaio).toBe(0);
-    expect((await processarPlanilha(planilha([linha({})]), agora, { raioM: 500 })).linhas[0].noRaio).toBe(1);
+    expect((await processarPlanilha(planilha([linha({})]), agora, { config: { raioM: 500 } })).linhas[0].noRaio).toBe(1);
   });
 
   it("planilha sem rota iniciada devolve lista vazia sem chamar o Infleet", async () => {

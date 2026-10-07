@@ -1,5 +1,6 @@
 import {
   boolean,
+  doublePrecision,
   date,
   integer,
   jsonb,
@@ -344,7 +345,11 @@ export type InsertMetricasConfig = typeof metricasConfig.$inferInsert;
 // ---------------------------------------------------------------------------
 export const entregasConfig = pgTable("entregas_config", {
   id:        serial("id").primaryKey(),
-  raioM:     integer("raioM").notNull().default(300),
+  raioM:       integer("raioM").notNull().default(300),
+  desvioFator: doublePrecision("desvioFator").notNull().default(1.8), // trecho com km > fator × linha reta…
+  desvioMinKm: doublePrecision("desvioMinKm").notNull().default(3),  // …e pelo menos estes km a mais = desvio
+  lentoMinMin: integer("lentoMinMin").notNull().default(20),         // trecho com mais que estes minutos…
+  lentoMaxKmh: integer("lentoMaxKmh").notNull().default(15),         // …a menos que esta média = lento
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 

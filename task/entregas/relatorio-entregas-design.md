@@ -256,6 +256,9 @@ Diária). Upload → tRPC `entregas.processar` (pipeline em
     `desvioMinKm` (3 km) a mais;
   - 🐢 **lento**: mais de `lentoMinMin` (20 min) a menos de `lentoMaxKmh`
     (15 km/h);
+  - os quatro limites (e o raio) ficam na tabela `entregas_config`, editáveis
+    no modal ⚙ (padrão em `CONFIG_ENTREGAS_PADRAO`; SQL em
+    `drizzle/manual/2026-10-07_entregas_config_limites.sql`);
 - o detalhe fica na ordem real de visita (chegada pelo GPS);
 - a distância planejada do CheckNow vem zerada e não é usada.
 
@@ -365,7 +368,7 @@ fixo. A tabela cruzada é revisada junto com o gestor para calibrar os limites.
 
 - Persistir entregas e paradas no Postgres (histórico por motorista e semana),
   com deduplicação de upload por `RouteId`.
-- Levar `LIMITES` para o `configService`, editável na tela.
+- Levar os demais `LIMITES` (relâmpago, saída, após 14h…) para o modal ⚙.
 - Aderência à sequência (`Ordem Planejada` × ordem real pelo GPS).
 - ERP: paradas em clientes fora do romaneio; qualidade do cadastro de
   coordenadas.

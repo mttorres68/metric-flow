@@ -66,15 +66,21 @@ export const configRouter = router({
     getEntregasConfig: publicProcedure.query(() => getConfigEntregas()),
 
     saveEntregasConfig: publicProcedure
-        .input(z.object({ raioM: z.number().int().min(50).max(2000) }))
+        .input(z.object({
+            raioM: z.number().int().min(50).max(2000),
+            desvioFator: z.number().min(1).max(10),
+            desvioMinKm: z.number().min(0).max(100),
+            lentoMinMin: z.number().int().min(1).max(600),
+            lentoMaxKmh: z.number().int().min(1).max(120),
+        }))
         .mutation(async ({ input }) => {
             const db = await getDb();
             if (!db) throw new Error("Banco de dados indisponível.");
             const existing = await db.select({ id: entregasConfig.id }).from(entregasConfig).limit(1);
             if (existing.length > 0) {
-                await db.update(entregasConfig).set({ raioM: input.raioM, updatedAt: new Date() }).where(eq(entregasConfig.id, existing[0].id));
+                await db.update(entregasConfig).set({ ...input, updatedAt: new Date() }).where(eq(entregasConfig.id, existing[0].id));
             } else {
-                await db.insert(entregasConfig).values({ raioM: input.raioM });
+                await db.insert(entregasConfig).values(input);
             }
             return { ok: true } as const;
         }),

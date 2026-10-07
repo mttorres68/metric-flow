@@ -24,10 +24,10 @@ relatorioEntregasRouter.post("/gerar", async (req: Request, res: Response) => {
   }
 
   try {
-    const { raioM } = await getConfigEntregas();
+    const config = await getConfigEntregas();
     let { linhas: resultados } = await processarPlanilha(Buffer.from(xlsxBase64, "base64"), new Date(), {
       cercaId: typeof cercaId === "string" && cercaId ? cercaId : undefined,
-      raioM,
+      config,
     });
     if (typeof soData === "string" && soData) resultados = resultados.filter(r => r.linha.data === soData);
     if (!resultados.length) {
@@ -42,7 +42,7 @@ relatorioEntregasRouter.post("/gerar", async (req: Request, res: Response) => {
     const pdfs: { nome: string; buf: Buffer }[] = [];
     for (const [data, ls] of porDia) {
       const avisos = ls.filter(r => r.semGps).map(r => `${r.linha.placa} · ${r.linha.motorista}: ${r.semGps}`);
-      pdfs.push({ nome: `entregas_${data}.pdf`, buf: await gerarPDFEntregas({ data, linhas: ls, analise: textoAnalise, avisos, raioM }) });
+      pdfs.push({ nome: `entregas_${data}.pdf`, buf: await gerarPDFEntregas({ data, linhas: ls, analise: textoAnalise, avisos, raioM: config.raioM }) });
     }
 
     if (pdfs.length === 1) {

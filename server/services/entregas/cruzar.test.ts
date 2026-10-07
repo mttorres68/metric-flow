@@ -170,14 +170,14 @@ describe("cruzar", () => {
     const quatrocentosM = -7 + 0.0036;
     const paradas = [parada(quatrocentosM, -43, "2026-10-05T09:55", 10)];
     expect(cruzar(linha(), [entrega()], gps(paradas)).baixas[0].status).toBe("sem_parada");
-    expect(cruzar(linha(), [entrega()], gps(paradas), 500).baixas[0].status).toBe("no_raio");
+    expect(cruzar(linha(), [entrega()], gps(paradas), { raioM: 500 }).baixas[0].status).toBe("no_raio");
   });
 
   it("raio configurável vale também para parada sem cliente", () => {
     const quatrocentosM = -7 + 0.0036;
     const paradas = [parada(quatrocentosM, -43, "2026-10-05T12:00", 30)];
     expect(cruzar(linha(), [entrega()], gps(paradas)).paradasSemCliente.qtd).toBe(1);
-    expect(cruzar(linha(), [entrega()], gps(paradas), 500).paradasSemCliente.qtd).toBe(0);
+    expect(cruzar(linha(), [entrega()], gps(paradas), { raioM: 500 }).paradasSemCliente.qtd).toBe(0);
   });
 
   describe("tempo do dia", () => {
@@ -260,6 +260,16 @@ describe("cruzar", () => {
       ]);
       expect(r.baixas[2].trecho?.retaKm).toBeCloseTo(1, 1);
       expect([r.desvios, r.trechosLentos]).toEqual([1, 1]);
+    });
+
+    it("limites de desvio e lentidão vêm da configuração", () => {
+      const c3 = (cfg: Parameters<typeof cruzar>[3]) => cruzar(linha(), es, gps([
+        parada(-7, -43, "2026-10-05T08:00", 10), parada(-7.009, -43, "2026-10-05T08:30", 10), parada(-7.018, -43, "2026-10-05T10:00", 10),
+      ], { trajeto }), cfg).baixas[2].trecho;
+      expect(c3({ desvioFator: 10 })?.desvio).toBe(false); // 9 km < 10× a linha reta
+      expect(c3({ desvioMinKm: 20 })?.desvio).toBe(false); // só 8 km a mais que a linha reta
+      expect(c3({ lentoMaxKmh: 5 })?.lento).toBe(false); // 6,75 km/h não é "lento" se o limite é 5
+      expect(c3({ lentoMinMin: 90 })?.lento).toBe(false); // 80 min < 90
     });
 
     it("cidades do dia, na ordem das baixas", () => {

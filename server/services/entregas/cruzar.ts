@@ -5,7 +5,7 @@
  */
 import type { Entrega } from "./parseCheckNow";
 import { distM, kmEntre, type Parada, type Trajeto } from "./detectarParadas";
-import { LIMITES, diaBRT, horaBRT } from "@shared/entregas";
+import { CONFIG_ENTREGAS_PADRAO, LIMITES, diaBRT, horaBRT, type ConfigEntregas } from "@shared/entregas";
 
 export { LIMITES, diaBRT, horaBRT };
 
@@ -67,8 +67,8 @@ export interface Trecho {
   min: number;
   km: number | null; // pela estrada (trajeto do GPS)
   retaKm: number | null; // linha reta entre os clientes (null quando parte da saída)
-  desvio: boolean; // km bem acima da linha reta (LIMITES.desvioFator e desvioMinKm)
-  lento: boolean; // demorado e devagar: parou no caminho (LIMITES.lentoMinMin e lentoMaxKmh)
+  desvio: boolean; // km bem acima da linha reta (config: desvioFator e desvioMinKm)
+  lento: boolean; // demorado e devagar: parou no caminho (config: lentoMinMin e lentoMaxKmh)
 }
 
 /** Compara a hora da baixa no app com as passagens do caminhão pelo cliente. */
@@ -199,7 +199,7 @@ const umaCasa = (km: number | null) => (km === null ? null : Math.round(km * 10)
  * Ordem real de visita (chegada da parada mais próxima de cada cliente) → trecho até cada cliente,
  * ida (saída → 1º) e volta (último → retorno), com km pela estrada e os gatilhos de desvio e lentidão.
  */
-function percursos(r: ResultadoLinha, trajeto: Trajeto) {
+function percursos(r: ResultadoLinha, trajeto: Trajeto, cfg: ConfigEntregas) {
   const visitas = r.baixas
     .filter(b => b.paradasNoRaio.length)
     .map(b => ({ b, p: b.paradasNoRaio.reduce((m, x) => (x.distM < m.distM ? x : m)) }))
@@ -226,8 +226,8 @@ function percursos(r: ResultadoLinha, trajeto: Trajeto) {
       const km = umaCasa(kmEntre(trajeto, desde, ate));
       const retaKm = anterior && anterior.e.lat !== null && anterior.e.lon !== null
         ? distM(anterior.e.lat, anterior.e.lon, b.entrega.lat!, b.entrega.lon!) / 1000 : null;
-      const desvio = km !== null && retaKm !== null && km > retaKm * LIMITES.desvioFator && km - retaKm > LIMITES.desvioMinKm;
-      const lento = t > LIMITES.lentoMinMin && (km ?? 0) / (t / 60) < LIMITES.lentoMaxKmh;
+      const desvio = km !== null && retaKm !== null && km > retaKm * cfg.desvioFator && km - retaKm > cfg.desvioMinKm;
+      const lento = t > cfg.lentoMinMin && (km ?? 0) / (t / 60) < cfg.lentoMaxKmh;
       b.trecho = { deCodCliente: anterior?.e.codCliente ?? null, min: t, km, retaKm, desvio, lento };
       if (desvio) r.desvios++;
       if (lento) r.trechosLentos++;
@@ -241,8 +241,10 @@ function kmInformado(e: Entrega): number | null {
   return e.odoIniInformado !== null && e.odoFimInformado !== null ? e.odoFimInformado - e.odoIniInformado : null;
 }
 
-/** raioM: raio do cliente em metros (configurável na tela; padrão LIMITES.raioM). */
-export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, raioM: number = LIMITES.raioM): ResultadoLinha {
+/** config: raio do cliente e limites de desvio/lentidão (modal ⚙); o que faltar usa CONFIG_ENTREGAS_PADRAO. */
+export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, config: Partial<ConfigEntregas> = {}): ResultadoLinha {
+  const cfg = { ...CONFIG_ENTREGAS_PADRAO, ...config };
+  const raioM = cfg.raioM;
   const baixasDia = entregasRota.filter(e =>
     e.situacao !== "AGUARDANDO" && e.baixaEm !== null && diaBRT(e.baixaEm) === linha.data);
   const entregues = baixasDia.filter(e => e.situacao === "ENTREGUE");
@@ -312,7 +314,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
       trecho: null,
     });
   }
-  percursos(r, gps.trajeto);
+  percursos(r, gps.trajeto, cfg);
 
   const clientes = entregasRota.filter(temCoord);
   const { saida, retorno } = r;

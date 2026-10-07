@@ -14,7 +14,7 @@ import { ConfigEntregasModal } from "./ConfigEntregasModal";
 import { PainelRota } from "./PainelRota";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc";
-import { LIMITES, horaBRT } from "@shared/entregas";
+import { CONFIG_ENTREGAS_PADRAO, LIMITES, horaBRT } from "@shared/entregas";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../server/routers";
 import {
@@ -205,7 +205,8 @@ export default function RelatorioEntregas() {
   const [analise, setAnalise] = useState("");
   const [baixando, setBaixando] = useState<"dia" | "zip" | null>(null);
   const [configAberto, setConfigAberto] = useState(false);
-  const raioM = trpc.config.getEntregasConfig.useQuery().data?.raioM ?? LIMITES.raioM;
+  const cfg = trpc.config.getEntregasConfig.useQuery().data ?? CONFIG_ENTREGAS_PADRAO;
+  const raioM = cfg.raioM;
   const [cercaSel, setCercaSel] = useState<string | null>(null); // null = padrão (cerca "Sede", se existir)
   const cercasQ = trpc.infleet.listarCercas.useQuery(undefined, { staleTime: Infinity });
   const cercas = cercasQ.data ?? [];
@@ -445,7 +446,7 @@ export default function RelatorioEntregas() {
                           <Th center title="Entregas sem nenhuma parada do caminhão perto do cliente">Sem parada</Th>
                           <Th center title={`Paradas no raio com menos de ${LIMITES.relampagoMin} min (vermelho se > ${LIMITES.relampagoMaxPct}%)`}>Relâmpago</Th>
                           <Th center title={`Paradas de ${LIMITES.paradaSemClienteMin} min ou mais longe de todo cliente, entre a saída e o retorno`}>Paradas s/ cliente (qtd · tempo)</Th>
-                          <Th center title={`Trechos entre clientes com desvio (km pela estrada > ${LIMITES.desvioFator}× a linha reta e +${LIMITES.desvioMinKm} km) e lentos (> ${LIMITES.lentoMinMin} min a < ${LIMITES.lentoMaxKmh} km/h)`}>Desvios · lentos</Th>
+                          <Th center title={`Trechos entre clientes com desvio (km pela estrada > ${cfg.desvioFator}× a linha reta e +${cfg.desvioMinKm} km) e lentos (> ${cfg.lentoMinMin} min a < ${cfg.lentoMaxKmh} km/h)`}>Desvios · lentos</Th>
                           <Th center title="Km rodado pelo GPS no dia · distância real informada no CheckNow (total da rota)">Km GPS · informado</Th>
                           <Th center title="Só no dia em que a rota fecha">Pendentes · Km inf.</Th>
                         </tr>

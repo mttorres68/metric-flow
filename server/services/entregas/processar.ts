@@ -6,6 +6,7 @@
 import { parseCheckNow } from "./parseCheckNow";
 import { montarLinhas, agruparPorRota, cruzar, type ResultadoLinha } from "./cruzar";
 import { analisarRotas, type AnaliseRota } from "./rota";
+import type { ConfigEntregas } from "@shared/entregas";
 import { mapaVeiculos, buscarGpsLinha, gpsErro, normalizarPlaca } from "./infleetEntregas";
 
 /** Executa fn sobre itens com no máximo n chamadas simultâneas, preservando a ordem. */
@@ -21,9 +22,9 @@ async function emParalelo<T, R>(itens: T[], n: number, fn: (t: T) => Promise<R>)
   return out;
 }
 
-/** Linhas por dia (ordenadas por dia, placa e motorista) e análise por rota. cercaId: cerca da base (saída/retorno); raioM: raio do cliente. */
+/** Linhas por dia (ordenadas por dia, placa e motorista) e análise por rota. cercaId: cerca da base (saída/retorno); config: raio e limites do modal ⚙. */
 export async function processarPlanilha(
-  buffer: Buffer, agora: Date, { cercaId, raioM }: { cercaId?: string; raioM?: number } = {},
+  buffer: Buffer, agora: Date, { cercaId, config }: { cercaId?: string; config?: Partial<ConfigEntregas> } = {},
 ): Promise<{ linhas: ResultadoLinha[]; rotas: AnaliseRota[] }> {
   const entregas = parseCheckNow(buffer);
   const linhas = montarLinhas(entregas, agora);
@@ -34,7 +35,7 @@ export async function processarPlanilha(
   const resultados = await emParalelo(linhas, 3, async l => {
     const vId = veiculos.get(normalizarPlaca(l.placa));
     const gps = vId ? await buscarGpsLinha(vId, l.janela, cercaId) : gpsErro("sem rastreador");
-    return cruzar(l, porRota.get(l.routeId)!, gps, raioM);
+    return cruzar(l, porRota.get(l.routeId)!, gps, config);
   });
   resultados.sort((a, b) =>
     a.linha.data.localeCompare(b.linha.data)

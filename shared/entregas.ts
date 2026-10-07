@@ -34,3 +34,19 @@ export function minParaHM(min: number): string {
   const t = Math.round(min);
   return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
 }
+
+/** Limites que a tela deixa ajustar (modal ⚙, tabela entregas_config). */
+export interface ConfigEntregas {
+  raioM: number;
+  desvioFator: number;
+  desvioMinKm: number;
+  lentoMinMin: number;
+  lentoMaxKmh: number;
+}
+export const CONFIG_ENTREGAS_PADRAO: ConfigEntregas = {
+  raioM: LIMITES.raioM,
+  desvioFator: LIMITES.desvioFator,
+  desvioMinKm: LIMITES.desvioMinKm,
+  lentoMinMin: LIMITES.lentoMinMin,
+  lentoMaxKmh: LIMITES.lentoMaxKmh,
+};

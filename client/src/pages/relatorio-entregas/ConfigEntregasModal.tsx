@@ -1,25 +1,47 @@
 /*
  * MetricFlow — Configuração do Relatório de Entregas (tabela entregas_config).
- * Por enquanto só o raio do cliente. Mesmo visual do ConfigMetricasModal.
+ * Raio do cliente e limites dos gatilhos de desvio e trecho lento. Mesmo visual do ConfigMetricasModal.
  */
 import { useEffect, useState } from "react";
 import { Loader2, RotateCcw, Save, Settings2, X } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import { LIMITES } from "@shared/entregas";
+import { CONFIG_ENTREGAS_PADRAO, type ConfigEntregas } from "@shared/entregas";
 
-const MIN = 50, MAX = 2000;
+interface Campo { chave: keyof ConfigEntregas; rotulo: string; un: string; min: number; max: number; step: number; inteiro: boolean; ajuda: string }
+
+/** Limites iguais aos do zod em configRouter.saveEntregasConfig. */
+const GRUPOS: { titulo: string; campos: Campo[] }[] = [
+  { titulo: "Cliente", campos: [
+    { chave: "raioM", rotulo: "Raio do cliente", un: "m", min: 50, max: 2000, step: 10, inteiro: true,
+      ajuda: "Parada do caminhão a até esta distância do cliente conta como entrega no raio." },
+  ] },
+  { titulo: "Desvio entre clientes", campos: [
+    { chave: "desvioFator", rotulo: "Km pela estrada acima de", un: "× a reta", min: 1, max: 10, step: 0.1, inteiro: false,
+      ajuda: "Trecho é desvio quando o caminhão rodou mais que este múltiplo da linha reta entre os dois clientes…" },
+    { chave: "desvioMinKm", rotulo: "E pelo menos", un: "km a mais", min: 0, max: 100, step: 0.5, inteiro: false,
+      ajuda: "…e a diferença passa deste valor (evita marcar trechos curtos dentro da cidade)." },
+  ] },
+  { titulo: "Trecho lento", campos: [
+    { chave: "lentoMinMin", rotulo: "Mais de", un: "min", min: 1, max: 600, step: 1, inteiro: true,
+      ajuda: "Trecho entre clientes é lento quando passa deste tempo…" },
+    { chave: "lentoMaxKmh", rotulo: "Média abaixo de", un: "km/h", min: 1, max: 120, step: 1, inteiro: true,
+      ajuda: "…com velocidade média abaixo deste valor." },
+  ] },
+];
+
+const valido = (c: Campo, v: number) => Number.isFinite(v) && v >= c.min && v <= c.max && (!c.inteiro || Number.isInteger(v));
 
 export function ConfigEntregasModal({ open, onClose, onSalvo }: { open: boolean; onClose: () => void; onSalvo: () => void }) {
   const utils = trpc.useUtils();
   const { data: salvo, isLoading } = trpc.config.getEntregasConfig.useQuery(undefined, { enabled: open });
   const salvar = trpc.config.saveEntregasConfig.useMutation();
   const restaurar = trpc.config.resetEntregasConfig.useMutation();
-  const [raio, setRaio] = useState<number>(LIMITES.raioM);
+  const [cfg, setCfg] = useState<ConfigEntregas>(CONFIG_ENTREGAS_PADRAO);
 
-  useEffect(() => { if (salvo) setRaio(salvo.raioM); }, [salvo, open]);
+  useEffect(() => { if (salvo) setCfg(salvo); }, [salvo, open]);
 
-  const valido = Number.isInteger(raio) && raio >= MIN && raio <= MAX;
+  const todosValidos = GRUPOS.every(g => g.campos.every(c => valido(c, cfg[c.chave])));
 
   async function aplicar(acao: () => Promise<unknown>, msg: string) {
     try {
@@ -38,7 +60,7 @@ export function ConfigEntregasModal({ open, onClose, onSalvo }: { open: boolean;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-md flex flex-col border border-slate-100 dark:border-[var(--border)]">
+      <div className="bg-white dark:bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col border border-slate-100 dark:border-[var(--border)]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-[var(--border)]">
           <div className="flex items-center gap-2">
             <Settings2 className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
@@ -52,31 +74,47 @@ export function ConfigEntregasModal({ open, onClose, onSalvo }: { open: boolean;
           </button>
         </div>
 
-        <div className="px-6 py-5">
+        <div className="px-6 py-5 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-6 text-slate-400 text-sm gap-2">
               <Loader2 className="w-4 h-4 animate-spin" /> Carregando configuração…
             </div>
           ) : (
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Raio do cliente (m)</span>
-              <input
-                type="number" min={MIN} max={MAX} step={10} value={Number.isNaN(raio) ? "" : raio}
-                onChange={e => setRaio(parseInt(e.target.value, 10))}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-[var(--background)] text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600"
-              />
-              <span className={`text-[11px] leading-snug ${valido ? "text-slate-400 dark:text-slate-500" : "text-red-500"}`}>
-                {valido
-                  ? `Parada do caminhão a até esta distância do cliente conta como entrega no raio. Padrão: ${LIMITES.raioM} m.`
-                  : `Informe um número inteiro entre ${MIN} e ${MAX}.`}
-              </span>
-            </label>
+            <div className="flex flex-col gap-5">
+              {GRUPOS.map(g => (
+                <section key={g.titulo} className="flex flex-col gap-3">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{g.titulo}</h3>
+                  {g.campos.map(c => {
+                    const v = cfg[c.chave];
+                    const ok = valido(c, v);
+                    return (
+                      <label key={c.chave} className="flex flex-col gap-1">
+                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{c.rotulo}</span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number" min={c.min} max={c.max} step={c.step} value={Number.isNaN(v) ? "" : v}
+                            onChange={e => setCfg({ ...cfg, [c.chave]: parseFloat(e.target.value) })}
+                            className="w-28 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-[var(--background)] text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600"
+                          />
+                          <span className="text-xs text-slate-500 dark:text-slate-400">{c.un}</span>
+                        </div>
+                        <span className={`text-[11px] leading-snug ${ok ? "text-slate-400 dark:text-slate-500" : "text-red-500"}`}>
+                          {ok
+                            ? `${c.ajuda} Padrão: ${CONFIG_ENTREGAS_PADRAO[c.chave]} ${c.un}.`
+                            : `Informe ${c.inteiro ? "um número inteiro" : "um número"} entre ${c.min} e ${c.max}.`}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </section>
+              ))}
+            </div>
           )}
         </div>
 
         <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-[var(--border)]">
           <button
-            onClick={() => aplicar(() => restaurar.mutateAsync(), `Raio restaurado para ${LIMITES.raioM} m.`)}
+            onClick={() => aplicar(() => restaurar.mutateAsync(), "Configuração restaurada para o padrão.")}
             disabled={ocupado}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 disabled:opacity-50 font-semibold"
           >
@@ -88,8 +126,8 @@ export function ConfigEntregasModal({ open, onClose, onSalvo }: { open: boolean;
               Cancelar
             </button>
             <button
-              onClick={() => aplicar(() => salvar.mutateAsync({ raioM: raio }), `Raio salvo: ${raio} m.`)}
-              disabled={ocupado || !valido || isLoading}
+              onClick={() => aplicar(() => salvar.mutateAsync(cfg), "Configuração salva.")}
+              disabled={ocupado || !todosValidos || isLoading}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-indigo-500 hover:bg-indigo-600 text-white disabled:opacity-50 font-semibold"
             >
               {salvar.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
