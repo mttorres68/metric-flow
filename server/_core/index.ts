@@ -11,6 +11,7 @@ import { relatorioRouter } from "../routes/relatorio";
 import { assessmentSyncRouter } from "../routes/assessmentSync";
 import { crmUploadRouter } from "../routes/crmUpload";
 import { relatorioEntregasRouter } from "../routes/relatorioEntregas";
+import { iniciarAgendador } from "../services/checknow/agendador";
 import { initWATables } from "../db/whatsapp";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -74,6 +75,7 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    iniciarAgendador();
   });
 }
 
