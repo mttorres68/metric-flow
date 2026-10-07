@@ -96,6 +96,17 @@ describe("analisarRotas", () => {
       expect(curto.pernoites[0]).toMatchObject({ descansoMin: 630, descansoCurto: true });
     });
 
+    it("dias seguidos só: sem entrega no meio (fim de semana parado), não há pernoite ligando os dias", () => {
+      const pulado = entregas.map(e => ({
+        ...e, rotaFim: brt("2026-10-05T18:00"),
+        baixaEm: e.baixaEm && e.baixaEm >= brt("2026-10-02T00:00") ? new Date(e.baixaEm.getTime() + 3 * 86_400_000) : e.baixaEm,
+      }));
+      const rotas = analisarRotas(pulado, montarLinhas(pulado, brt("2026-10-06T12:00"))
+        .map(l => cruzar(l, pulado, gpsPorDia[l.data] ?? gpsPorDia["2026-10-02"])));
+      expect(rotas[0].dias).toEqual(["2026-10-01", "2026-10-05"]);
+      expect(rotas[0].pernoites).toEqual([]);
+    });
+
     it("dormiu dentro de uma cerca (ex.: Sede)", () => {
       const sede = analisar({
         ...gpsPorDia,

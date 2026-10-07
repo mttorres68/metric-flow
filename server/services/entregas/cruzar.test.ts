@@ -41,19 +41,25 @@ describe("montarLinhas", () => {
       entrega({ ...r2, codCliente: "3", baixaEm: brt("2026-10-05T10:00") }),
     ], brt("2026-10-05T18:00"));
 
+    // 04 e 05 sem entrega da R1 (só fechou a rota no app em 05): não viram linha; o fechamento vai para o último dia com entrega.
     const r1Linhas = linhas.filter(l => l.routeId === "R1");
-    expect(r1Linhas.map(l => l.data)).toEqual(["2026-10-02", "2026-10-03", "2026-10-04", "2026-10-05"]);
+    expect(r1Linhas.map(l => l.data)).toEqual(["2026-10-02", "2026-10-03"]);
     expect(r1Linhas[0].janela.inicio.toISOString()).toBe("2026-10-02T03:00:00.000Z"); // dia inteiro: 00:00, não o início no app
     expect(r1Linhas[0].janela.fim.toISOString()).toBe("2026-10-03T02:59:59.000Z");
-    const r1Dia5 = r1Linhas[3];
-    expect(r1Dia5.janela.inicio.toISOString()).toBe("2026-10-05T03:00:00.000Z");
-    expect(r1Dia5.janela.fim.toISOString()).toBe("2026-10-05T09:51:00.000Z");
-    expect(r1Dia5.fechaRota).toBe(true);
+    expect(r1Linhas.map(l => l.fechaRota)).toEqual([false, true]);
 
     const [r2Dia5] = linhas.filter(l => l.routeId === "R2");
-    expect(r2Dia5.janela.inicio.toISOString()).toBe("2026-10-05T09:51:00.000Z");
+    expect(r2Dia5.janela.inicio.toISOString()).toBe("2026-10-05T09:51:00.000Z"); // corte da troca continua valendo
     expect(r2Dia5.janela.fim.toISOString()).toBe("2026-10-05T21:00:00.000Z"); // agora
     expect(r2Dia5.fechaRota).toBe(false);
+  });
+
+  it("o dia de início da rota fica mesmo sem entrega (saiu para longe e entregou no dia seguinte)", () => {
+    const linhas = montarLinhas([
+      entrega({ routeId: "R1", rotaInicio: brt("2026-10-05T07:00"), rotaFim: null, baixaEm: null }),
+      entrega({ routeId: "R1", codCliente: "2", rotaInicio: brt("2026-10-05T07:00"), rotaFim: null, baixaEm: brt("2026-10-06T10:00") }),
+    ], brt("2026-10-08T08:00"));
+    expect(linhas.map(l => l.data)).toEqual(["2026-10-05", "2026-10-06"]);
   });
 
   it("rota que fecha no meio do dia, sem outra rota no caminhão, usa o dia inteiro (pega o retorno à base)", () => {

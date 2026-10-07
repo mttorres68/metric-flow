@@ -136,8 +136,10 @@ export function agruparPorRota(entregas: Entrega[]): Map<string, Entrega[]> {
 }
 
 /**
- * Uma linha por rota e dia. Janela de GPS = o dia inteiro (00:00–23:59, ou até `agora`),
- * para pegar a saída real mesmo que o motorista inicie a rota no app depois. Só é cortada
+ * Uma linha por rota e dia com entrega (mais o dia de início da rota). Dias sem entrega — fim de
+ * semana parado, ou o dia em que o motorista só fechou a rota no app — não viram linha; o fechamento
+ * (fechaRota) vai para o último dia que ficou. Janela de GPS = o dia inteiro (00:00–23:59, ou até
+ * `agora`), para pegar a saída real mesmo que o motorista inicie a rota no app depois. Só é cortada
  * quando o mesmo caminhão troca de motorista no dia: no fim da rota anterior, ou no início
  * da seguinte se a anterior não tiver fim registrado.
  */
@@ -179,7 +181,14 @@ export function montarLinhas(entregas: Entrega[], agora: Date): LinhaDia[] {
       ls[i].janela.inicio = corte;
     }
   }
-  return linhas.map(({ rotaInicio, rotaFim, ...l }) => l);
+  // Depois do corte da troca de motorista (que usa todas as rotas do dia), tira os dias sem entrega.
+  const diasComBaixa = new Set(entregas.flatMap(e => (e.baixaEm ? [`${e.routeId}|${diaBRT(e.baixaEm)}`] : [])));
+  const ficam = linhas.filter(l => l.data === diaBRT(l.rotaInicio) || diasComBaixa.has(`${l.routeId}|${l.data}`));
+  for (const l of ficam) {
+    const ultimo = ficam.filter(x => x.routeId === l.routeId).at(-1);
+    l.fechaRota = l.rotaFim !== null && l === ultimo;
+  }
+  return ficam.map(({ rotaInicio, rotaFim, ...l }) => l);
 }
 
 /** O que o app diz no dia: 1ª e última baixa e tempo em cliente (saída − chegada no app). */

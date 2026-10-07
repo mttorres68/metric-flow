@@ -198,7 +198,10 @@ export function analisarRotas(entregas: Entrega[], linhas: ResultadoLinha[]): An
     const capacidadeKg = es.find(e => e.capacidadeKg)?.capacidadeKg ?? null;
 
     const comCoord = es.filter((e): e is Entrega & { lat: number; lon: number } => e.lat !== null && e.lon !== null);
+    // Só entre dias seguidos: dia sem entrega no meio (fim de semana parado) não vira uma "noite" de vários dias.
+    const diaSeguinte = (d: string) => new Date(Date.parse(`${d}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
     const pernoites = ls.slice(0, -1).flatMap((l, i) => {
+      if (ls[i + 1].linha.data !== diaSeguinte(l.linha.data)) return [];
       const p = pernoite(l, ls[i + 1], comCoord);
       return p ? [p] : [];
     });

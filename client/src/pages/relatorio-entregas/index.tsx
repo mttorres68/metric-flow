@@ -267,7 +267,9 @@ export default function RelatorioEntregas() {
     const noRaio = soma(gps, r => r.noRaio), relamp = soma(gps, r => r.relampago);
     return {
       linhas: linhas.length,
+      placas: new Set(linhas.map(r => r.linha.placa)).size,
       entregas: soma(linhas, r => r.entregasDia),
+      totalEntregas: soma(linhas, r => r.totalRota),
       noRaioPct: pct(noRaio, soma(gps, r => r.baixasComCoord)),
       semParada: soma(gps, r => r.semParada),
       relampPct: pct(relamp, noRaio + relamp),
@@ -440,8 +442,8 @@ export default function RelatorioEntregas() {
 
               <div className="px-6 pt-4 pb-2 grid grid-cols-5 gap-3">
                 {[
-                  { label: "Placas · motoristas", value: String(k.linhas), color: "text-slate-700 dark:text-slate-200", icon: <Truck size={16} className="text-indigo-400" /> },
-                  { label: "Entregas no dia", value: String(k.entregas), color: "text-slate-700 dark:text-slate-200", icon: <MapPin size={16} className="text-green-400" /> },
+                  { label: "Placas · motoristas / caminhões", value: `${k.linhas}/${k.placas}`, color: "text-slate-700 dark:text-slate-200", icon: <Truck size={16} className="text-indigo-400" /> },
+                  { label: "Entregues / total de entregas", value: `${k.entregas}/${k.totalEntregas}`, color: "text-slate-700 dark:text-slate-200", icon: <MapPin size={16} className="text-green-400" /> },
                   { label: "Entregas no raio", value: fmtPct(k.noRaioPct), color: k.noRaioPct < 100 ? "text-red-600" : "text-green-600", icon: <MapPin size={16} className="text-indigo-400" /> },
                   { label: "Entregas sem parada", value: String(k.semParada), color: k.semParada > 0 ? "text-red-600" : "text-green-600", icon: <AlertTriangle size={16} className="text-red-400" /> },
                   { label: "Relâmpago", value: fmtPct(k.relampPct), color: k.relampPct > LIMITES.relampagoMaxPct ? "text-red-600" : "text-green-600", icon: <Zap size={16} className="text-amber-400" /> },
