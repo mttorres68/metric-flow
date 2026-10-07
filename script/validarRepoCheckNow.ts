@@ -30,6 +30,12 @@ try {
   console.log("esperado T1/2 e T2/1:", lidas.map(e => `${e.routeId}/${e.codCliente}`).sort());
   console.log("rotaInicio volta igual:", lidas[0].rotaInicio!.getTime() === ini.getTime());
   console.log("gravar vazio não apaga:", await repo.gravarEntregas(rev.id, []), (await repo.entregasDoPeriodo(rev.id, "2026-01-01", "2026-01-01")).length === 2);
+  // Rota que começou antes do período e continua aberta entra; a que fechou antes do período não.
+  await repo.gravarEntregas(rev.id, [
+    { ...base, routeId: "T3", codCliente: "1", rotaInicio: new Date("2025-12-30T10:00:00-03:00"), rotaFim: null },
+    { ...base, routeId: "T4", codCliente: "1", rotaInicio: new Date("2025-12-30T10:00:00-03:00"), rotaFim: new Date("2025-12-31T18:00:00-03:00") },
+  ]);
+  console.log("esperado T1/2, T2/1 e T3/1:", (await repo.entregasDoPeriodo(rev.id, "2026-01-01", "2026-01-01")).map(e => `${e.routeId}/${e.codCliente}`).sort());
   await repo.comTrava(rev.id, async () => {
     await repo.comTrava(rev.id, async () => null).then(() => console.log("ERRO: trava não segurou"), e => console.log("trava ocupada:", e.message));
   });

@@ -182,7 +182,8 @@ function devolucoes(es: Entrega[], baixas: EntregaCruzada[]): AnaliseRota["devol
 }
 
 /** Uma análise por rota (RouteId) presente nas linhas, ordenadas pelo início da rota. */
-export function analisarRotas(entregas: Entrega[], linhas: ResultadoLinha[]): AnaliseRota[] {
+/** kmRotas: km do caminhão do início ao fim de cada rota (uma consulta); sem ele, soma o km das linhas. */
+export function analisarRotas(entregas: Entrega[], linhas: ResultadoLinha[], kmRotas: Map<string, number | null> = new Map()): AnaliseRota[] {
   const porRota = agruparPorRota(entregas);
   const rotas: AnaliseRota[] = [];
   for (const [routeId, es] of porRota) {
@@ -210,7 +211,7 @@ export function analisarRotas(entregas: Entrega[], linhas: ResultadoLinha[]): An
       ? [{ data: l.linha.data, ...l.tempo, chaveLigadaMin: l.chaveLigadaMin, marchasLentas: l.marchasLentas }]
       : []));
     const kms = ls.map(l => l.kmGps).filter((k): k is number => k !== null);
-    const kmGps = kms.length ? Math.round(soma(kms, k => k) * 10) / 10 : null;
+    const kmGps = kmRotas.get(routeId) ?? (kms.length ? Math.round(soma(kms, k => k) * 10) / 10 : null);
     const e0 = es[0];
     const kmInformado = e0.odoIniInformado !== null && e0.odoFimInformado !== null ? e0.odoFimInformado - e0.odoIniInformado : null;
     const diferencaKm = kmGps !== null && kmInformado !== null ? Math.round((kmGps - kmInformado) * 10) / 10 : null;

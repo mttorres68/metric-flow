@@ -366,8 +366,8 @@ fixo. A tabela cruzada é revisada junto com o gestor para calibrar os limites.
 
 ## 11. Depois desta versão (fora do escopo)
 
-- Persistir entregas e paradas no Postgres (histórico por motorista e semana),
-  com deduplicação de upload por `RouteId`.
+- ~~Persistir as entregas no Postgres~~ — feito na coleta automática do
+  CheckNow (`checknow-coleta-design.md`); falta guardar as paradas/cruzamento.
 - Levar os demais `LIMITES` (relâmpago, saída, após 14h…) para o modal ⚙.
 - Aderência à sequência (`Ordem Planejada` × ordem real pelo GPS).
 - ERP: paradas em clientes fora do romaneio; qualidade do cadastro de

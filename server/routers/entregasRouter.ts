@@ -28,10 +28,6 @@ async function amigavel<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-async function tokenDa(revendaId: number) {
-  return (await repo.contaComSegredos(revendaId))?.infleetToken ?? undefined;
-}
-
 const contas = router({
   cofre: publicProcedure.query(() => ({ disponivel: cofreDisponivel() })),
   listar: publicProcedure.query(() => repo.listarContas()),
@@ -50,18 +46,18 @@ const contas = router({
     return testarLogin(c);
   })),
   testarInfleet: publicProcedure.input(z.object({ revendaId: z.number().int() })).mutation(async ({ input }) =>
-    ({ veiculos: (await mapaVeiculos(await tokenDa(input.revendaId))).size })),
+    ({ veiculos: (await mapaVeiculos(await repo.tokenInfleet(input.revendaId))).size })),
 });
 
 export const entregasRouter = router({
   contas,
   processar: publicProcedure.input(periodo.and(z.object({ cercaId: z.string().optional() }))).mutation(async ({ input }) => {
-    const [entregas, token, config] = await Promise.all([repo.entregasDoPeriodo(input.revendaId, input.de, input.ate), tokenDa(input.revendaId), getConfigEntregas()]);
-    return processarEntregas(entregas, new Date(), { cercaId: input.cercaId, token, config });
+    const [entregas, token, config] = await Promise.all([repo.entregasDoPeriodo(input.revendaId, input.de, input.ate), repo.tokenInfleet(input.revendaId), getConfigEntregas()]);
+    return processarEntregas(entregas, new Date(), { cercaId: input.cercaId, token, config, periodo: { de: input.de, ate: input.ate } });
   }),
   importar: publicProcedure.input(z.object({ revendaId: z.number().int(), xlsxBase64: z.string().min(1) }))
     .mutation(({ input }) => amigavel(() => importarPlanilha(input.revendaId, Buffer.from(input.xlsxBase64, "base64")))),
   coletar: publicProcedure.input(periodo).mutation(({ input }) => amigavel(() => coletarRevenda(input.revendaId, input.de, input.ate, "botao"))),
   coletas: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(({ input }) => repo.ultimasColetas(input.revendaId)),
-  cercas: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(async ({ input }) => listarCercasInfleet(await tokenDa(input.revendaId))),
+  cercas: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(async ({ input }) => listarCercasInfleet(await repo.tokenInfleet(input.revendaId))),
 });

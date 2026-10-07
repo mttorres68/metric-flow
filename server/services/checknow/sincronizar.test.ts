@@ -60,6 +60,15 @@ describe("coletarRevenda", () => {
     (repo.contaComSegredos as Mock).mockResolvedValue(null);
     await expect(coletarRevenda(5, "2026-10-06", "2026-10-07", "botao", [])).rejects.toThrow("revenda sem conta do CheckNow");
   });
+  it("a trava vale só durante cada tentativa: nas esperas o upload e o botão ficam livres", async () => {
+    (baixarCheckNow as Mock).mockRejectedValueOnce(new repo.ColetaError("CheckNow não respondeu (HTTP 502)")).mockResolvedValue([Buffer.from("x")]);
+    (parseCheckNow as Mock).mockReturnValue([{ routeId: "1" }]);
+    (repo.gravarEntregas as Mock).mockResolvedValue({ rotas: 1, linhas: 1 });
+    await coletarRevenda(5, "2026-10-06", "2026-10-07", "auto", [0]);
+    expect(repo.comTrava).toHaveBeenCalledTimes(2);
+    expect((repo.fecharColeta as Mock).mock.calls.map(c => c[2].status)).toEqual(["erro", "ok"]);
+  });
+
   it("trava ocupada não abre coleta", async () => {
     (repo.comTrava as Mock).mockRejectedValueOnce(new repo.ColetaError("coleta já em andamento"));
     await expect(coletarRevenda(5, "2026-10-06", "2026-10-07", "botao", [])).rejects.toThrow("coleta já em andamento");

@@ -39,6 +39,16 @@ export function blocos(inicio: Date, fim: Date): { startAt: string; endAt: strin
   return out;
 }
 
+/** Km rodado pelo veículo no período (aceita vários dias numa consulta só). */
+export async function kmNoPeriodo(vehicleId: string, inicio: Date, fim: Date, token?: string): Promise<number | null> {
+  const km = await consultar<{ routeVehicleDetails: { totalDistanceTraveled: number } | null }>(Q_KM, {
+    filter: { vehicleId, fixTime: { startAt: inicio.toISOString(), endAt: fim.toISOString() } },
+  }, token);
+  const raw = km.routeVehicleDetails?.totalDistanceTraveled ?? null;
+  // Mesma conversão de unidade do resumoDiario (infleetRouter.ts).
+  return raw === null ? null : Math.round((raw > 1000 ? raw / 1000 : raw) * 10) / 10;
+}
+
 /** Cercas da conta Infleet da revenda (sem token = INFLEET_TOKEN). */
 export async function listarCercasInfleet(token?: string): Promise<{ id: string; name: string }[]> {
   const { listGeofences } = await consultar<{ listGeofences: { id: string; name: string }[] }>(`query { listGeofences { id name } }`, {}, token);
@@ -137,12 +147,7 @@ export async function buscarGpsLinha(
     }
     if (!posicoes.length) return gpsErro("sem sinal GPS");
 
-    const km = await consultar<{ routeVehicleDetails: { totalDistanceTraveled: number } | null }>(Q_KM, {
-      filter: { vehicleId, fixTime: { startAt: janela.inicio.toISOString(), endAt: janela.fim.toISOString() } },
-    }, token);
-    const raw = km.routeVehicleDetails?.totalDistanceTraveled ?? null;
-    // Mesma conversão de unidade do resumoDiario (infleetRouter.ts).
-    const kmGps = raw === null ? null : Math.round((raw > 1000 ? raw / 1000 : raw) * 10) / 10;
+    const kmGps = await kmNoPeriodo(vehicleId, janela.inicio, janela.fim, token);
 
     const gps = detectarParadas(posicoes);
     const eventos = await eventosDoDia(vehicleId, janela, token);

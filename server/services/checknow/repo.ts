@@ -2,7 +2,7 @@
  * MetricFlow — acesso ao banco da coleta do CheckNow (spec checknow-coleta §4–5).
  * Contas (segredos cifrados), entregas por revenda, registro de coletas e trava por revenda.
  */
-import { and, desc, eq, gte, inArray, lte, ne } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import type { Pool } from "pg";
 import { getDb } from "../../db";
 import { checknowColetas, checknowEntregas, entregasContas, revendas } from "../../../drizzle/schema";
@@ -45,10 +45,17 @@ export async function gravarEntregas(revendaId: number, entregas: Entrega[]): Pr
   return { rotas: rotas.length, linhas: linhas.length };
 }
 
+/**
+ * Entregas das rotas que estavam rodando no período: começaram até `ate` (no máximo 31 dias antes de `de`)
+ * e não fecharam antes de `de`. Quem filtra os dias das linhas é o processarEntregas (opção periodo).
+ */
 export async function entregasDoPeriodo(revendaId: number, de: string, ate: string): Promise<Entrega[]> {
   const db = await exigirDb();
-  const rows = await db.select().from(checknowEntregas)
-    .where(and(eq(checknowEntregas.revendaId, revendaId), gte(checknowEntregas.dia, de), lte(checknowEntregas.dia, ate)));
+  const limite = new Date(Date.parse(`${de}T12:00:00Z`) - 31 * 86_400_000).toISOString().slice(0, 10);
+  const rows = await db.select().from(checknowEntregas).where(and(
+    eq(checknowEntregas.revendaId, revendaId), gte(checknowEntregas.dia, limite), lte(checknowEntregas.dia, ate),
+    or(isNull(checknowEntregas.rotaFim), gte(checknowEntregas.rotaFim, new Date(`${de}T00:00:00-03:00`))),
+  ));
   return rows.map(deLinha);
 }
 
@@ -93,11 +100,42 @@ export async function ultimoPeriodoOk(revendaId: number): Promise<string | null>
   return r?.ate ?? null;
 }
 
+/** Decifra senha e token; cifrados com outra CHECKNOW_CHAVE viram um erro que diz o que fazer. */
+export function abrirSegredos(c: { checknowSenha: string; infleetToken: string | null }) {
+  try {
+    return { senha: decifrar(c.checknowSenha), infleetToken: c.infleetToken ? decifrar(c.infleetToken) : null };
+  } catch {
+    throw new ColetaError("credenciais cifradas com outra CHECKNOW_CHAVE — recadastre a conta");
+  }
+}
+
+/** Token do Infleet da conta; ausente ou ilegível → undefined (vale o INFLEET_TOKEN do .env). */
+export function lerToken(cifrado: string | null): string | undefined {
+  if (!cifrado) return undefined;
+  try {
+    return decifrar(cifrado);
+  } catch {
+    console.warn("[CheckNow] token do Infleet cifrado com outra CHECKNOW_CHAVE; usando o INFLEET_TOKEN do .env");
+    return undefined;
+  }
+}
+
+/** Login recusado não volta a ser tentado sozinho (risco de bloquear a conta) até a conta ser editada. */
+export const deveColetarAuto = (c: { ultimaColetaOk: boolean | null; ultimaColetaErro: string | null }) =>
+  !(c.ultimaColetaOk === false && c.ultimaColetaErro === "login recusado");
+
 export async function contaComSegredos(revendaId: number) {
   const db = await exigirDb();
   const [c] = await db.select().from(entregasContas).where(eq(entregasContas.revendaId, revendaId));
   if (!c) return null;
-  return { revendaId, ativo: c.ativo, usuario: c.checknowUsuario, senha: decifrar(c.checknowSenha), infleetToken: c.infleetToken ? decifrar(c.infleetToken) : null };
+  return { revendaId, ativo: c.ativo, usuario: c.checknowUsuario, ...abrirSegredos(c) };
+}
+
+/** Só o token do Infleet (a leitura do relatório não depende da senha do CheckNow). */
+export async function tokenInfleet(revendaId: number): Promise<string | undefined> {
+  const db = await exigirDb();
+  const [c] = await db.select({ t: entregasContas.infleetToken }).from(entregasContas).where(eq(entregasContas.revendaId, revendaId));
+  return lerToken(c?.t ?? null);
 }
 
 /** Para a tela: nunca devolve senha nem token. */
@@ -126,7 +164,9 @@ export async function salvarConta(c: SalvarConta) {
     ...(c.infleetToken === null ? { infleetToken: null } : c.infleetToken ? { infleetToken: cifrar(c.infleetToken) } : {}),
   };
   if (atual) {
-    await db.update(entregasContas).set({ checknowUsuario: c.checknowUsuario, ...segredos, updatedAt: new Date() }).where(eq(entregasContas.id, atual.id));
+    // Editar a conta libera de novo a coleta automática parada por login recusado.
+    await db.update(entregasContas).set({ checknowUsuario: c.checknowUsuario, ...segredos, ultimaColetaOk: null, ultimaColetaErro: null, updatedAt: new Date() })
+      .where(eq(entregasContas.id, atual.id));
   } else {
     if (!c.checknowSenha) throw new ColetaError("informe a senha do CheckNow");
     await db.insert(entregasContas).values({ revendaId: c.revendaId, checknowUsuario: c.checknowUsuario, checknowSenha: cifrar(c.checknowSenha), infleetToken: segredos.infleetToken ?? null });
@@ -145,7 +185,10 @@ export async function revendasSemConta() {
   return todas.filter(r => !comConta.includes(r.id));
 }
 
-export async function contasAtivas(): Promise<number[]> {
+/** Revendas que a coleta automática deve buscar: ativas e sem login recusado pendente. */
+export async function contasParaColeta(): Promise<number[]> {
   const db = await exigirDb();
-  return (await db.select({ id: entregasContas.revendaId }).from(entregasContas).where(eq(entregasContas.ativo, true))).map(r => r.id);
+  const rows = await db.select({ id: entregasContas.revendaId, ultimaColetaOk: entregasContas.ultimaColetaOk, ultimaColetaErro: entregasContas.ultimaColetaErro })
+    .from(entregasContas).where(eq(entregasContas.ativo, true));
+  return rows.filter(deveColetarAuto).map(r => r.id);
 }

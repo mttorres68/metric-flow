@@ -9,7 +9,7 @@
 import { Router, type Request, type Response } from "express";
 import JSZip from "jszip";
 import { processarEntregas } from "../services/entregas/processar";
-import { contaComSegredos, entregasDoPeriodo } from "../services/checknow/repo";
+import { entregasDoPeriodo, tokenInfleet } from "../services/checknow/repo";
 import type { ResultadoLinha } from "../services/entregas/cruzar";
 import { gerarPDFEntregas } from "../services/pdfEntregas";
 import { getConfigEntregas } from "../services/configService";
@@ -26,11 +26,12 @@ relatorioEntregasRouter.post("/gerar", async (req: Request, res: Response) => {
 
   try {
     const config = await getConfigEntregas();
-    const [entregas, conta] = await Promise.all([entregasDoPeriodo(revendaId, de, ate), contaComSegredos(revendaId)]);
+    const [entregas, token] = await Promise.all([entregasDoPeriodo(revendaId, de, ate), tokenInfleet(revendaId)]);
     let { linhas: resultados } = await processarEntregas(entregas, new Date(), {
       cercaId: typeof cercaId === "string" && cercaId ? cercaId : undefined,
-      token: conta?.infleetToken ?? undefined,
+      token,
       config,
+      periodo: { de, ate },
     });
     if (typeof soData === "string" && soData) resultados = resultados.filter(r => r.linha.data === soData);
     if (!resultados.length) {

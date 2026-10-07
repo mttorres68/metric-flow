@@ -6,8 +6,9 @@ vi.mock("./infleetEntregas", async importOriginal => ({
   ...(await importOriginal<typeof import("./infleetEntregas")>()),
   mapaVeiculos: vi.fn(),
   buscarGpsLinha: vi.fn(),
+  kmNoPeriodo: vi.fn(),
 }));
-import { mapaVeiculos, buscarGpsLinha } from "./infleetEntregas";
+import { mapaVeiculos, buscarGpsLinha, kmNoPeriodo } from "./infleetEntregas";
 import { processarEntregas } from "./processar";
 import { parseCheckNow } from "./parseCheckNow";
 
@@ -36,6 +37,7 @@ const gpsNoCliente = {
 beforeEach(() => {
   (mapaVeiculos as Mock).mockReset();
   (buscarGpsLinha as Mock).mockReset();
+  (kmNoPeriodo as Mock).mockReset().mockResolvedValue(null);
 });
 
 describe("processarEntregas", () => {
@@ -78,6 +80,28 @@ describe("processarEntregas", () => {
     const agora = new Date("2026-10-06T12:00:00-03:00");
     expect((await processarEntregas(parseCheckNow(planilha([linha({})])), agora)).linhas[0].noRaio).toBe(0);
     expect((await processarEntregas(parseCheckNow(planilha([linha({})])), agora, { config: { raioM: 500 } })).linhas[0].noRaio).toBe(1);
+  });
+
+  it("período: só os dias pedidos viram linha (e só eles buscam GPS)", async () => {
+    (mapaVeiculos as Mock).mockResolvedValue(new Map([["SOL6B13", "v1"]]));
+    (buscarGpsLinha as Mock).mockResolvedValue(gpsNoCliente);
+    const { linhas: rs } = await processarEntregas(parseCheckNow(planilha([
+      linha({ "Data Rota Fim Realizada": "06/10/2026" }),
+      linha({ "Código do Cliente": 11, "Data de Chegada": "06/10/2026", "Data Rota Fim Realizada": "06/10/2026" }),
+    ])), new Date("2026-10-07T12:00:00-03:00"), { periodo: { de: "2026-10-06", ate: "2026-10-06" } });
+    expect(rs.map(r => r.linha.data)).toEqual(["2026-10-06"]);
+    expect(buscarGpsLinha).toHaveBeenCalledTimes(1);
+  });
+
+  it("km da rota: uma consulta do início ao fim da rota inteira (pega os dias de viagem sem entrega)", async () => {
+    (mapaVeiculos as Mock).mockResolvedValue(new Map([["SOL6B13", "v1"]]));
+    (buscarGpsLinha as Mock).mockResolvedValue(gpsNoCliente);
+    (kmNoPeriodo as Mock).mockResolvedValue(445.2);
+    const { rotas } = await processarEntregas(parseCheckNow(planilha([linha({})])), new Date("2026-10-06T12:00:00-03:00"), { token: "tok" });
+    expect(rotas[0].distancia.kmGps).toBe(445.2);
+    expect((kmNoPeriodo as Mock).mock.calls[0]).toEqual([
+      "v1", new Date("2026-10-05T07:00:00-03:00"), new Date("2026-10-05T18:00:00-03:00"), "tok",
+    ]);
   });
 
   it("planilha sem rota iniciada devolve lista vazia sem chamar o Infleet", async () => {

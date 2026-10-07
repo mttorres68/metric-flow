@@ -107,31 +107,46 @@ Pasta `server/services/checknow/`.
     relatório mudou (ViewState não encontrado)", "resposta não é Excel",
     "CheckNow não respondeu (HTTP n)". Timeout de 2 min por chamada. A senha
     nunca entra em log nem em mensagem.
-- **`sincronizar.ts`** — `coletarRevenda(conta, de, ate, origem)`:
+- **`sincronizar.ts`** — `coletarRevenda(conta, de, ate, origem)`; cada
+  tentativa (botão = 1 + 1 após 5 s; auto = após 1, 5 e 15 min; "login
+  recusado" não repete) faz os passos abaixo, e a trava fica solta nas esperas
+  (upload e botão livres enquanto o CheckNow está fora):
   1. trava `pg_try_advisory_lock` por revenda; ocupada → "coleta já em
      andamento";
   2. registra a coleta como `rodando`;
-  3. baixa (tentativas: botão = 1 + 1 após 5 s; auto = após 1, 5 e 15 min) e lê
-     com `parseCheckNow`;
+  3. baixa e lê com `parseCheckNow`;
   4. `gravarEntregas(revendaId, entregas)` numa transação: apaga só os
      `routeId` presentes no arquivo e insere; zero entregas → `sem_dados`, nada
      apagado;
   5. fecha a coleta e atualiza `ultimaColeta*` da conta.
   O upload manual usa os passos 2, 4 e 5 com origem `upload`.
 - **`agendador.ts`** — liga só com `CHECKNOW_COLETA_AUTO=1`; `setTimeout`
-  simples (uma instância em produção). Revendas ativas, uma de cada vez:
-  - aos :05, das 06h às 22h (BRT): ontem e hoje;
-  - às 23:30: últimos 3 dias;
+  simples (uma instância em produção). Revendas ativas, uma de cada vez,
+  menos as paradas por "login recusado" (voltam quando a conta é editada, para
+  não bloquear o login real da revenda):
+  - aos :05, das 06h às 22h (BRT), e às 23:30: últimos 7 dias (o portal filtra
+    pelo início da rota; rota de vários dias só continua atualizada se o início
+    dela estiver no período);
   - 1 min após subir: da data final da última coleta `ok` até hoje, no máximo
     7 dias.
   Funções puras testáveis: `proximaExecucao(agora)` e
-  `periodoRecuperacao(ultimoOk, hoje)`.
+  `periodoRecuperacao(ultimoOk, hoje)`, `periodoAuto(hoje)`.
+- **Segredos** — `contaComSegredos` (coleta) e `tokenInfleet` (leitura do
+  relatório: não depende da senha). Cifrado com outra `CHECKNOW_CHAVE`: a coleta
+  diz "recadastre a conta"; o token ilegível cai no `INFLEET_TOKEN`.
 - **Infleet por revenda** — `infleetEntregas.consultar` e `buscarGpsLinha`
-  recebem o token (`conta.infleetToken ?? INFLEET_TOKEN`); `listarCercas`
-  aceita revendaId.
+  recebem o token (`conta.infleetToken ?? INFLEET_TOKEN`); `entregas.cercas`
+  lista as cercas da conta da revenda.
 - **Processamento** — `processarPlanilha` vira `processarEntregas(entregas,
-  agora, { token, cercaId, config })`; o parse fica fora. Leitura:
-  `entregasDoPeriodo(revendaId, de, ate)`.
+  agora, { token, cercaId, config, periodo })`; o parse fica fora. Leitura:
+  `entregasDoPeriodo(revendaId, de, ate)` traz as rotas que estavam rodando no
+  período (começaram até `ate`, no máx. 31 dias antes de `de`, e não fecharam
+  antes de `de`); `periodo` deixa só as linhas desses dias.
+- **Dias sem entrega** — não viram linha (fica o dia de início da rota e os
+  dias com entrega); pendentes e km informado vão para o último dia que ficou.
+  O km GPS da rota (aba Por rota) vem de uma consulta do início ao fim da rota
+  inteira (`kmNoPeriodo`), que conta os dias de viagem sem entrega. Pernoite só
+  entre dias seguidos.
 
 ### API (tRPC)
 
@@ -158,6 +173,9 @@ Pasta `server/services/checknow/`.
   resultado, linhas).
 - **Período vazio:** "Nenhuma entrega de Duttra FL entre 01/10 e 07/10" + botão
   Buscar do CheckNow.
+- **Cards do dia:** "Placas · motoristas / caminhões" = linhas / placas
+  distintas; "Entregues / total de entregas" = entregues no dia / soma dos
+  clientes das rotas do dia (mesmo cálculo da coluna Entregas).
 - **Resto igual:** abas Por dia / Por rota, dia, detalhe, cerca (lista da conta
   Infleet da revenda; padrão "Sede"), PDF pela revenda e período.
 - **Modal ⚙** com abas **Limites** (atual) e **Contas**: por revenda, ativo,
@@ -174,8 +192,10 @@ Pasta `server/services/checknow/`.
 | Planilha vazia ou inválida | `parseCheckNow` antes de gravar; inválida não grava. |
 | Gravação pela metade | Transação única. |
 | Servidor parado | Recuperação ao subir, até 7 dias. |
-| Botão + automático juntos | Advisory lock por revenda. |
-| Baixa registrada tarde | Hoje+ontem de hora em hora; 3 dias às 23:30. |
+| Botão + automático juntos | Advisory lock por revenda (solto nas esperas entre tentativas). |
+| Baixa registrada tarde / rota de vários dias | Últimos 7 dias de hora em hora e às 23:30. |
+| Senha trocada no CheckNow | "login recusado" para a coleta automática até a conta ser editada. |
+| `CHECKNOW_CHAVE` trocada | Relatório continua (token cai no padrão); coleta pede para recadastrar. |
 | Coleta quebrada de vez | Upload manual continua e grava no banco. |
 | Ninguém percebe | Situação da coleta na tela, vermelho após 3 h. |
 | Dev coletando junto | Só com `CHECKNOW_COLETA_AUTO=1`. |

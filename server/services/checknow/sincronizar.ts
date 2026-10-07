@@ -37,13 +37,12 @@ async function registrar(revendaId: number, origem: repo.Origem, de: string, ate
   }
 }
 
-export function coletarRevenda(revendaId: number, de: string, ate: string, origem: "auto" | "botao", esperasMs = ESPERAS[origem]): Promise<ResultadoColeta> {
-  return repo.comTrava(revendaId, async () => {
-    const conta = await repo.contaComSegredos(revendaId);
-    if (!conta) throw new repo.ColetaError("revenda sem conta do CheckNow");
-    return registrar(revendaId, origem, de, ate, async () =>
-      (await comTentativas(() => baixarCheckNow(conta, de, ate), esperasMs)).flatMap(b => parseCheckNow(b)));
-  });
+/** Cada tentativa pega a trava, registra, baixa e grava; nas esperas entre tentativas a trava fica solta (upload e botão livres). */
+export async function coletarRevenda(revendaId: number, de: string, ate: string, origem: "auto" | "botao", esperasMs = ESPERAS[origem]): Promise<ResultadoColeta> {
+  const conta = await repo.contaComSegredos(revendaId);
+  if (!conta) throw new repo.ColetaError("revenda sem conta do CheckNow");
+  return comTentativas(() => repo.comTrava(revendaId, () =>
+    registrar(revendaId, origem, de, ate, async () => (await baixarCheckNow(conta, de, ate)).flatMap(b => parseCheckNow(b)))), esperasMs);
 }
 
 /** Upload manual: mesma gravação, período = dias das rotas da planilha. Lança PlanilhaInvalidaError antes de registrar. */

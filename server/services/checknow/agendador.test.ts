@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 vi.mock("./repo", () => ({}));
 vi.mock("./sincronizar", () => ({}));
-import { periodoDoTipo, periodoRecuperacao, proximaExecucao } from "./agendador";
+import { periodoAuto, periodoRecuperacao, proximaExecucao } from "./agendador";
 
 const brt = (s: string) => new Date(`${s}-03:00`);
 
@@ -13,9 +13,8 @@ describe("proximaExecucao", () => {
 });
 
 describe("períodos", () => {
-  it("hora: ontem e hoje; noite: últimos 3 dias", () => {
-    expect(periodoDoTipo("hora", "2026-10-07")).toEqual({ de: "2026-10-06", ate: "2026-10-07" });
-    expect(periodoDoTipo("noite", "2026-10-07")).toEqual({ de: "2026-10-05", ate: "2026-10-07" });
+  it("de hora em hora e às 23:30: últimos 7 dias (o portal filtra pelo início da rota; rota de vários dias continua sendo atualizada)", () => {
+    expect(periodoAuto("2026-10-07")).toEqual({ de: "2026-10-01", ate: "2026-10-07" });
   });
   it("recuperação: desde o último ok, no máximo 7 dias", () => {
     expect(periodoRecuperacao("2026-10-05", "2026-10-07")).toEqual({ de: "2026-10-05", ate: "2026-10-07" });
