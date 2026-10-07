@@ -2,14 +2,14 @@
  * MetricFlow — Relatório Gerencial de Entregas (CheckNow × Infleet)
  *
  *   POST /api/relatorio-entregas/gerar
- *     Body: { xlsxBase64: string, analise?: string, data?: "aaaa-mm-dd", cercaId?: string }
+ *     Body: { revendaId: number, de: "aaaa-mm-dd", ate: "aaaa-mm-dd", analise?: string, data?: "aaaa-mm-dd", cercaId?: string }
  *     → PDF (1 dia, ou só `data` quando informada) ou ZIP (vários dias).
- *     Sem banco: tudo calculado no request. A tela usa o tRPC entregas.processar.
+ *     Entregas lidas do banco (coleta do CheckNow); GPS pela conta Infleet da revenda. A tela usa o tRPC entregas.processar.
  */
 import { Router, type Request, type Response } from "express";
 import JSZip from "jszip";
-import { PlanilhaInvalidaError } from "../services/entregas/parseCheckNow";
-import { processarPlanilha } from "../services/entregas/processar";
+import { processarEntregas } from "../services/entregas/processar";
+import { contaComSegredos, entregasDoPeriodo } from "../services/checknow/repo";
 import type { ResultadoLinha } from "../services/entregas/cruzar";
 import { gerarPDFEntregas } from "../services/pdfEntregas";
 import { getConfigEntregas } from "../services/configService";
@@ -17,21 +17,24 @@ import { getConfigEntregas } from "../services/configService";
 export const relatorioEntregasRouter = Router();
 
 relatorioEntregasRouter.post("/gerar", async (req: Request, res: Response) => {
-  const { xlsxBase64, analise, data: soData, cercaId } = (req.body ?? {}) as { xlsxBase64?: unknown; analise?: unknown; data?: unknown; cercaId?: unknown };
-  if (typeof xlsxBase64 !== "string" || !xlsxBase64) {
-    res.status(400).json({ error: "Campo xlsxBase64 obrigatório." });
+  const { revendaId, de, ate, analise, data: soData, cercaId } = (req.body ?? {}) as Record<string, unknown>;
+  const ehDia = (v: unknown): v is string => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  if (typeof revendaId !== "number" || !Number.isInteger(revendaId) || !ehDia(de) || !ehDia(ate)) {
+    res.status(400).json({ error: "Informe revenda e período." });
     return;
   }
 
   try {
     const config = await getConfigEntregas();
-    let { linhas: resultados } = await processarPlanilha(Buffer.from(xlsxBase64, "base64"), new Date(), {
+    const [entregas, conta] = await Promise.all([entregasDoPeriodo(revendaId, de, ate), contaComSegredos(revendaId)]);
+    let { linhas: resultados } = await processarEntregas(entregas, new Date(), {
       cercaId: typeof cercaId === "string" && cercaId ? cercaId : undefined,
+      token: conta?.infleetToken ?? undefined,
       config,
     });
     if (typeof soData === "string" && soData) resultados = resultados.filter(r => r.linha.data === soData);
     if (!resultados.length) {
-      res.status(400).json({ error: "Nenhuma rota iniciada na planilha para o período pedido." });
+      res.status(400).json({ error: "Nenhuma rota iniciada no período pedido." });
       return;
     }
 
@@ -58,10 +61,6 @@ relatorioEntregasRouter.post("/gerar", async (req: Request, res: Response) => {
     res.setHeader("Content-Disposition", `attachment; filename="entregas.zip"`);
     res.send(zipBuf);
   } catch (e) {
-    if (e instanceof PlanilhaInvalidaError) {
-      res.status(400).json({ error: e.message, faltando: e.faltando });
-      return;
-    }
     console.error("[relatorio-entregas]", e);
     res.status(500).json({ error: (e as Error).message });
   }
