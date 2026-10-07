@@ -11,14 +11,14 @@ const entrega = (o: Partial<Entrega> = {}): Entrega => ({
   situacao: "ENTREGUE", baixaEm: brt("2026-10-05T10:00"),
   rotaInicio: brt("2026-10-05T07:00"), rotaFim: null,
   odoIniInformado: null, odoFimInformado: null,
-  ordemPlanejada: null, valor: 0, pesoKg: 0, notas: 1, motivoProblema: null, capacidadeKg: null, cidade: "", ...o,
+  saidaApp: null, ordemPlanejada: null, valor: 0, pesoKg: 0, notas: 1, motivoProblema: null, capacidadeKg: null, cidade: "", ...o,
 });
 
 const parada = (lat: number, lon: number, inicio: string, min: number): Parada =>
   ({ lat, lon, inicio: brt(inicio), fim: new Date(brt(inicio).getTime() + min * 60000), min });
 
 const gps = (paradas: Parada[], o: Partial<GpsLinha> = {}): GpsLinha => ({
-  erro: null, paradas, kmGps: 120, eventos: [], saidaOrigem: "gps", retornoOrigem: "gps",
+  erro: null, paradas, kmGps: 120, eventos: [], trajeto: { t: [], km: [] }, saidaOrigem: "gps", retornoOrigem: "gps",
   saida: brt("2026-10-05T07:30"), retorno: brt("2026-10-05T18:00"), ...o,
 });
 
@@ -221,6 +221,54 @@ describe("cruzar", () => {
       expect(cruzar(linha(), [entrega()], gps([], { erro: "sem rastreador" })).tempo).toBeNull();
       const parado = cruzar(linha(), [entrega()], gps(paradasDia, { saida: null, retorno: null }));
       expect([parado.tempo, parado.ultimaParada, parado.chaveLigadaMin]).toEqual([null, null, null]);
+    });
+  });
+
+  describe("percursos, app × GPS e trechos entre clientes", () => {
+    // c1 → c2 a ~1 km; c3 a ~1 km de c2. Saída 07:30, retorno 18:00.
+    const c = (k: number, baixa: string, saiApp: string, cidade: string) => entrega({
+      codCliente: `c${k}`, cliente: `C${k}`, lat: -7 - 0.009 * (k - 1), cidade,
+      baixaEm: brt(`2026-10-05T${baixa}`), saidaApp: brt(`2026-10-05T${saiApp}`),
+    });
+    const es = [c(1, "08:05", "08:07", "A"), c(2, "08:35", "08:36", "A"), c(3, "16:00", "16:00", "B")];
+    const pontos: [string, number][] = [
+      ["07:30", 0], ["08:00", 10], ["08:10", 10], ["08:30", 11], ["08:40", 11], ["10:00", 20], ["10:10", 20], ["18:00", 35],
+    ];
+    const trajeto = { t: pontos.map(([h]) => brt(`2026-10-05T${h}`).getTime()), km: pontos.map(([, km]) => km) };
+    const r = cruzar(linha(), es, gps([
+      parada(-7, -43, "2026-10-05T08:00", 10),
+      parada(-7.009, -43, "2026-10-05T08:30", 10),
+      parada(-7.018, -43, "2026-10-05T10:00", 10),
+    ], { trajeto }));
+    const hh = (d: Date | null) => (d ? d.toISOString().slice(11, 16) : null); // em UTC (BRT + 3h)
+
+    it("1º e último cliente: horário do app × do GPS, e tempo em cliente pelo app", () => {
+      expect([hh(r.app.primeira), hh(r.app.ultima), r.app.emClienteMin]).toEqual(["11:05", "19:00", 3]);
+      expect([hh(r.gpsClientes.primeiraChegada), hh(r.gpsClientes.ultimaSaida)]).toEqual(["11:00", "13:10"]);
+    });
+
+    it("saída → 1º PDV e último PDV → retorno: tempo e km pela estrada", () => {
+      expect(r.ida).toEqual({ min: 30, km: 10 });
+      expect(r.volta).toEqual({ min: 470, km: 15 });
+    });
+
+    it("trecho até cada cliente: km pela estrada, tempo, linha reta e gatilhos", () => {
+      expect(r.baixas.map(b => [b.entrega.codCliente, b.trecho?.deCodCliente, b.trecho?.min, b.trecho?.km, b.trecho?.desvio, b.trecho?.lento])).toEqual([
+        ["c1", null, 30, 10, false, false],
+        ["c2", "c1", 20, 1, false, false],
+        ["c3", "c2", 80, 9, true, true], // 9 km para ~1 km em linha reta, 80 min a 6,75 km/h
+      ]);
+      expect(r.baixas[2].trecho?.retaKm).toBeCloseTo(1, 1);
+      expect([r.desvios, r.trechosLentos]).toEqual([1, 1]);
+    });
+
+    it("cidades do dia, na ordem das baixas", () => {
+      expect(r.cidades).toEqual(["A", "B"]);
+    });
+
+    it("sem GPS: só o que vem do app", () => {
+      const s = cruzar(linha(), es, gps([], { erro: "sem rastreador" }));
+      expect([hh(s.app.primeira), s.ida, s.volta, s.desvios]).toEqual(["11:05", null, null, 0]);
     });
   });
 

@@ -17,6 +17,7 @@ export interface Entrega {
   lon: number | null;
   situacao: Situacao;
   baixaEm: Date | null; // Data/Hora de Chegada (BRT)
+  saidaApp: Date | null; // Data/Hora de Saída do cliente no app (opcional)
   rotaInicio: Date | null;
   rotaFim: Date | null;
   odoIniInformado: number | null;
@@ -139,6 +140,7 @@ export function parseCheckNow(buffer: Buffer): Entrega[] {
       lon: temCoord ? lon : null,
       situacao: situacao(r["Situação"]),
       baixaEm: dataHoraBRT(r["Data de Chegada"], r["Hora de Chegada"]),
+      saidaApp: dataHoraBRT(r["Data de Saída"], r["Hora de Saída"]),
       rotaInicio: dataHoraBRT(r["Data Rota Inicio Realizada"], r["Hora Rota Inicio Realizada"]),
       rotaFim: dataHoraBRT(r["Data Rota Fim Realizada"], r["Hora Rota Fim Realizada"]),
       odoIniInformado: num(r["Odometro Inicial Real. Informado"]),

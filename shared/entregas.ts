@@ -16,6 +16,10 @@ export const LIMITES = {
   descansoMinH: 11, // descanso entre jornadas (Lei 13.103/2015) — alerta abaixo disso
   noturnoDe: "22:00", // chave ligada ou caminhão andando neste intervalo = atividade fora de hora
   noturnoAte: "05:00",
+  desvioFator: 1.8, // trecho entre clientes: km pela estrada acima de 1,8× a linha reta…
+  desvioMinKm: 3, // …e pelo menos 3 km a mais = desvio
+  lentoMinMin: 20, // trecho com mais de 20 min…
+  lentoMaxKmh: 15, // …a menos de 15 km/h de média = parou no caminho
 } as const;
 
 const H3 = 3 * 3600000;

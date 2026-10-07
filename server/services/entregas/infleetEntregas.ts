@@ -4,7 +4,7 @@
  * buscarGpsLinha nunca lança: falhas viram GpsLinha.erro e a linha sai "sem GPS".
  */
 import { infleetQuery } from "../../routers/infleetRouter";
-import { detectarParadas, type Posicao } from "./detectarParadas";
+import { detectarParadas, trajetoAcumulado, type Posicao } from "./detectarParadas";
 import type { EventoGps, GpsLinha, TipoEvento } from "./cruzar";
 
 /** Fator do `speed` do Infleet para km/h — medido na sonda (spec §2): já vem em km/h. */
@@ -28,7 +28,7 @@ export function blocos(inicio: Date, fim: Date): { startAt: string; endAt: strin
 }
 
 export const gpsErro = (erro: string): GpsLinha =>
-  ({ erro, paradas: [], saida: null, saidaOrigem: "gps", retorno: null, retornoOrigem: "gps", kmGps: null, eventos: [] });
+  ({ erro, paradas: [], saida: null, saidaOrigem: "gps", retorno: null, retornoOrigem: "gps", kmGps: null, eventos: [], trajeto: { t: [], km: [] } });
 
 const TIPOS_EVENTO: TipoEvento[] = ["geofenceExit", "geofenceEnter", "deviceIdle", "ignitionOn", "ignitionOff", "deviceStopped", "deviceMoving"];
 const Q_EVENTOS = `query($filter: ListEventsFilterInput!) {
@@ -99,7 +99,7 @@ export async function buscarGpsLinha(vehicleId: string, janela: { inicio: Date; 
 
     const gps = detectarParadas(posicoes);
     const eventos = await eventosDoDia(vehicleId, janela);
-    const r: GpsLinha = { erro: null, ...gps, saidaOrigem: "gps", retornoOrigem: "gps", kmGps, eventos };
+    const r: GpsLinha = { erro: null, ...gps, saidaOrigem: "gps", retornoOrigem: "gps", kmGps, eventos, trajeto: trajetoAcumulado(posicoes) };
     if (!cercaId) return r;
 
     const daCerca = (tipo: TipoEvento) => eventos.filter(e => e.cercaId === cercaId && e.tipo === tipo).map(e => e.em.getTime());

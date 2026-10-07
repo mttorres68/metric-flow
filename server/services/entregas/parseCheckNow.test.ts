@@ -101,6 +101,12 @@ describe("parseCheckNow — dados da rota (colunas opcionais)", () => {
     expect(e).toMatchObject({ ordemPlanejada: 34, capacidadeKg: 8000, cidade: "BERTOLINIA", motivoProblema: null });
   });
 
+  it("lê o horário de saída do cliente no app (opcional)", () => {
+    const [e] = parseCheckNow(planilha([{ ...base, ...extra, "Data de Saída": "05/10/2026", "Hora de Saída": "09:40:00" }]));
+    expect(e.saidaApp?.toISOString()).toBe("2026-10-05T12:40:00.000Z");
+    expect(parseCheckNow(planilha([base]))[0].saidaApp).toBeNull();
+  });
+
   it("lê o motivo do problema", () => {
     const [e] = parseCheckNow(planilha([{ ...base, ...extra, "Situação": "PROBLEMA", "Motivo Problema": "FECHADO/AUSENTE" }]));
     expect(e.motivoProblema).toBe("FECHADO/AUSENTE");

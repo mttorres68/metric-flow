@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectarParadas, distM, type Posicao } from "./detectarParadas";
+import { detectarParadas, distM, kmEntre, trajetoAcumulado, type Posicao } from "./detectarParadas";
 
 const T0 = Date.UTC(2026, 9, 5, 12, 0); // 05/10 09:00 BRT
 const pos = (min: number, kmh: number, lat = -7, lon = -43, valida = true): Posicao =>
@@ -10,6 +10,24 @@ const minDe = (d: Date | null) => (d ? (d.getTime() - T0) / 60000 : null);
 describe("distM", () => {
   it("0,001° de longitude no equador ≈ 111 m", () => {
     expect(distM(0, 0, 0, 0.001)).toBeCloseTo(111.2, 0);
+  });
+});
+
+describe("trajeto pela estrada", () => {
+  it("soma o caminho percorrido (não a linha reta) entre dois horários", () => {
+    // anda 1,1 km para o norte e depois 1,1 km para o leste: caminho ≈ 2,2 km, linha reta ≈ 1,56 km
+    const tr = trajetoAcumulado([pos(0, 40, -7, -43), pos(1, 40, -6.99, -43), pos(2, 40, -6.99, -42.99), pos(3, 0, -6.99, -42.99)]);
+    expect(kmEntre(tr, new Date(T0), new Date(T0 + 3 * 60000))).toBeCloseTo(2.21, 1);
+    expect(kmEntre(tr, new Date(T0 + 60000), new Date(T0 + 3 * 60000))).toBeCloseTo(1.1, 1);
+  });
+
+  it("ignora o tremor do GPS com o caminhão parado", () => {
+    const tremendo = [0, 1, 2, 3, 4].map(m => pos(m, 0, -7 + (m % 2) * 0.0002, -43)); // pula ~20 m para lá e para cá
+    expect(kmEntre(trajetoAcumulado(tremendo), new Date(T0), new Date(T0 + 4 * 60000))).toBe(0);
+  });
+
+  it("sem posições, não há trajeto", () => {
+    expect(kmEntre(trajetoAcumulado([]), new Date(T0), new Date(T0 + 60000))).toBeNull();
   });
 });
 

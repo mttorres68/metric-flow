@@ -56,6 +56,7 @@ describe("buscarGpsLinha", () => {
     expect(r.paradas).toHaveLength(1);
     expect(r.paradas[0].min).toBe(10);
     expect(r.kmGps).toBe(123.5);
+    expect(r.trajeto.t).toHaveLength(4); // km acumulado pela estrada, posição a posição
   });
 
   it("traz os eventos do dia em ordem, com endereço, cerca e duração da marcha lenta", async () => {

@@ -8,7 +8,7 @@ const entrega: Entrega = {
   routeId: "R1", placa: "SOL-6B13", motorista: "ANTONIO", codCliente: "160089", cliente: "CLIENTE A",
   lat: -7, lon: -43, situacao: "ENTREGUE", baixaEm: brt("2026-10-05T09:28"),
   rotaInicio: brt("2026-10-05T07:00"), rotaFim: null, odoIniInformado: null, odoFimInformado: null,
-  ordemPlanejada: 1, valor: 100, pesoKg: 10, notas: 1, motivoProblema: null, capacidadeKg: 8000, cidade: "URUCUI",
+  saidaApp: null, ordemPlanejada: 1, valor: 100, pesoKg: 10, notas: 1, motivoProblema: null, capacidadeKg: 8000, cidade: "URUCUI",
 };
 const base: ResultadoLinha = {
   linha: { data: "2026-10-05", placa: "SOL-6B13", motorista: "ANTONIO", routeId: "R1",

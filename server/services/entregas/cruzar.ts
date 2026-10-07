@@ -4,7 +4,7 @@
  * recortado pelo início/fim realizados da rota (separa troca de motorista).
  */
 import type { Entrega } from "./parseCheckNow";
-import { distM, type Parada } from "./detectarParadas";
+import { distM, kmEntre, type Parada, type Trajeto } from "./detectarParadas";
 import { LIMITES, diaBRT, horaBRT } from "@shared/entregas";
 
 export { LIMITES, diaBRT, horaBRT };
@@ -45,6 +45,7 @@ export interface GpsLinha {
   retorno: Date | null;
   kmGps: number | null;
   eventos: EventoGps[]; // eventos do Infleet no dia (cerca, chave, marcha lenta, parado/andando), em ordem
+  trajeto: Trajeto; // km acumulado pela estrada (posições em movimento)
 }
 
 export interface ParadaNoCliente { inicio: Date; fim: Date; distM: number }
@@ -57,6 +58,17 @@ export interface EntregaCruzada {
   paradasNoRaio: ParadaNoCliente[]; // a "entrega de fato": quando o caminhão esteve a até raioM do cliente
   maisProxima: ParadaNoCliente | null; // parada mais próxima do cliente, a qualquer distância
   momentoBaixa: { tipo: "na_parada" | "depois" | "antes"; min: number } | null; // null sem parada no raio
+  trecho: Trecho | null; // deslocamento até este cliente (do cliente anterior visitado, ou da saída)
+}
+
+/** Deslocamento entre dois pontos da jornada, pelo GPS. */
+export interface Trecho {
+  deCodCliente: string | null; // null = desde a saída
+  min: number;
+  km: number | null; // pela estrada (trajeto do GPS)
+  retaKm: number | null; // linha reta entre os clientes (null quando parte da saída)
+  desvio: boolean; // km bem acima da linha reta (LIMITES.desvioFator e desvioMinKm)
+  lento: boolean; // demorado e devagar: parou no caminho (LIMITES.lentoMinMin e lentoMaxKmh)
 }
 
 /** Compara a hora da baixa no app com as passagens do caminhão pelo cliente. */
@@ -96,6 +108,15 @@ export interface ResultadoLinha {
   pendentes: number | null;
   kmInformado: number | null;
   baixas: EntregaCruzada[]; // todas as baixas do dia com status (vazio quando a linha está sem GPS)
+  /** O que o app do CheckNow diz: 1ª e última baixa do dia e tempo em cliente (saída − chegada). */
+  app: { primeira: Date | null; ultima: Date | null; emClienteMin: number };
+  /** O que o GPS diz: chegada ao 1º cliente e saída do último. */
+  gpsClientes: { primeiraChegada: Date | null; ultimaSaida: Date | null };
+  ida: { min: number; km: number | null } | null; // saída → 1º cliente
+  volta: { min: number; km: number | null } | null; // último cliente → retorno
+  desvios: number;
+  trechosLentos: number;
+  cidades: string[]; // cidades das baixas do dia, na ordem
 }
 
 /** Baixas que o GPS não confirma (status diferente de no_raio). */
@@ -161,6 +182,61 @@ export function montarLinhas(entregas: Entrega[], agora: Date): LinhaDia[] {
   return linhas.map(({ rotaInicio, rotaFim, ...l }) => l);
 }
 
+/** O que o app diz no dia: 1ª e última baixa e tempo em cliente (saída − chegada no app). */
+function appDoDia(baixas: Entrega[]): ResultadoLinha["app"] {
+  const ts = baixas.map(e => e.baixaEm!.getTime());
+  const emCliente = baixas.reduce((s, e) => s + (e.saidaApp ? Math.max(0, e.saidaApp.getTime() - e.baixaEm!.getTime()) : 0), 0);
+  return {
+    primeira: ts.length ? new Date(Math.min(...ts)) : null,
+    ultima: ts.length ? new Date(Math.max(...ts)) : null,
+    emClienteMin: Math.round(emCliente / 60000),
+  };
+}
+
+const umaCasa = (km: number | null) => (km === null ? null : Math.round(km * 10) / 10);
+
+/**
+ * Ordem real de visita (chegada da parada mais próxima de cada cliente) → trecho até cada cliente,
+ * ida (saída → 1º) e volta (último → retorno), com km pela estrada e os gatilhos de desvio e lentidão.
+ */
+function percursos(r: ResultadoLinha, trajeto: Trajeto) {
+  const visitas = r.baixas
+    .filter(b => b.paradasNoRaio.length)
+    .map(b => ({ b, p: b.paradasNoRaio.reduce((m, x) => (x.distM < m.distM ? x : m)) }))
+    .sort((x, y) => x.p.inicio.getTime() - y.p.inicio.getTime());
+  if (!visitas.length) return;
+
+  const chegada = visitas[0].p.inicio;
+  const ultimaSaida = new Date(Math.max(...visitas.map(v => v.p.fim.getTime())));
+  r.gpsClientes = { primeiraChegada: chegada, ultimaSaida };
+  const min = (de: Date, ate: Date) => Math.max(0, Math.round((ate.getTime() - de.getTime()) / 60000));
+  if (r.saida && r.saida <= chegada) {
+    r.ida = { min: min(r.saida, chegada), km: umaCasa(kmEntre(trajeto, r.saida, chegada)) };
+  }
+  if (r.retorno && r.retorno > ultimaSaida) {
+    r.volta = { min: min(ultimaSaida, r.retorno), km: umaCasa(kmEntre(trajeto, ultimaSaida, r.retorno)) };
+  }
+
+  let anterior: { fim: Date; e: Entrega } | null = null;
+  for (const { b, p } of visitas) {
+    const desde = anterior ? anterior.fim : r.saida;
+    if (desde) {
+      const ate = p.inicio > desde ? p.inicio : desde; // clientes vizinhos na mesma parada: trecho zero
+      const t = min(desde, ate);
+      const km = umaCasa(kmEntre(trajeto, desde, ate));
+      const retaKm = anterior && anterior.e.lat !== null && anterior.e.lon !== null
+        ? distM(anterior.e.lat, anterior.e.lon, b.entrega.lat!, b.entrega.lon!) / 1000 : null;
+      const desvio = km !== null && retaKm !== null && km > retaKm * LIMITES.desvioFator && km - retaKm > LIMITES.desvioMinKm;
+      const lento = t > LIMITES.lentoMinMin && (km ?? 0) / (t / 60) < LIMITES.lentoMaxKmh;
+      b.trecho = { deCodCliente: anterior?.e.codCliente ?? null, min: t, km, retaKm, desvio, lento };
+      if (desvio) r.desvios++;
+      if (lento) r.trechosLentos++;
+    }
+    if (!anterior || p.fim > anterior.fim) anterior = { fim: p.fim, e: b.entrega };
+    else anterior = { fim: anterior.fim, e: b.entrega };
+  }
+}
+
 function kmInformado(e: Entrega): number | null {
   return e.odoIniInformado !== null && e.odoFimInformado !== null ? e.odoFimInformado - e.odoIniInformado : null;
 }
@@ -195,6 +271,13 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
     pendentes: linha.fechaRota ? entregasRota.filter(e => e.situacao === "AGUARDANDO").length : null,
     kmInformado: linha.fechaRota ? kmInformado(entregasRota[0]) : null,
     baixas: [],
+    app: appDoDia(baixasDia),
+    gpsClientes: { primeiraChegada: null, ultimaSaida: null },
+    ida: null,
+    volta: null,
+    desvios: 0,
+    trechosLentos: 0,
+    cidades: [...new Set([...baixasDia].sort((a, b) => a.baixaEm!.getTime() - b.baixaEm!.getTime()).map(e => e.cidade).filter(Boolean))],
   };
   if (gps.erro) return r;
 
@@ -206,7 +289,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
     if (!temCoord(e)) {
       r.baixas.push({
         entrega: e, status: "sem_coordenada", permanenciaMin: 0, distMaisProximaM: null,
-        paradasNoRaio: [], maisProxima: null, momentoBaixa: null,
+        paradasNoRaio: [], maisProxima: null, momentoBaixa: null, trecho: null,
       });
       continue;
     }
@@ -226,8 +309,10 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
       paradasNoRaio,
       maisProxima: maisProxima && semMin(maisProxima),
       momentoBaixa: momentoDaBaixa(e.baixaEm!, paradasNoRaio),
+      trecho: null,
     });
   }
+  percursos(r, gps.trajeto);
 
   const clientes = entregasRota.filter(temCoord);
   const { saida, retorno } = r;

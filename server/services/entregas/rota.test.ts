@@ -9,7 +9,7 @@ const lat = (k: number) => -7 + 0.01 * k; // clientes a ~1,1 km um do outro
 
 const cliente = (k: number, o: Partial<Entrega>): Entrega => ({
   routeId: "R1", placa: "SOL-6E53", motorista: "FRANCISCO", codCliente: `c${k}`, cliente: `CLIENTE ${k}`,
-  lat: lat(k), lon: -43, situacao: "ENTREGUE", baixaEm: null,
+  lat: lat(k), lon: -43, situacao: "ENTREGUE", baixaEm: null, saidaApp: null,
   rotaInicio: brt("2026-10-01T07:00"), rotaFim: brt("2026-10-02T18:00"),
   odoIniInformado: 1000, odoFimInformado: 1334,
   ordemPlanejada: k, valor: 0, pesoKg: 0, notas: 1, motivoProblema: null, capacidadeKg: 8000, cidade: `CIDADE ${k}`, ...o,
@@ -34,7 +34,7 @@ const ev = (tipo: TipoEvento, quando: string, o: Partial<EventoGps> = {}): Event
 const gpsPorDia: Record<string, GpsLinha> = {
   // dia 1: visita 1 → 3 → 2 (pulou a ordem do 2); estaciona às 18:00 perto do cliente 3, na rodovia
   "2026-10-01": {
-    erro: null, saidaOrigem: "gps", retornoOrigem: "gps", kmGps: 100,
+    erro: null, saidaOrigem: "gps", retornoOrigem: "gps", kmGps: 100, trajeto: { t: [], km: [] },
     saida: brt("2026-10-01T07:30"), retorno: brt("2026-10-01T18:00"),
     paradas: [parada(1, "2026-10-01T08:50", 10), parada(3, "2026-10-01T09:40", 10), parada(2, "2026-10-01T10:30", 10), parada(3, "2026-10-01T18:00", 600)],
     eventos: [
@@ -45,7 +45,7 @@ const gpsPorDia: Record<string, GpsLinha> = {
   },
   // dia 2: chave ligada às 02:41 (fora de hora); não passa no cliente 4; para no cliente 5
   "2026-10-02": {
-    erro: null, saidaOrigem: "gps", retornoOrigem: "gps", kmGps: 50,
+    erro: null, saidaOrigem: "gps", retornoOrigem: "gps", kmGps: 50, trajeto: { t: [], km: [] },
     saida: brt("2026-10-02T07:00"), retorno: brt("2026-10-02T17:00"),
     paradas: [parada(5, "2026-10-02T09:55", 10)],
     eventos: [

@@ -28,7 +28,7 @@ const linha = (o: Record<string, unknown>): Record<string, unknown> => ({
 
 const inicio = new Date("2026-10-05T09:55:00-03:00");
 const gpsNoCliente = {
-  erro: null, kmGps: 50, eventos: [], saidaOrigem: "gps" as const, retornoOrigem: "gps" as const, saida: new Date("2026-10-05T07:30:00-03:00"), retorno: new Date("2026-10-05T17:00:00-03:00"),
+  erro: null, kmGps: 50, eventos: [], trajeto: { t: [], km: [] }, saidaOrigem: "gps" as const, retornoOrigem: "gps" as const, saida: new Date("2026-10-05T07:30:00-03:00"), retorno: new Date("2026-10-05T17:00:00-03:00"),
   paradas: [{ lat: -7, lon: -43, inicio, fim: new Date(inicio.getTime() + 10 * 60000), min: 10 }],
 };
 

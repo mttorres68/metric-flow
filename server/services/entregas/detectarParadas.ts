@@ -26,6 +26,34 @@ export function distM(lat1: number, lon1: number, lat2: number, lon2: number): n
 
 const minutos = (a: Date, b: Date) => (b.getTime() - a.getTime()) / 60000;
 
+/** Km acumulado pela estrada ao longo do dia: t[i] (ms) → km[i]. */
+export interface Trajeto { t: number[]; km: number[] }
+
+/** Soma os trechos entre posições consecutivas em movimento (o tremor do GPS parado não conta). */
+export function trajetoAcumulado(posicoes: Posicao[]): Trajeto {
+  const ps = posicoes.filter(p => p.valida).sort((a, b) => a.em.getTime() - b.em.getTime());
+  const tr: Trajeto = { t: [], km: [] };
+  let acum = 0;
+  ps.forEach((p, i) => {
+    const a = ps[i - 1];
+    if (a && (a.kmh >= PARADA.velMaxKmh || p.kmh >= PARADA.velMaxKmh)) acum += distM(a.lat, a.lon, p.lat, p.lon) / 1000;
+    tr.t.push(p.em.getTime());
+    tr.km.push(acum);
+  });
+  return tr;
+}
+
+/** Km rodado pela estrada entre dois horários (null sem trajeto). */
+export function kmEntre(tr: Trajeto, de: Date, ate: Date): number | null {
+  if (!tr.t.length) return null;
+  const kmEm = (t: number) => {
+    let lo = 0, hi = tr.t.length - 1, k = -1;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (tr.t[m] <= t) { k = m; lo = m + 1; } else hi = m - 1; }
+    return k < 0 ? 0 : tr.km[k];
+  };
+  return Math.max(0, kmEm(ate.getTime()) - kmEm(de.getTime()));
+}
+
 export function detectarParadas(posicoes: Posicao[]): ResultadoParadas {
   const ps = posicoes.filter(p => p.valida).sort((a, b) => a.em.getTime() - b.em.getTime());
   const movendo = ps.filter(p => p.kmh >= PARADA.velMaxKmh);
