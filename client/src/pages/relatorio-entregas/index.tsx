@@ -54,6 +54,8 @@ const dur = (min: number) => {
   return m ? `${h}h ${m}min` : `${h}h`;
 };
 const primeiroNome = (nome: string) => nome.trim().split(/\s+/)[0] || nome;
+/** Distância com unidade: "35 m", "1,2 km". */
+const distancia = (m: number) => (m < 1000 ? `${Math.round(m)} m` : `${num1(Math.round(m / 100) / 10)} km`);
 
 /** Hora da entrega no app × passagem do caminhão pelo cliente. */
 function MomentoEntrega({ m }: { m: Baixa["momentoBaixa"] }) {
@@ -140,7 +142,7 @@ function LinhaTrecho({ t, colunas }: { t: NonNullable<Baixa["trecho"]>; colunas:
 
 /** Tabela de entregas — no detalhe da linha (com os trechos entre as linhas) e na lista de exceções do dia. */
 function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Baixa }[]; comPlaca?: boolean; raioM: number }) {
-  const colunas = comPlaca ? 9 : 8;
+  const colunas = comPlaca ? 10 : 9;
   const ordenados = [...itens].sort((x, y) => ordemVisita(x.b) - ordemVisita(y.b));
   return (
     <>
@@ -160,6 +162,7 @@ function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Ba
             <th className="px-2 py-1.5">Cidade</th>
             <th className="px-2 py-1.5 text-center" title="Hora em que o motorista registrou a entrega no app do CheckNow">Entrega no app (hora)</th>
             <th className="px-2 py-1.5 text-center" title={`Chegada e saída do caminhão a até ${raioM} m do cliente, pelo GPS`}>Caminhão no cliente (hora)</th>
+            <th className="px-2 py-1.5 text-center" title="Distância entre a parada mais próxima do caminhão e o cliente, pelo GPS">Parou a (distância)</th>
             <th className="px-2 py-1.5 text-center" title={`Hora do registro no app × passagem do caminhão (tolerância de ${LIMITES.momentoTolMin} min)`}>Momento do registro</th>
             <th className="px-2 py-1.5 text-center">Situação</th>
             <th className="px-2 py-1.5 text-center" title="Tempo total do caminhão parado perto do cliente, pelo GPS">Tempo no cliente</th>
@@ -176,6 +179,7 @@ function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Ba
                 <Td className="text-slate-500 dark:text-slate-400">{b.entrega.cidade || "—"}</Td>
                 <Td center mono>{hora(b.entrega.baixaEm)}</Td>
                 <Td center mono><ParadasNoCliente b={b} /></Td>
+                <Td center mono>{b.distMaisProximaM === null ? vazio : <span className={b.distMaisProximaM > raioM ? "text-red-500 font-bold" : ""} title={b.distMaisProximaM > raioM ? `Fora do raio de ${raioM} m` : `Dentro do raio de ${raioM} m`}>{distancia(b.distMaisProximaM)}</span>}</Td>
                 <Td center><MomentoEntrega m={b.momentoBaixa} /></Td>
                 <Td center>
                   <span title={`${STATUS[b.status].dica}${b.distMaisProximaM !== null ? ` · parada mais próxima a ${Math.round(b.distMaisProximaM)} m` : ""}`}>
