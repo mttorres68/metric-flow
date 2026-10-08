@@ -198,7 +198,8 @@ function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Ba
 
 export default function RelatorioEntregas() {
   const { isCollapsed } = useSidebarCollapse();
-  const [dia, setDia] = useState<string | null>(null);
+  // Dia que está sendo visto: só ele é cruzado com o GPS. O período do topo serve só para buscar no CheckNow.
+  const [dia, setDia] = useState<string>(() => diaBRT(new Date()));
   const [abertas, setAbertas] = useState<Set<string>>(new Set());
   const [verExcecoes, setVerExcecoes] = useState(false);
   const [analise, setAnalise] = useState("");
@@ -221,7 +222,6 @@ export default function RelatorioEntregas() {
   const processar = trpc.entregas.processar.useMutation({
     onSuccess: ({ linhas: rs }) => {
       // Recalcular (GPS, cerca, raio) mantém o dia aberto; período novo abre no último dia.
-      setDia(d => (d && rs.some(r => r.linha.data === d) ? d : rs.length ? rs[rs.length - 1].linha.data : null));
       setAbertas(new Set());
     },
     onError: e => toast.error(e.message),
@@ -231,12 +231,16 @@ export default function RelatorioEntregas() {
   const [aba, setAba] = useState<"dia" | "rota">("dia");
 
   const utils = trpc.useUtils();
-  const recalcular = (cerca = cercaId) => { if (revenda) processar.mutate({ revendaId: revenda.revendaId, ...periodo, cercaId: cerca || undefined }); };
-  // Revenda, período ou lista de cercas mudou: recarrega (a cerca padrão "Sede" depende da lista da conta Infleet).
-  useEffect(() => { if (revenda && cercasQ.isFetched) recalcular(); }, [revenda?.revendaId, periodo.de, periodo.ate, cercasQ.isFetched]); // eslint-disable-line react-hooks/exhaustive-deps
+  const recalcular = (cerca = cercaId) => { if (revenda) processar.mutate({ revendaId: revenda.revendaId, de: dia, ate: dia, cercaId: cerca || undefined }); };
+  // Revenda, dia visto ou lista de cercas mudou: recarrega (a cerca padrão "Sede" depende da lista da conta Infleet).
+  // Mudar o período de busca do CheckNow não consulta o Infleet.
+  useEffect(() => { if (revenda && cercasQ.isFetched) recalcular(); }, [revenda?.revendaId, dia, cercasQ.isFetched]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const coletar = trpc.entregas.coletar.useMutation({
-    onSuccess: r => { toast.success(r.status === "ok" ? `${r.rotas} rotas, ${r.linhas} entregas atualizadas` : "CheckNow sem entregas no período"); recalcular(); },
+    onSuccess: (r, v) => {
+      toast.success(r.status === "ok" ? `${r.rotas} rotas, ${r.linhas} entregas atualizadas` : "CheckNow sem entregas no período");
+      if (dia >= v.de && dia <= v.ate) recalcular(); // só refaz o cruzamento se o dia visto foi atualizado
+    },
     onError: e => toast.error(e.message),
     onSettled: () => utils.entregas.coletas.invalidate(),
   });
@@ -251,11 +255,9 @@ export default function RelatorioEntregas() {
   function escolherRevenda(id: number) {
     setRevendaId(id);
     setCercaSel(null);
-    setDia(null);
     try { localStorage.setItem("entregas.revenda", String(id)); } catch { /* sem storage: só não lembra a revenda */ }
   }
 
-  const dias = useMemo(() => [...new Set(resultados.map(r => r.linha.data))], [resultados]);
   const linhas = useMemo(() => resultados.filter(r => r.linha.data === dia), [resultados, dia]);
   const excecoesDia = useMemo(
     () => linhas.flatMap(r => r.baixas.filter(b => b.status !== "no_raio").map(b => ({ r, b }))),
@@ -276,7 +278,7 @@ export default function RelatorioEntregas() {
     };
   }, [linhas]);
 
-  const idxDia = dia ? dias.indexOf(dia) : -1;
+  const passarDia = (n: number) => setDia(d => new Date(Date.parse(`${d}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10));
   const toggle = (c: string) => setAbertas(s => { const n = new Set(s); n.has(c) ? n.delete(c) : n.add(c); return n; });
 
   async function baixar(tipo: "dia" | "zip") {
@@ -286,7 +288,7 @@ export default function RelatorioEntregas() {
       const resp = await fetch("/api/relatorio-entregas/gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ revendaId: revenda.revendaId, ...periodo, analise, cercaId: cercaId || undefined, ...(tipo === "dia" ? { data: dia } : {}) }),
+        body: JSON.stringify({ revendaId: revenda.revendaId, ...(tipo === "dia" ? { de: dia, ate: dia, data: dia } : periodo), analise, cercaId: cercaId || undefined }),
       });
       if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error ?? "Erro ao gerar o PDF");
       const nome = resp.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "entregas.pdf";
@@ -331,9 +333,9 @@ export default function RelatorioEntregas() {
                 className="text-xs font-semibold bg-transparent border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-slate-700 dark:text-slate-200">
                 {contasAtivas.map(c => <option key={c.revendaId} value={c.revendaId}>{c.revenda}</option>)}
               </select>
-              <input type="date" value={periodo.de} max={periodo.ate} aria-label="De" onChange={e => { const v = e.target.value; if (v) { setDia(null); setPeriodo(p => ({ ...p, de: v })); } }}
+              <input type="date" value={periodo.de} max={periodo.ate} aria-label="Buscar do CheckNow de" title="Período para buscar do CheckNow (não muda o dia visto)" onChange={e => { const v = e.target.value; if (v) setPeriodo(p => ({ ...p, de: v })); }}
                 className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-transparent text-slate-700 dark:text-slate-200" />
-              <input type="date" value={periodo.ate} min={periodo.de} max={hoje} aria-label="Até" onChange={e => { const v = e.target.value; if (v) { setDia(null); setPeriodo(p => ({ ...p, ate: v })); } }}
+              <input type="date" value={periodo.ate} min={periodo.de} max={hoje} aria-label="Buscar do CheckNow até" title="Período para buscar do CheckNow (não muda o dia visto)" onChange={e => { const v = e.target.value; if (v) setPeriodo(p => ({ ...p, ate: v })); }}
                 className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-transparent text-slate-700 dark:text-slate-200" />
               <button onClick={() => coletar.mutate({ revendaId: revenda.revendaId, ...periodo })} disabled={coletar.isPending}
                 className={`${botao} bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-500`}>
@@ -347,7 +349,7 @@ export default function RelatorioEntregas() {
                 className={`${botao} bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-700`}>
                 <RefreshCw size={12} className={processar.isPending ? "animate-spin" : ""} /> Atualizar GPS
               </button>
-              <button onClick={() => baixar("zip")} disabled={!dias.length || baixando !== null}
+              <button onClick={() => baixar("zip")} disabled={baixando !== null} title="PDFs de cada dia do período do CheckNow"
                 className={`${botao} border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20`}>
                 <Printer size={12} /> {baixando === "zip" ? "Gerando..." : "Baixar todos (ZIP)"}
               </button>
@@ -381,26 +383,51 @@ export default function RelatorioEntregas() {
             </div>
           )}
 
+          {/* ── Dia visto (só ele é cruzado com o GPS) ── */}
+          {revenda && (
+            <div className="bg-white dark:bg-[var(--card)] rounded-2xl px-5 py-3 flex items-center gap-4 mx-6 mt-4 border border-slate-100 dark:border-[var(--border)]">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Revenda: <b className="text-slate-700 dark:text-slate-200">{revenda.revenda}</b></span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Raio: <b className="text-slate-700 dark:text-slate-200">{raioM} m</b></span>
+              <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" title="Saiu da cerca escolhida = horário de saída; entrou nela depois da saída = horário de retorno. Sem esses eventos no dia, vale o GPS">
+                Saída / retorno pela cerca
+                <select value={cercaId} disabled={processar.isPending}
+                  onChange={e => { setCercaSel(e.target.value); recalcular(e.target.value); }}
+                  className="text-xs font-semibold bg-transparent border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-200">
+                  <option value="">Nenhuma (só GPS)</option>
+                  {cercas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+              <div className="flex items-center gap-1 ml-auto">
+                <span className="text-xs text-slate-500 dark:text-slate-400 mr-1">Dia</span>
+                <button aria-label="Dia anterior" disabled={processar.isPending} onClick={() => passarDia(-1)}
+                  className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700/50 disabled:opacity-30"><ChevronLeft size={16} /></button>
+                <input type="date" value={dia} max={hoje} aria-label="Dia visto" disabled={processar.isPending}
+                  onChange={e => { if (e.target.value) setDia(e.target.value); }}
+                  className="text-xs font-semibold bg-transparent border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-200" />
+                <button aria-label="Próximo dia" disabled={processar.isPending || dia >= hoje} onClick={() => passarDia(1)}
+                  className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700/50 disabled:opacity-30"><ChevronRight size={16} /></button>
+              </div>
+            </div>
+          )}
+
           {revenda && processar.isPending && (
             <div className="flex items-center justify-center h-40 text-slate-400 dark:text-slate-500 text-sm">
-              <Loader2 size={16} className="animate-spin mr-2" /> Cruzando as entregas de {revenda.revenda} com o GPS...
+              <Loader2 size={16} className="animate-spin mr-2" /> Cruzando as entregas de {revenda.revenda} em {fmtDia(dia)} com o GPS...
             </div>
           )}
 
           {revenda && !processar.isPending && processar.data && !resultados.length && (
             <div className="m-6 flex flex-col items-center justify-center gap-2 p-12 rounded-xl border-2 border-dashed border-slate-200 dark:border-[var(--border)] bg-white dark:bg-[var(--card)]">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Nenhuma entrega de {revenda.revenda} {periodo.de === periodo.ate ? `em ${fmtDia(periodo.de)}` : `entre ${fmtDia(periodo.de)} e ${fmtDia(periodo.ate)}`}.
-              </span>
-              <button onClick={() => coletar.mutate({ revendaId: revenda.revendaId, ...periodo })} disabled={coletar.isPending}
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Nenhuma entrega de {revenda.revenda} em {fmtDia(dia)}.</span>
+              <button onClick={() => coletar.mutate({ revendaId: revenda.revendaId, de: dia, ate: dia })} disabled={coletar.isPending}
                 className={`${botao} bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-500`}>
-                <CloudDownload size={12} /> {coletar.isPending ? "Buscando…" : "Buscar do CheckNow"}
+                <CloudDownload size={12} /> {coletar.isPending ? "Buscando…" : `Buscar ${fmtDia(dia)} do CheckNow`}
               </button>
             </div>
           )}
 
           {/* ── Abas: por dia × por rota ── */}
-          {revenda && !processar.isPending && dia && (
+          {revenda && !processar.isPending && !!resultados.length && (
             <div className="mx-6 mt-4 inline-flex rounded-xl border border-slate-200 dark:border-slate-600 p-0.5 bg-white dark:bg-[var(--card)]">
               {([["dia", "Por dia"], ["rota", "Por rota"]] as const).map(([v, rotulo]) => (
                 <button key={v} onClick={() => setAba(v)}
@@ -411,35 +438,10 @@ export default function RelatorioEntregas() {
             </div>
           )}
 
-          {revenda && !processar.isPending && dia && aba === "rota" && <PainelRota rotas={rotas} />}
+          {revenda && !processar.isPending && !!resultados.length && aba === "rota" && <PainelRota rotas={rotas} />}
 
-          {revenda && !processar.isPending && dia && aba === "dia" && (
+          {revenda && !processar.isPending && !!resultados.length && aba === "dia" && (
             <>
-              {/* ── Filtro de dia + KPIs ── */}
-              <div className="bg-white dark:bg-[var(--card)] rounded-2xl px-5 py-3 flex items-center gap-4 mx-6 mt-4 border border-slate-100 dark:border-[var(--border)]">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Revenda: <b className="text-slate-700 dark:text-slate-200">{revenda.revenda}</b></span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">Raio: <b className="text-slate-700 dark:text-slate-200">{raioM} m</b></span>
-                <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" title="Saiu da cerca escolhida = horário de saída; entrou nela depois da saída = horário de retorno. Sem esses eventos no dia, vale o GPS">
-                  Saída / retorno pela cerca
-                  <select value={cercaId} disabled={processar.isPending}
-                    onChange={e => { setCercaSel(e.target.value); recalcular(e.target.value); }}
-                    className="text-xs font-semibold bg-transparent border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-200">
-                    <option value="">Nenhuma (só GPS)</option>
-                    {cercas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </label>
-                <div className="flex items-center gap-1 ml-auto">
-                  <button aria-label="Dia anterior" disabled={idxDia <= 0} onClick={() => setDia(dias[idxDia - 1])}
-                    className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700/50 disabled:opacity-30"><ChevronLeft size={16} /></button>
-                  <select value={dia} onChange={e => setDia(e.target.value)}
-                    className="text-xs font-semibold bg-transparent border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-200">
-                    {dias.map(d => <option key={d} value={d}>{fmtDia(d)}</option>)}
-                  </select>
-                  <button aria-label="Próximo dia" disabled={idxDia >= dias.length - 1} onClick={() => setDia(dias[idxDia + 1])}
-                    className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700/50 disabled:opacity-30"><ChevronRight size={16} /></button>
-                </div>
-              </div>
-
               <div className="px-6 pt-4 pb-2 grid grid-cols-5 gap-3">
                 {[
                   { label: "Placas · motoristas / caminhões", value: `${k.linhas}/${k.placas}`, color: "text-slate-700 dark:text-slate-200", icon: <Truck size={16} className="text-indigo-400" /> },
