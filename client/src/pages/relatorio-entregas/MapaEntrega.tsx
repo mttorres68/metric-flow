@@ -32,11 +32,12 @@ export function MapaEntrega({ b, raioM }: { b: EntregaNoMapa; raioM: number }) {
     if (e.latApp !== null && e.lonApp !== null) {
       app = distM(e.lat, e.lon, e.latApp, e.lonApp);
       pontos.push({ lat: e.latApp, lon: e.lonApp, cor: COR.app, letra: "M", titulo: "Motorista (app)", info: `Registrou a entrega${e.baixaEm ? ` às ${horaBRT(e.baixaEm)}` : ""} a ${metros(app)} do cliente` });
-      linhas.push({ de: [e.lat, e.lon], ate: [e.latApp, e.lonApp], cor: COR.app, rotulo: metros(app) });
+      // Rótulo só fora do raio: perto do cliente ele cobriria os marcadores (a distância já está na legenda).
+      linhas.push({ de: [e.lat, e.lon], ate: [e.latApp, e.lonApp], cor: COR.app, rotulo: app > raioM ? metros(app) : undefined });
     }
     if (p) {
       pontos.push({ lat: p.lat, lon: p.lon, cor: COR.parada, letra: "P", titulo: "Parada do caminhão (GPS)", info: `${horaBRT(p.inicio)}–${horaBRT(p.fim)} a ${metros(p.distM)} do cliente` });
-      linhas.push({ de: [e.lat, e.lon], ate: [p.lat, p.lon], cor: COR.parada, rotulo: metros(p.distM) });
+      linhas.push({ de: [e.lat, e.lon], ate: [p.lat, p.lon], cor: COR.parada, rotulo: p.distM > raioM ? metros(p.distM) : undefined });
     }
     return { pontos, linhas, circulo, app };
   }, [e, p, raioM]);
