@@ -4,8 +4,9 @@
  */
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Plus } from "lucide-react";
+import { FileUp, Loader2, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { blobToBase64 } from "@/pages/analise/lib/pdf";
 
 type Form = { revendaId: number; nova: boolean; checknowUsuario: string; checknowSenha: string; infleetToken: string; limparInfleet: boolean };
 const campo = "w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-[var(--background)] text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600";
@@ -21,6 +22,29 @@ export function ContasEntregas({ onMudou }: { onMudou: () => void }) {
   const testarCN = trpc.entregas.contas.testarCheckNow.useMutation();
   const testarIF = trpc.entregas.contas.testarInfleet.useMutation();
   const [form, setForm] = useState<Form | null>(null);
+  const importarProdutos = trpc.entregas.erp.importarProdutos.useMutation();
+  const importarPedidos = trpc.entregas.erp.importarPedidos.useMutation();
+  const [revendaErp, setRevendaErp] = useState<number | null>(null);
+
+  async function enviarProdutos(file: File | undefined) {
+    if (!file) return;
+    try {
+      const r = await importarProdutos.mutateAsync({ xlsxBase64: await blobToBase64(file) });
+      toast.success(`${r.produtos.toLocaleString("pt-BR")} produtos (${r.comVolume.toLocaleString("pt-BR")} com volume)`);
+    } catch (e) { toast.error((e as Error).message); }
+  }
+
+  async function enviarPedidos(file: File | undefined) {
+    const revendaId = revendaErp ?? contas.data?.find(c => c.ativo)?.revendaId;
+    if (!file || !revendaId) return;
+    try {
+      const r = await importarPedidos.mutateAsync({ revendaId, csvBase64: await blobToBase64(file) });
+      const falta = r.semCadastro.length ? ` · ${r.semCadastro.length} produto(s) sem cadastro: ${r.semCadastro.slice(0, 5).join(", ")}${r.semCadastro.length > 5 ? "…" : ""}` : "";
+      toast.success(`${r.itens.toLocaleString("pt-BR")} itens · ${r.pedidos.toLocaleString("pt-BR")} pedidos${falta}`);
+      await utils.entregas.coletas.invalidate();
+      onMudou();
+    } catch (e) { toast.error((e as Error).message); }
+  }
 
   async function recarregar() {
     await Promise.all([utils.entregas.contas.listar.invalidate(), utils.entregas.contas.revendasSemConta.invalidate()]);
@@ -122,6 +146,27 @@ export function ContasEntregas({ onMudou }: { onMudou: () => void }) {
           </div>
         </div>
       )}
+      <section className="mt-2 pt-4 border-t border-slate-100 dark:border-[var(--border)] flex flex-col gap-2">
+        <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Arquivos do ERP (produtividade em hL)</h3>
+        <label className={`${botaoSec} self-start flex items-center gap-1.5 cursor-pointer`}>
+          {importarProdutos.isPending ? <Loader2 size={12} className="animate-spin" /> : <FileUp size={12} />} Importar produtos (todas as revendas)
+          <input type="file" accept=".xlsx" className="hidden" onChange={e => { enviarProdutos(e.target.files?.[0]); e.target.value = ""; }} />
+        </label>
+        <div className="flex items-center gap-2">
+          <select className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-transparent text-slate-700 dark:text-slate-200"
+            aria-label="Revenda dos pedidos" value={revendaErp ?? contas.data?.find(c => c.ativo)?.revendaId ?? ""}
+            onChange={e => setRevendaErp(Number(e.target.value))}>
+            {(contas.data ?? []).map(c => <option key={c.revendaId} value={c.revendaId}>{c.revenda}</option>)}
+          </select>
+          <label className={`${botaoSec} flex items-center gap-1.5 cursor-pointer`}>
+            {importarPedidos.isPending ? <Loader2 size={12} className="animate-spin" /> : <FileUp size={12} />} Importar pedidos (CSV do mês)
+            <input type="file" accept=".csv,.CSV" className="hidden" onChange={e => { enviarPedidos(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
+        </div>
+        <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-snug">
+          Produtos: PRODUTOS.xlsx do ERP (volume pelo Fat.Conv1). Pedidos: o CSV do mês, reenviado todo dia — pedidos já importados são atualizados, sem duplicar.
+        </p>
+      </section>
     </div>
   );
 }

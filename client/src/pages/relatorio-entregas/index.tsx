@@ -13,6 +13,7 @@ import { ConfigEntregasModal } from "./ConfigEntregasModal";
 import { PainelRota } from "./PainelRota";
 import { SituacaoColeta } from "./SituacaoColeta";
 import { MapaEntrega } from "./MapaEntrega";
+import { PainelDiaNew } from "./PainelDiaNew";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc";
 import { CONFIG_ENTREGAS_PADRAO, LIMITES, diaBRT, horaBRT } from "@shared/entregas";
@@ -243,7 +244,7 @@ export default function RelatorioEntregas() {
   });
   const resultados = processar.data?.linhas ?? [];
   const rotas = processar.data?.rotas ?? [];
-  const [aba, setAba] = useState<"dia" | "rota">("dia");
+  const [aba, setAba] = useState<"dia" | "rota" | "dianew">("dia");
 
   const utils = trpc.useUtils();
   const recalcular = (cerca = cercaId) => { if (revenda) processar.mutate({ revendaId: revenda.revendaId, de: dia, ate: dia, cercaId: cerca || undefined }); };
@@ -444,7 +445,7 @@ export default function RelatorioEntregas() {
           {/* ── Abas: por dia × por rota ── */}
           {revenda && !processar.isPending && !!resultados.length && (
             <div className="mx-6 mt-4 inline-flex rounded-xl border border-slate-200 dark:border-slate-600 p-0.5 bg-white dark:bg-[var(--card)]">
-              {([["dia", "Por dia"], ["rota", "Por rota"]] as const).map(([v, rotulo]) => (
+              {([["dia", "Por dia"], ["rota", "Por rota"], ["dianew", "Por dia new"]] as const).map(([v, rotulo]) => (
                 <button key={v} onClick={() => setAba(v)}
                   className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${aba === v ? "bg-indigo-500 text-white" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50"}`}>
                   {rotulo}
@@ -454,6 +455,8 @@ export default function RelatorioEntregas() {
           )}
 
           {revenda && !processar.isPending && !!resultados.length && aba === "rota" && <PainelRota rotas={rotas} />}
+
+          {revenda && !processar.isPending && !!resultados.length && aba === "dianew" && <PainelDiaNew linhas={linhas} raioM={raioM} />}
 
           {revenda && !processar.isPending && !!resultados.length && aba === "dia" && (
             <>
