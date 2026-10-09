@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   doublePrecision,
@@ -386,6 +387,7 @@ export const checknowEntregas = pgTable("checknow_entregas", {
   lon:             doublePrecision("lon"),
   latApp:          doublePrecision("latApp"),   // onde o motorista registrou a entrega no app
   lonApp:          doublePrecision("lonApp"),
+  documentos:      text("documentos").array().notNull().default(sql`'{}'::text[]`), // = Pedido do ERP
   situacao:        varchar("situacao", { length: 20 }).notNull(),
   baixaEm:         timestamp("baixaEm", { withTimezone: true }),
   saidaApp:        timestamp("saidaApp", { withTimezone: true }),
@@ -419,6 +421,66 @@ export const checknowColetas = pgTable("checknow_coletas", {
   linhas:      integer("linhas"),
   erro:        text("erro"),
 }, t => [index("ix_checknow_coletas").on(t.revendaId, t.iniciadoEm)]);
+
+// ---------------------------------------------------------------------------
+// Produtividade em hL (spec produtividade §4): cadastro de produtos (global),
+// itens dos pedidos do ERP (por revenda) e pontos do "4 semanas".
+// ---------------------------------------------------------------------------
+export const produtos = pgTable("produtos", {
+  codigo:      varchar("codigo", { length: 20 }).primaryKey(),
+  descricao:   varchar("descricao", { length: 200 }).notNull(),
+  familia:     varchar("familia", { length: 120 }).notNull().default(""),
+  categoria:   varchar("categoria", { length: 120 }).notNull().default(""),
+  marca:       varchar("marca", { length: 120 }).notNull().default(""),
+  embalagem:   varchar("embalagem", { length: 4 }).notNull().default(""),   // CX | EB | BR | UN
+  tipo:        varchar("tipo", { length: 12 }),                             // retornavel | descartavel | barril | null
+  unPorEmb:    integer("unPorEmb").notNull().default(1),
+  litrosEmb:   doublePrecision("litrosEmb"),                                // null = sem volume
+  litrosUn:    doublePrecision("litrosUn"),
+  ativo:       boolean("ativo").notNull().default(true),
+  atualizadoEm: timestamp("atualizadoEm", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const erpPedidoItens = pgTable("erp_pedido_itens", {
+  id:           serial("id").primaryKey(),
+  revendaId:    integer("revendaId").notNull().references(() => revendas.id),
+  pedido:       varchar("pedido", { length: 20 }).notNull(),
+  item:         integer("item").notNull(),
+  romaneio:     varchar("romaneio", { length: 20 }).notNull().default(""),
+  cliente:      varchar("cliente", { length: 20 }).notNull().default(""),
+  placa:        varchar("placa", { length: 12 }).notNull().default(""),
+  motoristaCod: varchar("motoristaCod", { length: 12 }).notNull().default(""),
+  dataPedido:   date("dataPedido", { mode: "string" }),
+  codProduto:   varchar("codProduto", { length: 20 }).notNull(),
+  qtdCx:        doublePrecision("qtdCx").notNull().default(0),
+  qtdUn:        doublePrecision("qtdUn").notNull().default(0),
+  retCx:        doublePrecision("retCx").notNull().default(0),
+  retUn:        doublePrecision("retUn").notNull().default(0),
+  liqCx:        doublePrecision("liqCx").notNull().default(0),
+  liqUn:        doublePrecision("liqUn").notNull().default(0),
+  motivoDev:    varchar("motivoDev", { length: 10 }),
+  valor:        doublePrecision("valor").notNull().default(0),
+  cancelado:    boolean("cancelado").notNull().default(false),
+  importadoEm:  timestamp("importadoEm", { withTimezone: true }).defaultNow().notNull(),
+}, t => [
+  uniqueIndex("uq_erp_pedido_itens").on(t.revendaId, t.pedido, t.item),
+  index("ix_erp_pedido_itens_pedido").on(t.revendaId, t.pedido),
+]);
+
+export const produtividadeParadas = pgTable("produtividade_paradas", {
+  id:          serial("id").primaryKey(),
+  revendaId:   integer("revendaId").notNull().references(() => revendas.id),
+  dia:         date("dia", { mode: "string" }).notNull(),
+  placa:       varchar("placa", { length: 20 }).notNull(),
+  motorista:   varchar("motorista", { length: 120 }).notNull(),
+  routeId:     varchar("routeId", { length: 40 }).notNull(),
+  codCliente:  varchar("codCliente", { length: 40 }).notNull(),
+  hl:          doublePrecision("hl").notNull(),
+  minDescarga: doublePrecision("minDescarga").notNull(),
+}, t => [
+  uniqueIndex("uq_produtividade_paradas").on(t.revendaId, t.routeId, t.codCliente, t.dia),
+  index("ix_produtividade_paradas_motorista").on(t.revendaId, t.motorista, t.dia),
+]);
 
 // ---------------------------------------------------------------------------
 // Análise Diária — flags de ocorrência por vendedor × dia
