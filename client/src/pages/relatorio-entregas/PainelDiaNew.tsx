@@ -167,7 +167,7 @@ function Cartao({ l, aberto, onClick }: { l: Linha; aberto: boolean; onClick: ()
         </div>
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-        <span><b className="text-slate-800 dark:text-slate-100">{n(p.hl)}</b> hL</span>
+        <span><b className="text-slate-800 dark:text-slate-100">{p.hl || p.hlPorHora !== null ? n(p.hl) : "—"}</b> hL</span>
         <span><b className={p.dev ? "text-red-600 dark:text-red-400" : "text-slate-800 dark:text-slate-100"}>{n(p.dev)}</b> hL dev.</span>
         <span><b className="text-slate-800 dark:text-slate-100">{n(p.hlPorKm, 2)}</b> hL/km</span>
         <span><b className="text-slate-800 dark:text-slate-100">{n(p.hlPorParada, 2)}</b> hL/parada</span>

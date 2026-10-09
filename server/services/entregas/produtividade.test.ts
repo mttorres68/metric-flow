@@ -73,13 +73,26 @@ describe("produtividadeLinha", () => {
     expect(p.parcial).toBe(true);
     expect(p.hlPorHora).toBeCloseTo(3 / 3.5, 3);
   });
-  it("etiquetas: app atrasado, registro longe e entregas sem pedido no ERP", () => {
+  it("etiquetas: app atrasado (pelo 1º registro do dia), registros longe e entregas sem pedido no ERP", () => {
+    const longe = { lat: -7, lon: -43, latApp: -7.01, lonApp: -43, situacao: "ENTREGUE" };
     const { r, vols } = linha([
-      baixa(1, 5, { entrega: { lat: -7, lon: -43, latApp: -7.01, lonApp: -43, baixaEm: new Date(), situacao: "ENTREGUE" } }),
+      baixa(1, 5, { entrega: { ...longe, baixaEm: new Date("2026-10-05T12:45:00Z") }, momentoBaixa: { tipo: "depois", min: 45 } }),
+      baixa(1, 5, { entrega: { ...longe, baixaEm: new Date("2026-10-05T13:30:00Z") }, momentoBaixa: { tipo: "na_parada", min: 0 } }),
       baixa(0, 5, { vol: null }),
-    ], { app: { primeira: new Date("2026-10-05T12:45:00Z"), ultima: null, emClienteMin: 0 } });
+    ]);
     const textos = produtividadeLinha(r, vols, 200).etiquetas.map(e => e.texto);
-    expect(textos).toEqual(expect.arrayContaining(["app 45 min depois", "registro longe do cliente", "1 entrega sem pedido no ERP"]));
+    expect(textos).toEqual(expect.arrayContaining(["app 45 min depois", "2 registros longe do cliente", "1 entrega sem pedido no ERP"]));
+  });
+  it("pernoite perto de cliente não vira 'app atrasado' (vale a passagem do próprio cliente)", () => {
+    const { r, vols } = linha([baixa(1, 5, { momentoBaixa: { tipo: "na_parada", min: 0 } })],
+      { gpsClientes: { primeiraChegada: new Date("2026-10-05T03:07:00Z"), ultimaSaida: new Date("2026-10-05T13:30:00Z") } });
+    expect(produtividadeLinha(r, vols, 200).etiquetas.map(e => e.texto).join()).not.toMatch(/app/);
+  });
+  it("sem volume casado com o ERP: hL/h e hL/km ficam vazios (não zero)", () => {
+    const { r, vols } = linha([baixa(0, 5, { vol: null })]);
+    expect(produtividadeLinha(r, vols, 200)).toMatchObject({ hlPorHora: null, hlPorKm: null });
+    const semPedido = linha([baixa(0, 5, { vol: { ...baixa(0, 5).vol, casou: false } })]);
+    expect(produtividadeLinha(semPedido.r, semPedido.vols, 200)).toMatchObject({ hlPorHora: null, hlPorKm: null, semVolume: 1 });
   });
   it("min/hL por tipo dominante e reta das 4 semanas", () => {
     const bs = [0.5, 1, 1.5, 2, 3, 4].map(hl => baixa(hl, 6 + 2 * hl));

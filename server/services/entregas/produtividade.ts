@@ -72,6 +72,7 @@ export function produtividadeLinha(
 ): ProdutividadeLinha {
   const vs = volumes.filter((v): v is VolumeEntrega => !!v);
   const hl = r3(vs.reduce((s, v) => s + v.hl, 0)), dev = r3(vs.reduce((s, v) => s + v.dev, 0));
+  const casados = vs.filter(v => v.casou).length;
   const fim = r.retorno ?? r.gpsClientes.ultimaSaida;
   const horas = r.saida && fim ? (fim.getTime() - r.saida.getTime()) / 3_600_000 : 0;
   const comHl = vs.filter(v => v.hl > 0);
@@ -93,11 +94,14 @@ export function produtividadeLinha(
   const add = (texto: string, nivel: "alerta" | "aviso" = "alerta") => etiquetas.push({ texto, nivel });
   if (r.semGps) add(`sem GPS: ${r.semGps}`, "aviso");
   if (r.saida && horaBRT(r.saida) > LIMITES.saidaAte) add(`saída ${horaBRT(r.saida)}`);
-  const atraso = r.app.primeira && r.gpsClientes.primeiraChegada
-    ? Math.round((r.app.primeira.getTime() - r.gpsClientes.primeiraChegada.getTime()) / 60000) : 0;
+  // Atraso do app: o 1º registro do dia contra a passagem do caminhão por aquele mesmo cliente (momento do
+  // registro). Comparar com a 1ª chegada a qualquer cliente erra quando o caminhão dorme perto de um cliente.
+  const primeiro = r.baixas.filter(b => b.entrega.baixaEm).sort((a, b) => a.entrega.baixaEm!.getTime() - b.entrega.baixaEm!.getTime())[0];
+  const atraso = primeiro?.momentoBaixa?.tipo === "depois" ? primeiro.momentoBaixa.min : 0;
   if (atraso > APP_ATRASO_MIN) add(`app ${atraso >= 60 ? `${Math.floor(atraso / 60)}h${String(atraso % 60).padStart(2, "0")}` : `${atraso} min`} depois`);
-  if (r.baixas.some(b => b.entrega.lat !== null && b.entrega.lon !== null && b.entrega.latApp !== null && b.entrega.lonApp !== null
-    && distM(b.entrega.lat, b.entrega.lon, b.entrega.latApp, b.entrega.lonApp) > raioM)) add("registro longe do cliente");
+  const longe = r.baixas.filter(b => b.entrega.lat !== null && b.entrega.lon !== null && b.entrega.latApp !== null && b.entrega.lonApp !== null
+    && distM(b.entrega.lat, b.entrega.lon, b.entrega.latApp, b.entrega.lonApp) > raioM).length;
+  if (longe) add(`${longe} registro${longe > 1 ? "s" : ""} longe do cliente`);
   if (devPct !== null && devPct > DEV_ALTA_PCT) add(`devolução ${Math.round(devPct)}%`);
   if (r.paradasSemCliente.qtd) add(`${r.paradasSemCliente.qtd} parada(s) sem cliente`, "aviso");
   if (r.desvios) add(`${r.desvios} desvio(s)`, "aviso");
@@ -106,8 +110,9 @@ export function produtividadeLinha(
 
   return {
     hl, dev, devPct,
-    hlPorHora: horas > 0 ? r3(hl / horas) : null, parcial: !r.retorno,
-    hlPorKm: r.kmGps ? r3(hl / r.kmGps) : null,
+    // Sem nenhuma entrega casada com o ERP o volume é desconhecido: vazio, não zero.
+    hlPorHora: casados && horas > 0 ? r3(hl / horas) : null, parcial: !r.retorno,
+    hlPorKm: casados && r.kmGps ? r3(hl / r.kmGps) : null,
     hlPorParada: comHl.length ? r3(hl / comHl.length) : null,
     menorHl: comHl.length ? Math.min(...comHl.map(v => v.hl)) : null,
     reta: ajustarReta(pontos),
