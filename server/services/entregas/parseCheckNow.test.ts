@@ -114,6 +114,16 @@ describe("parseCheckNow — dados da rota (colunas opcionais)", () => {
     expect(parseCheckNow(planilha([base]))[0]).toMatchObject({ latApp: null, lonApp: null });
   });
 
+  it("guarda os documentos distintos da entrega (= Pedido do ERP)", () => {
+    const [e] = parseCheckNow(planilha([
+      { ...base, "Documento": "202610070129" },
+      { ...base, "Documento": "202610070129" }, // linha repetida
+      { ...base, "Documento": "202610070130" },
+    ]));
+    expect(e.documentos).toEqual(["202610070129", "202610070130"]);
+    expect(parseCheckNow(planilha([base]))[0].documentos).toEqual([]);
+  });
+
   it("lê o motivo do problema", () => {
     const [e] = parseCheckNow(planilha([{ ...base, ...extra, "Situação": "PROBLEMA", "Motivo Problema": "FECHADO/AUSENTE" }]));
     expect(e.motivoProblema).toBe("FECHADO/AUSENTE");

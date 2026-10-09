@@ -7,7 +7,7 @@ const brt = (s: string) => new Date(`${s}:00-03:00`); // "2026-10-05T10:00"
 
 const entrega = (o: Partial<Entrega> = {}): Entrega => ({
   routeId: "R1", placa: "SOO-8D21", motorista: "ANTONIO",
-  codCliente: "1", cliente: "C1", lat: -7, lon: -43, latApp: null, lonApp: null,
+  codCliente: "1", cliente: "C1", lat: -7, lon: -43, latApp: null, lonApp: null, documentos: [],
   situacao: "ENTREGUE", baixaEm: brt("2026-10-05T10:00"),
   rotaInicio: brt("2026-10-05T07:00"), rotaFim: null,
   odoIniInformado: null, odoFimInformado: null,

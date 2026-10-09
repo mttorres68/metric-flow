@@ -16,7 +16,7 @@ const { eq } = await import("drizzle-orm");
 const db = (await getDb())!;
 const [rev] = await db.select().from(revendas).limit(1);
 const base = {
-  placa: "TST-0001", motorista: "TESTE", cliente: "C", lat: -7, lon: -43, latApp: null, lonApp: null, situacao: "ENTREGUE" as const, baixaEm: null, saidaApp: null,
+  placa: "TST-0001", motorista: "TESTE", cliente: "C", lat: -7, lon: -43, latApp: null, lonApp: null, documentos: [], situacao: "ENTREGUE" as const, baixaEm: null, saidaApp: null,
   rotaFim: null, odoIniInformado: null, odoFimInformado: null, ordemPlanejada: null, valor: 0, pesoKg: 0, notas: 1, motivoProblema: null, capacidadeKg: null, cidade: "",
 };
 const ini = new Date("2026-01-01T10:00:00-03:00");

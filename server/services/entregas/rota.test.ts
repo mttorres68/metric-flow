@@ -9,7 +9,7 @@ const lat = (k: number) => -7 + 0.01 * k; // clientes a ~1,1 km um do outro
 
 const cliente = (k: number, o: Partial<Entrega>): Entrega => ({
   routeId: "R1", placa: "SOL-6E53", motorista: "FRANCISCO", codCliente: `c${k}`, cliente: `CLIENTE ${k}`,
-  lat: lat(k), lon: -43, latApp: null, lonApp: null, situacao: "ENTREGUE", baixaEm: null, saidaApp: null,
+  lat: lat(k), lon: -43, latApp: null, lonApp: null, documentos: [], situacao: "ENTREGUE", baixaEm: null, saidaApp: null,
   rotaInicio: brt("2026-10-01T07:00"), rotaFim: brt("2026-10-02T18:00"),
   odoIniInformado: 1000, odoFimInformado: 1334,
   ordemPlanejada: k, valor: 0, pesoKg: 0, notas: 1, motivoProblema: null, capacidadeKg: 8000, cidade: `CIDADE ${k}`, ...o,

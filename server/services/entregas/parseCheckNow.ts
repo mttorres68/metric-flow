@@ -15,6 +15,7 @@ export interface Entrega {
   cliente: string;
   lat: number | null; // null = sem coordenada (0 na planilha)
   lon: number | null;
+  documentos: string[]; // números dos documentos da entrega (= Pedido do ERP), distintos
   latApp: number | null; // onde o motorista registrou a entrega no app (Latitude/Longitude Final); null = sem
   lonApp: number | null;
   situacao: Situacao;
@@ -123,6 +124,7 @@ export function parseCheckNow(buffer: Buffer): Entrega[] {
     const existente = entregas.get(chave);
     if (existente) {
       if (notaNova && doc) {
+        existente.documentos.push(doc);
         existente.notas++;
         existente.valor += reais(r["Valor (R$)"]);
         existente.pesoKg += num(r["Peso (Kg)"]) ?? 0;
@@ -142,6 +144,7 @@ export function parseCheckNow(buffer: Buffer): Entrega[] {
       cliente: String(r["Descrição do Ponto"] ?? "").trim(),
       lat: temCoord ? lat : null,
       lon: temCoord ? lon : null,
+      documentos: doc ? [doc] : [],
       latApp: temApp ? latApp : null,
       lonApp: temApp ? lonApp : null,
       situacao: situacao(r["Situação"]),
