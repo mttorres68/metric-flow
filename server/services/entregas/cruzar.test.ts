@@ -209,6 +209,12 @@ describe("cruzar", () => {
       ]);
     });
 
+    it("trilho sem retorno ainda (caminhão na rua): paradas até o fim da janela", () => {
+      const r = cruzar(linha({ janela: { inicio: brt("2026-10-05T00:00"), fim: brt("2026-10-05T14:00") } }), [entrega()], gps(paradasDia, { retorno: null }));
+      const hm = (d: Date) => d.toISOString().slice(11, 16);
+      expect(r.trilho.map(t => [hm(t.inicio), hm(t.fim), t.noCliente])).toEqual([["12:55", "13:00", true], ["15:00", "16:00", false]]);
+    });
+
     it("parada que cruza a saída conta só a parte dentro da jornada", () => {
       const r = cruzar(linha(), [entrega()], gps([parada(LONGE, -43, "2026-10-05T07:00", 60)]));
       expect(r.tempo?.paradoSemClienteMin).toBe(30);

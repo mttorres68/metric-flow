@@ -60,6 +60,7 @@ export interface ProdutividadeLinha {
   hlPorKm: number | null; hlPorParada: number | null; menorHl: number | null;
   reta: ReturnType<typeof ajustarReta>; reta4s: (NonNullable<ReturnType<typeof ajustarReta>> & { dias: number }) | null;
   porTipo: { tipo: Tipo | "misto"; hl: number; minPorHl: number }[];
+  incompleto: boolean; // há entregas sem volume (sem pedido no ERP): o hL/h fica abaixo do real
   semVolume: number; etiquetas: { texto: string; nivel: "alerta" | "aviso" }[];
 }
 
@@ -69,8 +70,10 @@ const descarregou = (b: EntregaCruzada, v: VolumeEntrega | null): v is VolumeEnt
 export function produtividadeLinha(
   r: ResultadoLinha, volumes: (VolumeEntrega | null)[], raioM: number,
   pontos4s: { hl: number; minDescarga: number; dia: string }[] = [],
+  /** Linha sem GPS não tem baixas cruzadas: o volume do dia vem das entregas dela (o hL/h fica vazio). */
+  semGps: { situacao: string; vol: VolumeEntrega | null }[] = [],
 ): ProdutividadeLinha {
-  const vs = volumes.filter((v): v is VolumeEntrega => !!v);
+  const vs = [...volumes, ...semGps.map(s => s.vol)].filter((v): v is VolumeEntrega => !!v);
   const hl = r3(vs.reduce((s, v) => s + v.hl, 0)), dev = r3(vs.reduce((s, v) => s + v.dev, 0));
   const casados = vs.filter(v => v.casou).length;
   const fim = r.retorno ?? r.gpsClientes.ultimaSaida;
@@ -87,7 +90,8 @@ export function produtividadeLinha(
   });
 
   const reta4 = ajustarReta(pontos4s.map(p => ({ hl: p.hl, min: p.minDescarga })));
-  const semVolume = r.baixas.filter((b, i) => b.entrega.situacao === "ENTREGUE" && !volumes[i]?.casou).length;
+  const semVolume = r.baixas.filter((b, i) => b.entrega.situacao === "ENTREGUE" && !volumes[i]?.casou).length
+    + semGps.filter(s => s.situacao === "ENTREGUE" && !s.vol?.casou).length;
   const devPct = hl + dev > 0 ? Math.round((dev / (hl + dev)) * 10000) / 100 : null;
 
   const etiquetas: ProdutividadeLinha["etiquetas"] = [];
@@ -118,7 +122,7 @@ export function produtividadeLinha(
     reta: ajustarReta(pontos),
     reta4s: reta4 && { ...reta4, dias: new Set(pontos4s.map(p => p.dia)).size },
     porTipo: [...grupos].map(([tipo, g]) => ({ tipo, hl: r3(g.hl), minPorHl: g.min / g.hl })),
-    semVolume, etiquetas,
+    incompleto: semVolume > 0, semVolume, etiquetas,
   };
 }
 

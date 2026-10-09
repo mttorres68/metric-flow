@@ -94,6 +94,21 @@ describe("produtividadeLinha", () => {
     const semPedido = linha([baixa(0, 5, { vol: { ...baixa(0, 5).vol, casou: false } })]);
     expect(produtividadeLinha(semPedido.r, semPedido.vols, 200)).toMatchObject({ hlPorHora: null, hlPorKm: null, semVolume: 1 });
   });
+  it("caminhão sem GPS: hL do dia vem das entregas (sem baixas cruzadas); hL/h fica vazio", () => {
+    const vol = baixa(2, 0).vol;
+    const { r } = linha([], { semGps: "sem sinal GPS", saida: null, retorno: null });
+    const p = produtividadeLinha(r, [], 200, [], [
+      { situacao: "ENTREGUE", vol }, { situacao: "ENTREGUE", vol: { ...vol, hl: 1, dev: 0.5 } }, { situacao: "ENTREGUE", vol: null },
+    ]);
+    expect([p.hl, p.dev, p.hlPorHora, p.semVolume]).toEqual([3, 0.5, null, 1]);
+  });
+  it("cobertura parcial do ERP: hL/h marcado como incompleto", () => {
+    const { r, vols } = linha([baixa(2, 10), baixa(0, 5, { vol: { ...baixa(0, 5).vol, casou: false } })]);
+    expect(produtividadeLinha(r, vols, 200)).toMatchObject({ incompleto: true });
+    const completo = linha([baixa(2, 10)]);
+    expect(produtividadeLinha(completo.r, completo.vols, 200).incompleto).toBe(false);
+  });
+
   it("min/hL por tipo dominante e reta das 4 semanas", () => {
     const bs = [0.5, 1, 1.5, 2, 3, 4].map(hl => baixa(hl, 6 + 2 * hl));
     const { r, vols } = linha(bs);

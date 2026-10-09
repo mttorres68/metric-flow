@@ -116,7 +116,7 @@ function Detalhe({ l, raioM }: { l: Linha; raioM: number }) {
                     <div className={`h-2.5 rounded ${cor(mph)}`} style={{ width: `${((v?.hl ?? 0) / maxHl) * 100}%` }} />
                   </div>
                   <span className="text-slate-500 dark:text-slate-400 font-mono">
-                    {!v ? "sem pedido no ERP" : `${n(v.hl, 2)} hL${mph !== null ? ` · ${n(mph)} min/hL` : ""}${v.dev ? ` · dev ${n(v.dev, 2)}` : ""}`}
+                    {!v?.casou ? "sem pedido no ERP" : `${n(v.hl, 2)} hL${mph !== null ? ` · ${n(mph)} min/hL` : ""}${v.dev ? ` · dev ${n(v.dev, 2)}` : ""}`}
                   </span>
                 </div>
                 {mapa === i && <MapaEntrega b={b} raioM={raioM} />}
@@ -163,7 +163,9 @@ function Cartao({ l, aberto, onClick }: { l: Linha; aberto: boolean; onClick: ()
         </div>
         <div className="text-right shrink-0">
           <div className="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">{n(p.hlPorHora)}</div>
-          <div className="text-[11px] text-slate-400">hL/h{p.parcial ? " · parcial" : ""}</div>
+          <div className="text-[11px] text-slate-400" title={p.incompleto ? `${p.semVolume} entrega(s) sem pedido no ERP: o hL/h fica abaixo do real` : undefined}>
+            hL/h{p.parcial ? " · parcial" : ""}{p.incompleto ? " · incompleto" : ""}
+          </div>
         </div>
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
@@ -188,8 +190,10 @@ function Cartao({ l, aberto, onClick }: { l: Linha; aberto: boolean; onClick: ()
 export function PainelDiaNew({ linhas, raioM }: { linhas: Linha[]; raioM: number }) {
   const [aberto, setAberto] = useState<string | null>(null);
   const chave = (l: Linha) => `${l.linha.routeId}|${l.linha.data}`;
+  // Do menor hL/h para o maior; incompletos (entregas sem pedido no ERP) e sem hL/h vão para o fim.
   const ordenadas = useMemo(() => [...linhas].sort((a, b) =>
-    (a.produtividade.hlPorHora ?? Infinity) - (b.produtividade.hlPorHora ?? Infinity)), [linhas]);
+    Number(a.produtividade.incompleto) - Number(b.produtividade.incompleto)
+    || (a.produtividade.hlPorHora ?? Infinity) - (b.produtividade.hlPorHora ?? Infinity)), [linhas]);
 
   const resumo = useMemo(() => {
     const ps = linhas.map(l => l.produtividade);

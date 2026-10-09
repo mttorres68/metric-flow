@@ -329,6 +329,15 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
 
   const clientes = entregasRota.filter(temCoord);
   const { saida, retorno } = r;
+  // Trilho do dia (linha do tempo): paradas recortadas em [saída, retorno]; sem retorno ainda, até o fim da janela.
+  if (saida) {
+    const fimT = retorno ?? linha.janela.fim;
+    for (const p of gps.paradas) {
+      const ini = Math.max(p.inicio.getTime(), saida.getTime()), fim = Math.min(p.fim.getTime(), fimT.getTime());
+      if (fim <= ini) continue;
+      r.trilho.push({ inicio: new Date(ini), fim: new Date(fim), noCliente: clientes.some(c => distM(p.lat, p.lon, c.lat, c.lon) <= raioM) });
+    }
+  }
   if (saida && retorno) {
     for (const p of gps.paradas) {
       if (p.min < LIMITES.paradaSemClienteMin || p.inicio <= saida || p.inicio >= retorno) continue;
@@ -344,9 +353,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
     for (const p of gps.paradas) {
       const m = minDentro(p);
       if (!m) continue;
-      const noCliente = clientes.some(c => distM(p.lat, p.lon, c.lat, c.lon) <= raioM);
-      r.trilho.push({ inicio: new Date(Math.max(p.inicio.getTime(), saida.getTime())), fim: new Date(Math.min(p.fim.getTime(), retorno.getTime())), noCliente });
-      if (noCliente) emCliente += m;
+      if (clientes.some(c => distM(p.lat, p.lon, c.lat, c.lon) <= raioM)) emCliente += m;
       else semCliente += m;
     }
     const jornada = (retorno.getTime() - saida.getTime()) / 60000;

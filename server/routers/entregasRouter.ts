@@ -4,6 +4,7 @@
  * anexa a produtividade em hL pelos pedidos do ERP (spec produtividade §6) e as importações do ERP ficam em `erp`.
  */
 import { z } from "zod";
+import { diaBRT } from "@shared/entregas";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { PlanilhaInvalidaError } from "../services/entregas/parseCheckNow";
@@ -68,13 +69,19 @@ export const entregasRouter = router({
     const [entregas, token, config] = await Promise.all([repo.entregasDoPeriodo(input.revendaId, input.de, input.ate), repo.tokenInfleet(input.revendaId), getConfigEntregas()]);
     const res = await processarEntregas(entregas, new Date(), { cercaId: input.cercaId, token, config, periodo: { de: input.de, ate: input.ate } });
     // Produtividade em hL: itens do ERP dos documentos das entregas; pontos de descarga guardados para o "4 semanas".
-    const itens = await erpRepo.itensDosDocumentos(input.revendaId, res.linhas.flatMap(l => l.baixas.flatMap(b => b.entrega.documentos))).catch(() => []);
+    const avisar = (o: string) => (e: unknown) => { console.warn(`[produtividade] ${o}: ${(e as Error).message}`); return undefined; };
+    const itens = (await erpRepo.itensDosDocumentos(input.revendaId, entregas.flatMap(e => e.documentos)).catch(avisar("itens do ERP"))) ?? [];
     const desde = new Date(Date.parse(`${input.de}T12:00:00Z`) - 28 * 86_400_000).toISOString().slice(0, 10);
     const linhas = await Promise.all(res.linhas.map(async l => {
-      const volumes = l.baixas.map(b => (b.entrega.documentos.length ? volumeEntrega(b.entrega.documentos, itens) : null));
-      await erpRepo.gravarPontos(input.revendaId, pontosDaLinha(l, volumes)).catch(() => undefined);
-      const p4 = await erpRepo.pontosDoMotorista(input.revendaId, l.linha.motorista, desde, l.linha.data).catch(() => []);
-      return { ...l, volumes, produtividade: produtividadeLinha(l, volumes, config.raioM, p4) };
+      const volume = (docs: string[]) => (docs.length ? volumeEntrega(docs, itens) : null);
+      const volumes = l.baixas.map(b => volume(b.entrega.documentos));
+      // Sem GPS não há baixas cruzadas: o volume do dia vem direto das entregas da rota naquele dia.
+      const semGps = l.semGps ? entregas
+        .filter(e => e.routeId === l.linha.routeId && e.situacao !== "AGUARDANDO" && e.baixaEm && diaBRT(e.baixaEm) === l.linha.data)
+        .map(e => ({ situacao: e.situacao, vol: volume(e.documentos) })) : [];
+      await erpRepo.gravarPontos(input.revendaId, pontosDaLinha(l, volumes)).catch(avisar("gravar pontos"));
+      const p4 = (await erpRepo.pontosDoMotorista(input.revendaId, l.linha.motorista, desde, l.linha.data).catch(avisar("pontos de 4 semanas"))) ?? [];
+      return { ...l, volumes, produtividade: produtividadeLinha(l, volumes, config.raioM, p4, semGps) };
     }));
     return { ...res, linhas };
   }),
