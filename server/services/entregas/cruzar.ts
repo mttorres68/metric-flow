@@ -48,7 +48,7 @@ export interface GpsLinha {
   trajeto: Trajeto; // km acumulado pela estrada (posições em movimento)
 }
 
-export interface ParadaNoCliente { inicio: Date; fim: Date; distM: number }
+export interface ParadaNoCliente { inicio: Date; fim: Date; distM: number; lat: number; lon: number }
 
 export interface EntregaCruzada {
   entrega: Entrega;
@@ -305,7 +305,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
       continue;
     }
     r.baixasComCoord++;
-    const comDist = gps.paradas.map(p => ({ inicio: p.inicio, fim: p.fim, min: p.min, distM: distM(p.lat, p.lon, e.lat, e.lon) }));
+    const comDist = gps.paradas.map(p => ({ inicio: p.inicio, fim: p.fim, min: p.min, lat: p.lat, lon: p.lon, distM: distM(p.lat, p.lon, e.lat, e.lon) }));
     const noRaio = comDist.filter(p => p.distM <= raioM).sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
     const perm = noRaio.reduce((s, p) => s + p.min, 0);
     const maisProxima = comDist.reduce<(typeof comDist)[number] | null>((m, p) => (!m || p.distM < m.distM ? p : m), null);
@@ -313,7 +313,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
     if (status === "no_raio") r.noRaio++;
     else if (status === "relampago") r.relampago++;
     else r.semParada++;
-    const semMin = ({ inicio, fim, distM }: ParadaNoCliente): ParadaNoCliente => ({ inicio, fim, distM });
+    const semMin = ({ inicio, fim, distM, lat, lon }: ParadaNoCliente): ParadaNoCliente => ({ inicio, fim, distM, lat, lon });
     const paradasNoRaio = noRaio.map(semMin);
     r.baixas.push({
       entrega: e, status, permanenciaMin: perm, distMaisProximaM: maisProxima?.distM ?? null,

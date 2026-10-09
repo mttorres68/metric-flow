@@ -107,6 +107,13 @@ describe("parseCheckNow — dados da rota (colunas opcionais)", () => {
     expect(parseCheckNow(planilha([base]))[0].saidaApp).toBeNull();
   });
 
+  it("lê onde o motorista registrou a entrega no app (Latitude/Longitude Final; zero ou ausente = null)", () => {
+    const [e] = parseCheckNow(planilha([{ ...base, "Latitude Final": -6.973179817199707, "Longitude Final": -42.66939163208008 }]));
+    expect([e.latApp, e.lonApp]).toEqual([-6.973179817199707, -42.66939163208008]);
+    expect(parseCheckNow(planilha([{ ...base, "Latitude Final": 0, "Longitude Final": 0 }]))[0].latApp).toBeNull();
+    expect(parseCheckNow(planilha([base]))[0]).toMatchObject({ latApp: null, lonApp: null });
+  });
+
   it("lê o motivo do problema", () => {
     const [e] = parseCheckNow(planilha([{ ...base, ...extra, "Situação": "PROBLEMA", "Motivo Problema": "FECHADO/AUSENTE" }]));
     expect(e.motivoProblema).toBe("FECHADO/AUSENTE");

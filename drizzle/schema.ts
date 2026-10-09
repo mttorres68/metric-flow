@@ -384,6 +384,8 @@ export const checknowEntregas = pgTable("checknow_entregas", {
   cliente:         varchar("cliente", { length: 200 }).notNull(),
   lat:             doublePrecision("lat"),
   lon:             doublePrecision("lon"),
+  latApp:          doublePrecision("latApp"),   // onde o motorista registrou a entrega no app
+  lonApp:          doublePrecision("lonApp"),
   situacao:        varchar("situacao", { length: 20 }).notNull(),
   baixaEm:         timestamp("baixaEm", { withTimezone: true }),
   saidaApp:        timestamp("saidaApp", { withTimezone: true }),

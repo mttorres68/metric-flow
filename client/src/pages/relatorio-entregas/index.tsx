@@ -12,6 +12,7 @@ import { blobToBase64 } from "@/pages/analise/lib/pdf";
 import { ConfigEntregasModal } from "./ConfigEntregasModal";
 import { PainelRota } from "./PainelRota";
 import { SituacaoColeta } from "./SituacaoColeta";
+import { MapaEntrega } from "./MapaEntrega";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc";
 import { CONFIG_ENTREGAS_PADRAO, LIMITES, diaBRT, horaBRT } from "@shared/entregas";
@@ -144,12 +145,13 @@ function LinhaTrecho({ t, colunas }: { t: NonNullable<Baixa["trecho"]>; colunas:
 function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Baixa }[]; comPlaca?: boolean; raioM: number }) {
   const colunas = comPlaca ? 10 : 9;
   const ordenados = [...itens].sort((x, y) => ordemVisita(x.b) - ordemVisita(y.b));
+  const [mapa, setMapa] = useState<number | null>(null); // linha com o mapa aberto
   return (
     <>
       {!comPlaca && (
         <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
           Na ordem em que o caminhão passou. Entre as linhas: <b className="text-indigo-500">↓ distância pela estrada · tempo de deslocamento</b>
-          {" "}· 🚩 desvio (caminho bem maior que a linha reta) · 🐢 lento (parou no caminho). Passe o mouse para ver detalhes.
+          {" "}· 🚩 desvio (caminho bem maior que a linha reta) · 🐢 lento (parou no caminho). Passe o mouse para ver detalhes; clique no cliente para ver o mapa.
         </p>
       )}
       {/* No detalhe, largura do conteúdo: a tabela principal é larga e esticaria as faixas de trecho para a direita. */}
@@ -174,7 +176,13 @@ function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Ba
               {!comPlaca && b.trecho && <LinhaTrecho t={b.trecho} colunas={colunas} />}
               <tr className="border-b border-slate-100 dark:border-slate-700/40 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10">
                 {comPlaca && <Td>{r.linha.placa} · {r.linha.motorista}</Td>}
-                <Td><span title={b.entrega.cliente} className="cursor-help underline decoration-dotted decoration-slate-300 underline-offset-2">{primeiroNome(b.entrega.cliente)}</span></Td>
+                <Td>
+                  <button onClick={() => setMapa(m => (m === i ? null : i))} aria-expanded={mapa === i}
+                    title={`${b.entrega.cliente} — clique para ver no mapa: cliente, motorista no app e parada do caminhão`}
+                    className="flex items-center gap-1 text-left text-indigo-600 dark:text-indigo-400 hover:underline">
+                    {mapa === i ? <ChevronDown size={12} /> : <MapPin size={12} />} {primeiroNome(b.entrega.cliente)}
+                  </button>
+                </Td>
                 <Td mono className="text-slate-500 dark:text-slate-400">{b.entrega.codCliente}</Td>
                 <Td className="text-slate-500 dark:text-slate-400">{b.entrega.cidade || "—"}</Td>
                 <Td center mono>{hora(b.entrega.baixaEm)}</Td>
@@ -188,6 +196,13 @@ function TabelaBaixas({ itens, comPlaca, raioM }: { itens: { r: Resultado; b: Ba
                 </Td>
                 <Td center mono>{b.status === "sem_coordenada" ? vazio : dur(b.permanenciaMin)}</Td>
               </tr>
+              {mapa === i && (
+                <tr>
+                  <td colSpan={colunas} className="px-2">
+                    <MapaEntrega b={b} raioM={raioM} />
+                  </td>
+                </tr>
+              )}
             </React.Fragment>
           ))}
         </tbody>

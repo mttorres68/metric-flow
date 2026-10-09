@@ -15,6 +15,8 @@ export interface Entrega {
   cliente: string;
   lat: number | null; // null = sem coordenada (0 na planilha)
   lon: number | null;
+  latApp: number | null; // onde o motorista registrou a entrega no app (Latitude/Longitude Final); null = sem
+  lonApp: number | null;
   situacao: Situacao;
   baixaEm: Date | null; // Data/Hora de Chegada (BRT)
   saidaApp: Date | null; // Data/Hora de Saída do cliente no app (opcional)
@@ -130,6 +132,8 @@ export function parseCheckNow(buffer: Buffer): Entrega[] {
 
     const lat = num(r["Latitude"]), lon = num(r["Longitude"]);
     const temCoord = lat !== null && lon !== null && Math.abs(lat) > 0.001 && Math.abs(lon) > 0.001;
+    const latApp = num(r["Latitude Final"]), lonApp = num(r["Longitude Final"]);
+    const temApp = latApp !== null && lonApp !== null && Math.abs(latApp) > 0.001 && Math.abs(lonApp) > 0.001;
     entregas.set(chave, {
       routeId,
       placa: String(r["Placa"] ?? "").trim(),
@@ -138,6 +142,8 @@ export function parseCheckNow(buffer: Buffer): Entrega[] {
       cliente: String(r["Descrição do Ponto"] ?? "").trim(),
       lat: temCoord ? lat : null,
       lon: temCoord ? lon : null,
+      latApp: temApp ? latApp : null,
+      lonApp: temApp ? lonApp : null,
       situacao: situacao(r["Situação"]),
       baixaEm: dataHoraBRT(r["Data de Chegada"], r["Hora de Chegada"]),
       saidaApp: dataHoraBRT(r["Data de Saída"], r["Hora de Saída"]),

@@ -7,7 +7,7 @@ const brt = (s: string) => new Date(`${s}:00-03:00`); // "2026-10-05T10:00"
 
 const entrega = (o: Partial<Entrega> = {}): Entrega => ({
   routeId: "R1", placa: "SOO-8D21", motorista: "ANTONIO",
-  codCliente: "1", cliente: "C1", lat: -7, lon: -43,
+  codCliente: "1", cliente: "C1", lat: -7, lon: -43, latApp: null, lonApp: null,
   situacao: "ENTREGUE", baixaEm: brt("2026-10-05T10:00"),
   rotaInicio: brt("2026-10-05T07:00"), rotaFim: null,
   odoIniInformado: null, odoFimInformado: null,
@@ -164,6 +164,7 @@ describe("cruzar", () => {
       expect(b.momentoBaixa).toBeNull();
       expect(b.maisProxima && [hhmm(b.maisProxima.inicio), hhmm(b.maisProxima.fim)]).toEqual(["13:05", "13:15"]);
       expect(b.maisProxima!.distM).toBeGreaterThan(990);
+      expect([b.maisProxima!.lat, b.maisProxima!.lon]).toEqual([UM_KM, -43]); // ponto da parada para o mapa
     });
 
     it("sem coordenada: nada de GPS na baixa", () => {
