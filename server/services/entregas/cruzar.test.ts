@@ -201,6 +201,14 @@ describe("cruzar", () => {
       expect(r.tempo).toEqual({ jornadaMin: 630, rodandoMin: 565, emClienteMin: 5, paradoSemClienteMin: 60 });
     });
 
+    it("trilho do dia: paradas recortadas na jornada, marcando as no cliente", () => {
+      const r = cruzar(linha(), [entrega()], gps(paradasDia));
+      const hm = (d: Date) => d.toISOString().slice(11, 16); // UTC = BRT + 3h
+      expect(r.trilho.map(t => [hm(t.inicio), hm(t.fim), t.noCliente])).toEqual([
+        ["12:55", "13:00", true], ["15:00", "16:00", false],
+      ]);
+    });
+
     it("parada que cruza a saída conta só a parte dentro da jornada", () => {
       const r = cruzar(linha(), [entrega()], gps([parada(LONGE, -43, "2026-10-05T07:00", 60)]));
       expect(r.tempo?.paradoSemClienteMin).toBe(30);

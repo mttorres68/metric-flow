@@ -102,6 +102,7 @@ export interface ResultadoLinha {
   marchasLentas: number;
   eventos: EventoGps[];
   /** Divisão da jornada (saída → retorno). null sem GPS ou sem saída/retorno. */
+  trilho: { inicio: Date; fim: Date; noCliente: boolean }[]; // paradas da jornada, recortadas em [saída, retorno] (linha do dia)
   tempo: { jornadaMin: number; rodandoMin: number; emClienteMin: number; paradoSemClienteMin: number } | null;
   /** Onde o caminhão estacionou no fim do dia (parada que começa no retorno) — base do pernoite. */
   ultimaParada: { lat: number; lon: number; inicio: Date } | null;
@@ -277,6 +278,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
     chaveLigadaMin: null,
     marchasLentas: 0,
     eventos: gps.eventos,
+    trilho: [],
     tempo: null,
     ultimaParada: null,
     pendentes: linha.fechaRota ? entregasRota.filter(e => e.situacao === "AGUARDANDO").length : null,
@@ -342,7 +344,9 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
     for (const p of gps.paradas) {
       const m = minDentro(p);
       if (!m) continue;
-      if (clientes.some(c => distM(p.lat, p.lon, c.lat, c.lon) <= raioM)) emCliente += m;
+      const noCliente = clientes.some(c => distM(p.lat, p.lon, c.lat, c.lon) <= raioM);
+      r.trilho.push({ inicio: new Date(Math.max(p.inicio.getTime(), saida.getTime())), fim: new Date(Math.min(p.fim.getTime(), retorno.getTime())), noCliente });
+      if (noCliente) emCliente += m;
       else semCliente += m;
     }
     const jornada = (retorno.getTime() - saida.getTime()) / 60000;
