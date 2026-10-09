@@ -7,7 +7,7 @@ import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { diaBRT, horaBRT } from "@shared/entregas";
 
-const ORIGEM: Record<string, string> = { auto: "automática", botao: "botão", upload: "planilha" };
+const ORIGEM: Record<string, string> = { auto: "automática", botao: "botão", upload: "planilha", erp: "ERP" };
 const RESULTADO: Record<string, string> = { ok: "ok", sem_dados: "sem dados", rodando: "rodando…" };
 const diaBR = (iso: string) => iso.split("-").reverse().join("/");
 const quando = (d: Date) => `${diaBRT(d) === diaBRT(new Date()) ? "hoje" : diaBR(diaBRT(d)).slice(0, 5)} ${horaBRT(d)}`;
@@ -15,8 +15,10 @@ const quando = (d: Date) => `${diaBRT(d) === diaBRT(new Date()) ? "hoje" : diaBR
 export function SituacaoColeta({ revendaId }: { revendaId: number }) {
   const [aberto, setAberto] = useState(false);
   const { data: coletas = [] } = trpc.entregas.coletas.useQuery({ revendaId }, { refetchInterval: 60_000 });
-  const ultima = coletas.find(c => c.status !== "rodando");
-  const ultimoOk = coletas.find(c => c.status === "ok" || c.status === "sem_dados");
+  // O aviso é da coleta do CheckNow: importações do ERP aparecem na lista, mas não contam aqui.
+  const doCheckNow = coletas.filter(c => c.origem !== "erp");
+  const ultima = doCheckNow.find(c => c.status !== "rodando");
+  const ultimoOk = doCheckNow.find(c => c.status === "ok" || c.status === "sem_dados");
   const hora = Number(horaBRT(new Date()).slice(0, 2));
   const atrasada = hora >= 6 && hora <= 22 && (!ultimoOk || Date.now() - new Date(ultimoOk.iniciadoEm).getTime() > 3 * 3600_000);
   const falhou = ultima?.status === "erro";

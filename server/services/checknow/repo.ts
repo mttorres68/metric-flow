@@ -2,7 +2,7 @@
  * MetricFlow — acesso ao banco da coleta do CheckNow (spec checknow-coleta §4–5).
  * Contas (segredos cifrados), entregas por revenda, registro de coletas e trava por revenda.
  */
-import { and, desc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, notInArray, or } from "drizzle-orm";
 import type { Pool } from "pg";
 import { getDb } from "../../db";
 import { checknowColetas, checknowEntregas, entregasContas, revendas } from "../../../drizzle/schema";
@@ -11,7 +11,7 @@ import { diaBRT } from "@shared/entregas";
 import { cifrar, decifrar } from "./cofre";
 
 export class ColetaError extends Error {}
-export type Origem = "auto" | "botao" | "upload";
+export type Origem = "auto" | "botao" | "upload" | "erp";
 const CHAVE_TRAVA = 7301;
 
 async function exigirDb() {
@@ -95,7 +95,7 @@ export async function ultimasColetas(revendaId: number, n = 10) {
 export async function ultimoPeriodoOk(revendaId: number): Promise<string | null> {
   const db = await exigirDb();
   const [r] = await db.select({ ate: checknowColetas.periodoAte }).from(checknowColetas)
-    .where(and(eq(checknowColetas.revendaId, revendaId), inArray(checknowColetas.status, ["ok", "sem_dados"]), ne(checknowColetas.origem, "upload")))
+    .where(and(eq(checknowColetas.revendaId, revendaId), inArray(checknowColetas.status, ["ok", "sem_dados"]), notInArray(checknowColetas.origem, ["upload", "erp"])))
     .orderBy(desc(checknowColetas.periodoAte)).limit(1);
   return r?.ate ?? null;
 }
