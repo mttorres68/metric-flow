@@ -353,6 +353,7 @@ export const entregasConfig = pgTable("entregas_config", {
   desvioMinKm: doublePrecision("desvioMinKm").notNull().default(3),  // …e pelo menos estes km a mais = desvio
   lentoMinMin: integer("lentoMinMin").notNull().default(20),         // trecho com mais que estes minutos…
   lentoMaxKmh: integer("lentoMaxKmh").notNull().default(15),         // …a menos que esta média = lento
+  saidaMinima: varchar("saidaMinima", { length: 5 }).notNull().default("04:00"), // movimento antes disso não é saída
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 

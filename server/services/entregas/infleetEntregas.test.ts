@@ -47,6 +47,16 @@ describe("token por revenda", () => {
   });
 });
 
+describe("horário mínimo de saída", () => {
+  beforeEach(() => { q.mockReset(); });
+  it("movimento que termina antes do horário mínimo do dia não é saída", async () => {
+    const mov = (de: number, ate: number, kmh: number) => Array.from({ length: ate - de + 1 }, (_, i) => p(de + i, kmh));
+    responder([...mov(0, 10, 40), ...mov(11, 39, 0), ...mov(40, 60, 40), ...mov(61, 90, 0)]);
+    expect((await buscarGpsLinha("v1", janela)).saida?.toISOString()).toBe(em(0));
+    expect((await buscarGpsLinha("v1", janela, { saidaMinima: "07:30" })).saida?.toISOString()).toBe(em(40));
+  });
+});
+
 describe("blocos", () => {
   it("divide a janela em blocos de 6 h", () => {
     const b = blocos(new Date("2026-10-05T07:00:00-03:00"), new Date("2026-10-05T23:59:59-03:00"));

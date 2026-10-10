@@ -54,7 +54,8 @@ export function kmEntre(tr: Trajeto, de: Date, ate: Date): number | null {
   return Math.max(0, kmEm(ate.getTime()) - kmEm(de.getTime()));
 }
 
-export function detectarParadas(posicoes: Posicao[]): ResultadoParadas {
+/** saidaNaoAntes: movimento que termina antes disso não é saída (madrugada fora da base); o que começa antes e segue viagem sai nesse horário. */
+export function detectarParadas(posicoes: Posicao[], { saidaNaoAntes }: { saidaNaoAntes?: Date } = {}): ResultadoParadas {
   const ps = posicoes.filter(p => p.valida).sort((a, b) => a.em.getTime() - b.em.getTime());
   const movendo = ps.filter(p => p.kmh >= PARADA.velMaxKmh);
 
@@ -104,9 +105,10 @@ export function detectarParadas(posicoes: Posicao[]): ResultadoParadas {
   const longos = trechos.filter(t =>
     minutos(t.de, t.ate) >= PARADA.movimentoMinMin && movendo.some(m => m.em >= t.de && m.em <= t.ate));
 
+  const valeSaida = longos.find(t => !saidaNaoAntes || t.ate > saidaNaoAntes);
   return {
     paradas,
-    saida: longos[0]?.de ?? null,
+    saida: valeSaida ? (saidaNaoAntes && valeSaida.de < saidaNaoAntes ? saidaNaoAntes : valeSaida.de) : null,
     retorno: longos[longos.length - 1]?.ate ?? null,
   };
 }

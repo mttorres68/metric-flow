@@ -63,7 +63,7 @@ export async function getConfigEntregas(): Promise<ConfigEntregas> {
         if (!db) return CONFIG_ENTREGAS_PADRAO;
         const [r] = await db.select().from(entregasConfig).limit(1);
         if (!r) return CONFIG_ENTREGAS_PADRAO;
-        return { raioM: r.raioM, desvioFator: r.desvioFator, desvioMinKm: r.desvioMinKm, lentoMinMin: r.lentoMinMin, lentoMaxKmh: r.lentoMaxKmh };
+        return { raioM: r.raioM, desvioFator: r.desvioFator, desvioMinKm: r.desvioMinKm, lentoMinMin: r.lentoMinMin, lentoMaxKmh: r.lentoMaxKmh, saidaMinima: r.saidaMinima };
     } catch {
         return CONFIG_ENTREGAS_PADRAO;
     }

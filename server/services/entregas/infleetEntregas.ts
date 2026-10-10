@@ -6,7 +6,7 @@
 import { infleetQuery } from "../../routers/infleetRouter";
 import { detectarParadas, trajetoAcumulado, type Posicao } from "./detectarParadas";
 import type { EventoGps, GpsLinha, TipoEvento } from "./cruzar";
-import { LIMITES } from "@shared/entregas";
+import { LIMITES, diaBRT } from "@shared/entregas";
 
 /** Fator do `speed` do Infleet para km/h — medido na sonda (spec §2): já vem em km/h. */
 export const SPEED_PARA_KMH = 1;
@@ -135,7 +135,8 @@ function periodosNaCerca(eventos: EventoGps[], cercaId: string, inicioJanela: Da
  * (saiu e entrou em menos de LIMITES.cercaManobraMin) não contam. Sem o evento, vale o GPS.
  */
 export async function buscarGpsLinha(
-  vehicleId: string, janela: { inicio: Date; fim: Date }, { cercaId, token }: { cercaId?: string; token?: string } = {},
+  vehicleId: string, janela: { inicio: Date; fim: Date },
+  { cercaId, token, saidaMinima }: { cercaId?: string; token?: string; saidaMinima?: string } = {},
 ): Promise<GpsLinha> {
   try {
     const posicoes: Posicao[] = [];
@@ -149,7 +150,7 @@ export async function buscarGpsLinha(
 
     const kmGps = await kmNoPeriodo(vehicleId, janela.inicio, janela.fim, token);
 
-    const gps = detectarParadas(posicoes);
+    const gps = detectarParadas(posicoes, saidaMinima ? { saidaNaoAntes: new Date(`${diaBRT(janela.inicio)}T${saidaMinima}:00-03:00`) } : {});
     const eventos = await eventosDoDia(vehicleId, janela, token);
     const r: GpsLinha = { erro: null, ...gps, saidaOrigem: "gps", retornoOrigem: "gps", kmGps, eventos, trajeto: trajetoAcumulado(posicoes) };
     if (!cercaId) return r;

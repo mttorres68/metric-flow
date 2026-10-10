@@ -9,7 +9,8 @@ import { trpc } from "@/lib/trpc";
 import { CONFIG_ENTREGAS_PADRAO, type ConfigEntregas } from "@shared/entregas";
 import { ContasEntregas } from "./ContasEntregas";
 
-interface Campo { chave: keyof ConfigEntregas; rotulo: string; un: string; min: number; max: number; step: number; inteiro: boolean; ajuda: string }
+type ChaveNum = Exclude<keyof ConfigEntregas, "saidaMinima">;
+interface Campo { chave: ChaveNum; rotulo: string; un: string; min: number; max: number; step: number; inteiro: boolean; ajuda: string }
 
 /** Limites iguais aos do zod em configRouter.saveEntregasConfig. */
 const GRUPOS: { titulo: string; campos: Campo[] }[] = [
@@ -47,7 +48,8 @@ export function ConfigEntregasModal({ open, onClose, onSalvo, abaInicial = "limi
 
   useEffect(() => { if (salvo) setCfg(salvo); }, [salvo, open]);
 
-  const todosValidos = GRUPOS.every(g => g.campos.every(c => valido(c, cfg[c.chave])));
+  const horaOk = /^([01]\d|2[0-3]):[0-5]\d$/.test(cfg.saidaMinima);
+  const todosValidos = horaOk && GRUPOS.every(g => g.campos.every(c => valido(c, cfg[c.chave])));
 
   async function aplicar(acao: () => Promise<unknown>, msg: string) {
     try {
@@ -125,6 +127,19 @@ export function ConfigEntregasModal({ open, onClose, onSalvo, abaInicial = "limi
                   })}
                 </section>
               ))}
+              <section className="flex flex-col gap-3">
+                <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Jornada</h3>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Saída não antes de</span>
+                  <input type="time" value={cfg.saidaMinima} onChange={e => setCfg({ ...cfg, saidaMinima: e.target.value })}
+                    className="w-28 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-[var(--background)] text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600" />
+                  <span className={`text-[11px] leading-snug ${horaOk ? "text-slate-400 dark:text-slate-500" : "text-red-500"}`}>
+                    {horaOk
+                      ? `Movimento do caminhão que termina antes deste horário (madrugada fora da base) não conta como saída; quem sai antes e segue viagem sai neste horário. A saída pela cerca não muda. Padrão: ${CONFIG_ENTREGAS_PADRAO.saidaMinima}.`
+                      : "Informe um horário (hh:mm)."}
+                  </span>
+                </label>
+              </section>
             </div>
           )}
         </div>

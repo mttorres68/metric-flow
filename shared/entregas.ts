@@ -9,6 +9,7 @@ export const LIMITES = {
   relampagoMin: 3,
   paradaSemClienteMin: 10,
   saidaAte: "08:00",
+  saidaMinima: "04:00", // movimento que termina antes disso não é saída (madrugada fora da base)
   apos14h: "14:00",
   apos14hMinPct: 25,
   relampagoMaxPct: 10,
@@ -42,6 +43,7 @@ export interface ConfigEntregas {
   desvioMinKm: number;
   lentoMinMin: number;
   lentoMaxKmh: number;
+  saidaMinima: string; // "hh:mm" BRT
 }
 export const CONFIG_ENTREGAS_PADRAO: ConfigEntregas = {
   raioM: LIMITES.raioM,
@@ -49,4 +51,5 @@ export const CONFIG_ENTREGAS_PADRAO: ConfigEntregas = {
   desvioMinKm: LIMITES.desvioMinKm,
   lentoMinMin: LIMITES.lentoMinMin,
   lentoMaxKmh: LIMITES.lentoMaxKmh,
+  saidaMinima: LIMITES.saidaMinima,
 };

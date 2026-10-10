@@ -49,6 +49,17 @@ describe("detectarParadas", () => {
     expect(minDe(r.retorno)).toBe(121);
   });
 
+  it("horário mínimo de saída: movimento que termina antes dele não conta (madrugada fora da base)", () => {
+    const pts = [...parado(0, 10), ...andando(11, 30), ...parado(31, 120, -6.8), ...andando(121, 140), ...parado(141, 200, -6.5)];
+    expect(minDe(detectarParadas(pts).saida)).toBe(11);
+    expect(minDe(detectarParadas(pts, { saidaNaoAntes: new Date(T0 + 60 * 60000) }).saida)).toBe(121);
+  });
+
+  it("horário mínimo de saída: trecho que começa antes e segue viagem sai no próprio horário mínimo", () => {
+    const r = detectarParadas([...parado(0, 10), ...andando(11, 80), ...parado(81, 120, -6.8)], { saidaNaoAntes: new Date(T0 + 30 * 60000) });
+    expect(minDe(r.saida)).toBe(30);
+  });
+
   it("manobra de pátio (menos de 3 min em movimento) não conta como saída", () => {
     const cemM = -7 + 0.0009; // ≈ 100 m: não funde com a parada anterior
     const r = detectarParadas([...parado(0, 30), pos(31, 20, -7.0004), pos(32, 20, -7.0007), ...parado(33, 60, cemM), ...andando(61, 80), ...parado(81, 90, -6.5)]);
