@@ -55,6 +55,13 @@ describe("horário mínimo de saída", () => {
     expect((await buscarGpsLinha("v1", janela)).saida?.toISOString()).toBe(em(0));
     expect((await buscarGpsLinha("v1", janela, { saidaMinima: "07:30" })).saida?.toISOString()).toBe(em(40));
   });
+  it("saída da cerca antes do horário mínimo é ignorada (GPS oscilando na borda com o caminhão parado): vale o GPS", async () => {
+    const mov = (de: number, ate: number, kmh: number) => Array.from({ length: ate - de + 1 }, (_, i) => p(de + i, kmh));
+    responder([...mov(0, 39, 0), ...mov(40, 60, 40), ...mov(61, 90, 0)],
+      [{ slugName: "geofenceExit", reportedAt: em(8), geofenceId: "sede" }]);
+    const r = await buscarGpsLinha("v1", janela, { cercaId: "sede", saidaMinima: "07:30" });
+    expect([r.saida?.toISOString(), r.saidaOrigem]).toEqual([em(40), "gps"]);
+  });
 });
 
 describe("blocos", () => {

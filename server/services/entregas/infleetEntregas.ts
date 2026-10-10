@@ -150,15 +150,17 @@ export async function buscarGpsLinha(
 
     const kmGps = await kmNoPeriodo(vehicleId, janela.inicio, janela.fim, token);
 
-    const gps = detectarParadas(posicoes, saidaMinima ? { saidaNaoAntes: new Date(`${diaBRT(janela.inicio)}T${saidaMinima}:00-03:00`) } : {});
+    const naoAntes = saidaMinima ? new Date(`${diaBRT(janela.inicio)}T${saidaMinima}:00-03:00`) : undefined;
+    const gps = detectarParadas(posicoes, { saidaNaoAntes: naoAntes });
     const eventos = await eventosDoDia(vehicleId, janela, token);
     const r: GpsLinha = { erro: null, ...gps, saidaOrigem: "gps", retornoOrigem: "gps", kmGps, eventos, trajeto: trajetoAcumulado(posicoes) };
     if (!cercaId) return r;
 
     const ps = periodosNaCerca(eventos, cercaId, janela.inicio);
     const primeiro = ps[0], ultimo = ps[ps.length - 1];
-    // Saída pela cerca só se o dia começou dentro dela (dormiu na revenda).
-    if (primeiro && primeiro.de === janela.inicio.getTime() && primeiro.ate !== null) {
+    // Saída pela cerca só se o dia começou dentro dela (dormiu na revenda) e depois do horário mínimo:
+    // "saiu da cerca" de madrugada com o caminhão parado é o GPS oscilando na borda (vale o GPS).
+    if (primeiro && primeiro.de === janela.inicio.getTime() && primeiro.ate !== null && (!naoAntes || primeiro.ate >= naoAntes.getTime())) {
       r.saida = new Date(primeiro.ate);
       r.saidaOrigem = "cerca";
     }

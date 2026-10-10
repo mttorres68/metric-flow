@@ -135,7 +135,7 @@ export function ConfigEntregasModal({ open, onClose, onSalvo, abaInicial = "limi
                     className="w-28 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-[var(--background)] text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600" />
                   <span className={`text-[11px] leading-snug ${horaOk ? "text-slate-400 dark:text-slate-500" : "text-red-500"}`}>
                     {horaOk
-                      ? `Movimento do caminhão que termina antes deste horário (madrugada fora da base) não conta como saída; quem sai antes e segue viagem sai neste horário. A saída pela cerca não muda. Padrão: ${CONFIG_ENTREGAS_PADRAO.saidaMinima}.`
+                      ? `Movimento do caminhão que termina antes deste horário (madrugada fora da base) não conta como saída; quem sai antes e segue viagem sai neste horário. Vale também para "saiu da cerca" (o GPS oscila na borda com o caminhão parado). Padrão: ${CONFIG_ENTREGAS_PADRAO.saidaMinima}.`
                       : "Informe um horário (hh:mm)."}
                   </span>
                 </label>
