@@ -83,3 +83,17 @@ export async function revisar(revendaId: number, pedido: string, situacao: Revis
     set: { situacao, observacao, revisadoEm: new Date() },
   });
 }
+
+/**
+ * Pedidos abertos que a última planilha não trouxe: atualizados há mais de 12 h antes da importação mais recente da
+ * revenda. É o mês anterior não reenviado — o acerto pode ter acontecido e a base não sabe.
+ */
+export async function pedidosDesatualizados(revendaId: number): Promise<Set<string>> {
+  const db = await exigirDb();
+  const { rows } = await db.$client.query<{ pedido: string }>(
+    `select pedido from erp_pedidos
+      where "revendaId" = $1 and situacao = 'aberto'
+        and "atualizadoEm" < (select max("atualizadoEm") from erp_pedidos where "revendaId" = $1) - interval '12 hours'`, [revendaId]);
+  return new Set(rows.map(r => r.pedido));
+}
+

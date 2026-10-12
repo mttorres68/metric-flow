@@ -5,33 +5,39 @@
  */
 import { diaBRT } from "@shared/entregas";
 import { getConfigEntregas } from "../configService";
-import { analisarPedidos, porMotorista, romaneiosAbertos, type Caso } from "./analisar";
+import { analisarPedidos, chaveRomaneio, porMotorista, romaneiosAbertos, type Caso } from "./analisar";
 import { estranheza, type Estranheza } from "./estranheza";
 import * as repo from "./repo";
 import type { Revisao } from "./repo";
 
 export type CasoTela = Caso & { estranheza: Estranheza | null; revisao: Revisao | null };
-interface Base { chave: string; casos: Caso[]; estranheza: Map<string, Estranheza> }
+interface Base { casos: Caso[]; estranheza: Map<string, Estranheza> }
 
 const DIA_MS = 86_400_000;
 const menosDias = (d: string, n: number) => new Date(Date.parse(`${d}T12:00:00Z`) - n * DIA_MS).toISOString().slice(0, 10);
-const cache = new Map<number, Base>();
+// A Promise fica no cache: as 4 consultas da aba chegam juntas e calculam uma vez só.
+const cache = new Map<number, { chave: string; base: Promise<Base> }>();
+
+async function calcular(revendaId: number, hoje: string, raioM: number): Promise<Base> {
+  const desde = menosDias(hoje, 365);
+  const [pedidos, evidencias, semSinal, rotas, desatualizados] = await Promise.all([
+    repo.carregarPedidos(revendaId, desde), repo.carregarEvidencias(revendaId, desde),
+    repo.noitesSemSinal(revendaId, desde), repo.rotasDosPedidos(revendaId, desde), repo.pedidosDesatualizados(revendaId),
+  ]);
+  const casos = analisarPedidos({ pedidos, evidencias, semSinal, rotas, hoje, raioM, desatualizados });
+  return { casos, estranheza: estranheza(casos) };
+}
 
 async function base(revendaId: number): Promise<Base> {
   const hoje = diaBRT(new Date());
   const [cfg, versao] = await Promise.all([getConfigEntregas(), repo.versao(revendaId)]);
   const chave = `${hoje}|${cfg.raioM}|${versao}`;
   const c = cache.get(revendaId);
-  if (c?.chave === chave) return c;
-  const desde = menosDias(hoje, 365);
-  const [pedidos, evidencias, semSinal, rotas] = await Promise.all([
-    repo.carregarPedidos(revendaId, desde), repo.carregarEvidencias(revendaId, desde),
-    repo.noitesSemSinal(revendaId, desde), repo.rotasDosPedidos(revendaId, desde),
-  ]);
-  const casos = analisarPedidos({ pedidos, evidencias, semSinal, rotas, hoje, raioM: cfg.raioM });
-  const b = { chave, casos, estranheza: estranheza(casos) };
-  cache.set(revendaId, b);
-  return b;
+  if (c?.chave === chave) return c.base;
+  const nova = calcular(revendaId, hoje, cfg.raioM);
+  cache.set(revendaId, { chave, base: nova });
+  nova.catch(() => { if (cache.get(revendaId)?.base === nova) cache.delete(revendaId); });
+  return nova;
 }
 
 async function paraTela(revendaId: number, casos: Caso[], b: Base): Promise<CasoTela[]> {
@@ -66,7 +72,7 @@ export async function detalhe(revendaId: number, pedido: string) {
   if (!caso) return null;
   const doCliente = b.casos.map(c => c.pedido).filter(p => p.cliente === caso.pedido.cliente && p.pedido !== pedido
     && (p.dataPedido ?? "") <= (caso.pedido.dataPedido ?? "")).sort((x, y) => (y.dataPedido ?? "").localeCompare(x.dataPedido ?? ""));
-  const [t, ...romaneio] = await paraTela(revendaId, [caso, ...b.casos.filter(c => c.pedido.romaneio === caso.pedido.romaneio && c !== caso)], b);
+  const [t, ...romaneio] = await paraTela(revendaId, [caso, ...b.casos.filter(c => chaveRomaneio(c.pedido) === chaveRomaneio(caso.pedido) && c !== caso)], b);
   return { caso: t, anteriores: doCliente.slice(0, 5), romaneio };
 }
 

@@ -220,8 +220,14 @@ export function PainelDesvio({ revendaId, raioM }: { revendaId: number; raioM: n
             {cartao("Casos altos", String(altos.length), altos.length > 0)}
             {cartao("Casos médios", String(fila.filter(c => c.faixa === "media").length))}
             {cartao("Valor em risco (altos)", reais(altos.reduce((s, c) => s + c.pedido.valor, 0)), altos.length > 0)}
-            {cartao("Romaneios abertos > 3 dias", String(abertos.filter(r => (r.dias ?? 0) > 3).length))}
+            {cartao("Romaneios abertos > 3 dias", String(abertos.filter(r => !r.desatualizado && (r.dias ?? 0) > 3).length))}
           </div>
+          {abertos.some(r => r.desatualizado) && (
+            <div className="px-4 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-xs text-amber-800 dark:text-amber-300">
+              {abertos.filter(r => r.desatualizado).length} romaneio(s) em aberto de pedidos que a última planilha não trouxe (mês anterior?).
+              Não entram nos sinais até você reenviar o CSV do mês deles no ⚙ › Contas › Arquivos do ERP — o acerto pode já ter sido feito.
+            </div>
+          )}
 
           <div className={`${caixa} overflow-x-auto`}>
             <div className="flex items-center gap-4 px-4 py-2 text-xs text-slate-600 dark:text-slate-300">
@@ -243,10 +249,11 @@ export function PainelDesvio({ revendaId, raioM }: { revendaId: number; raioM: n
                 </tr></thead>
                 <tbody>
                   {abertos.map(r => (
-                    <tr key={r.romaneio} className="border-t border-slate-100 dark:border-[var(--border)]">
+                    <tr key={`${r.romaneio}|${r.saida}|${r.valor}`} className={`border-t border-slate-100 dark:border-[var(--border)] ${r.desatualizado ? "opacity-50" : ""}`}
+                      title={r.desatualizado ? "Planilha desatualizada: reenvie o CSV do mês para saber se já foi acertado" : undefined}>
                       <td className={`${td} font-mono`}>{r.romaneio}</td><td className={`${td} font-mono`}>{r.placa}</td><td className={td}>{r.motorista}</td>
                       <td className={td}>{ddmm(r.saida)}</td>
-                      <td className={`${td} ${(r.dias ?? 0) > 3 ? "text-red-600 dark:text-red-400 font-bold" : ""}`}>{r.dias ?? "—"}</td>
+                      <td className={`${td} ${!r.desatualizado && (r.dias ?? 0) > 3 ? "text-red-600 dark:text-red-400 font-bold" : ""}`}>{r.desatualizado ? "planilha desatualizada" : r.dias ?? "—"}</td>
                       <td className={td}>{r.pedidos}</td><td className={`${td} text-right`}>{reais(r.valor)}</td><td className={`${td} text-right`}>{reais(r.valorAvista)}</td>
                     </tr>
                   ))}

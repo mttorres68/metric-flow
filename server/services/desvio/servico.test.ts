@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 vi.mock("./repo", () => ({
   carregarPedidos: vi.fn(), carregarEvidencias: vi.fn(async () => []), noitesSemSinal: vi.fn(async () => []),
   rotasDosPedidos: vi.fn(async () => new Map()), versao: vi.fn(), revisoes: vi.fn(), revisar: vi.fn(),
+  pedidosDesatualizados: vi.fn(async () => new Set<string>()),
 }));
 vi.mock("../configService", () => ({ getConfigEntregas: async () => ({ raioM: 200 }) }));
 import * as repo from "./repo";
@@ -48,4 +49,16 @@ describe("fila", () => {
     await fila(1, "2026-10-01", "2026-10-12");
     expect(repo.carregarPedidos).toHaveBeenCalledTimes(2);
   });
+  it("I4: chamadas simultâneas num cache vazio calculam uma vez só", async () => {
+    vi.mocked(repo.versao).mockResolvedValue("v5");
+    await Promise.all([fila(1, "2026-10-01", "2026-10-12"), fila(1, "2026-10-01", "2026-10-12"), fila(1, "2026-10-01", "2026-10-12")]);
+    expect(repo.carregarPedidos).toHaveBeenCalledTimes(1);
+  });
+  it("C1: pedido aberto com atualização mais antiga que a última planilha fica desatualizado", async () => {
+    vi.mocked(repo.versao).mockResolvedValue("v6");
+    vi.mocked(repo.pedidosDesatualizados).mockResolvedValue(new Set(["X"]));
+    const f = await fila(1, "2026-10-01", "2026-10-12");
+    expect(f[0]).toMatchObject({ desatualizado: true, nota: 30 }); // só o à vista atípico
+  });
 });
+

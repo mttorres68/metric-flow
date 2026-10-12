@@ -70,3 +70,36 @@ describe("romaneios abertos e motoristas", () => {
     expect(porMotorista(casos, rs)).toMatchObject([{ motoristaCod: "77", romaneiosAbertos: 4 }]);
   });
 });
+
+describe("correções da revisão", () => {
+  it("C1: aberto que não veio nas últimas planilhas fica 'desatualizado' — fora dos sinais de aberto e marcado na lista", () => {
+    const velhos = ["V1", "V2", "V3", "V4"].map(r => ped({ pedido: r, romaneio: r, cliente: `K${r}`, situacao: "aberto", dataAcerto: null, dataPedido: "2026-09-28" }));
+    const casos = analisarPedidos(base({ pedidos: velhos, desatualizados: new Set(["V1", "V2", "V3", "V4"]) }));
+    expect(casos.flatMap(c => c.sinais)).toEqual([]);
+    expect(casos[0]).toMatchObject({ desatualizado: true, diasAberto: null });
+    expect(romaneiosAbertos(casos).every(r => r.desatualizado)).toBe(true);
+    expect(porMotorista(casos, romaneiosAbertos(casos))[0].romaneiosAbertos).toBe(0);
+  });
+  it("I2: cliente sem coordenada no cadastro não vira 'sem parada' (é sem GPS)", () => {
+    const c = um(analisarPedidos(base({ pedidos: [ped({ pedido: "X" })], evidencias: [ev({ status: "sem_coordenada", distParadaM: null, clienteLat: null, clienteLon: null })] })), "X");
+    expect(c.sinais).toEqual([]);
+    expect(c.semGps).toBe(true);
+  });
+  it("I3: pedidos sem romaneio não se juntam num romaneio só", () => {
+    const casos = analisarPedidos(base({ pedidos: [
+      ped({ pedido: "S1", romaneio: "", situacao: "aberto", dataAcerto: null, dataPedido: "2026-08-01" }),
+      ped({ pedido: "S2", romaneio: "", cliente: "C2", situacao: "aberto", dataAcerto: null, dataPedido: "2026-10-10" }),
+    ] }));
+    expect(um(casos, "S1")).toMatchObject({ saida: "2026-08-01", dia: "2026-08-01" });
+    expect(romaneiosAbertos(casos)).toHaveLength(2);
+  });
+  it("I5: cliente com milhares de pedidos (balcão) não trava", () => {
+    const muitos = Array.from({ length: 6000 }, (_, i) => ped({ pedido: `B${i}`, romaneio: `RB${i}`,
+      dataPedido: new Date(Date.parse("2025-10-13") + Math.floor(i / 17) * 86_400_000).toISOString().slice(0, 10), tipoCobranca: i % 2 ? "1" : "4" }));
+    const t = Date.now();
+    const casos = analisarPedidos(base({ pedidos: muitos }));
+    expect(Date.now() - t).toBeLessThan(1500);
+    expect(um(casos, "B5999").perfil).toMatchObject({ pedidos: 5999, avistaPct: 50, valorMediana: 300 });
+  });
+});
+

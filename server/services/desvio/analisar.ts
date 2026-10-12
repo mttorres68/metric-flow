@@ -18,6 +18,8 @@ export interface RotaPedido { inicio: Date; motorista: string; placa: string }
 export interface EntradaDesvio {
   pedidos: PedidoErp[]; evidencias: Evidencia[]; semSinal: { placa: string; dia: string }[];
   rotas: Map<string, RotaPedido>; hoje: string; raioM: number;
+  /** Pedidos abertos que não vieram nas últimas planilhas (mês anterior não reenviado): situação desconhecida. */
+  desatualizados?: Set<string>;
 }
 export type ChaveSinal = keyof typeof PESOS;
 export interface SinalDesvio { chave: ChaveSinal; peso: number; texto: string }
@@ -26,8 +28,9 @@ export type Faixa = "alta" | "media" | "baixa";
 export interface Caso {
   pedido: PedidoErp; dia: string; saida: string | null; diasAberto: number | null; motorista: string;
   nota: number; faixa: Faixa; sinais: SinalDesvio[]; perfil: PerfilCliente; evidencia: Evidencia | null; semGps: boolean;
+  desatualizado: boolean; // aberto na base, mas a planilha do mês dele não foi reenviada: não conta como aberto
 }
-export interface RomaneioAberto { romaneio: string; placa: string; motorista: string; motoristaCod: string; saida: string | null; dias: number | null; pedidos: number; valor: number; valorAvista: number }
+export interface RomaneioAberto { romaneio: string; placa: string; motorista: string; motoristaCod: string; saida: string | null; dias: number | null; pedidos: number; valor: number; valorAvista: number; desatualizado: boolean }
 export interface MotoristaDesvio { motoristaCod: string; motorista: string; romaneiosAbertos: number; avistaAtipicos: number; casosAltos: number; casosMedios: number; somaNotas: number }
 
 const DIA_MS = 86_400_000;
@@ -38,6 +41,9 @@ const vezes = (x: number) => x.toFixed(1).replace(".", ",");
 const dist = (m: number) => (m >= 1000 ? `${vezes(m / 1000)} km` : `${Math.round(m)} m`);
 const ddmm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 const placaNorm = (p: string) => p.toUpperCase().replace(/[^A-Z0-9]/g, "");
+/** Pedido sem romaneio é um romaneio sozinho (não junta pedidos sem relação). */
+export const chaveRomaneio = (p: PedidoErp) => p.romaneio || `#${p.pedido}`;
+const JANELA_PERFIL = 100;
 function agrupar<T>(xs: T[], chave: (x: T) => string): Map<string, T[]> {
   const m = new Map<string, T[]>();
   for (const x of xs) { const k = chave(x); const l = m.get(k); if (l) l.push(x); else m.set(k, [x]); }
@@ -47,9 +53,11 @@ function agrupar<T>(xs: T[], chave: (x: T) => string): Map<string, T[]> {
 export function analisarPedidos(e: EntradaDesvio): Caso[] {
   const L = LIMITES_DESVIO;
   const validos = e.pedidos.filter(p => p.situacao !== "cancelado");
+  const desat = e.desatualizados ?? new Set<string>();
+  const abertoVale = (p: PedidoErp) => p.situacao === "aberto" && !desat.has(p.pedido);
 
   // Saída do romaneio: o início de rota mais cedo no CheckNow entre os pedidos dele; sem rota, a maior data de pedido.
-  const romaneios = agrupar(validos, p => p.romaneio);
+  const romaneios = agrupar(validos, chaveRomaneio);
   const saidaRomaneio = new Map<string, string | null>();
   for (const [r, ps] of romaneios) {
     const inicios = ps.flatMap(p => { const x = e.rotas.get(p.pedido); return x ? [x.inicio.getTime()] : []; });
@@ -60,26 +68,31 @@ export function analisarPedidos(e: EntradaDesvio): Caso[] {
   const abertosMot = new Map<string, Set<string>>();
   for (const [r, ps] of romaneios) {
     const s = saidaRomaneio.get(r);
-    if (!r || !s || s >= e.hoje || !ps.some(p => p.situacao === "aberto")) continue;
+    if (!s || s >= e.hoje || !ps.some(abertoVale)) continue;
     const m = ps[0].motoristaCod;
     abertosMot.set(m, (abertosMot.get(m) ?? new Set()).add(r));
   }
 
-  // Perfil do cliente com os pedidos anteriores a cada um.
+  // Perfil do cliente com os pedidos anteriores a cada um. Contagem e % à vista sobre todos os anteriores;
+  // ponytail: medianas sobre os últimos 100 (cliente "balcão" tem milhares de pedidos no ano).
   const perfis = new Map<string, PerfilCliente>();
   for (const ps of agrupar(validos, p => p.cliente).values()) {
     ps.sort((a, b) => (a.dataPedido ?? "").localeCompare(b.dataPedido ?? "") || a.pedido.localeCompare(b.pedido));
+    let avista = 0;
+    let ultima: string | null = null;
     ps.forEach((p, i) => {
-      const ant = ps.slice(0, i);
+      const ant = ps.slice(Math.max(0, i - JANELA_PERFIL), i);
       const datas = ant.map(a => a.dataPedido).filter((d): d is string => !!d);
       const gaps = datas.slice(1).map((d, j) => dias(datas[j], d));
       perfis.set(p.pedido, {
-        pedidos: ant.length,
-        avistaPct: ant.length ? Math.round((ant.filter(a => a.tipoCobranca === AVISTA).length / ant.length) * 100) : 0,
+        pedidos: i,
+        avistaPct: i ? Math.round((avista / i) * 100) : 0,
         valorMediana: ant.length ? mediana(ant.map(a => a.valor)) : null,
         intervaloDias: gaps.length ? mediana(gaps) : null,
-        ultimaCompra: datas.at(-1) ?? null,
+        ultimaCompra: ultima,
       });
+      if (p.tipoCobranca === AVISTA) avista++;
+      if (p.dataPedido) ultima = p.dataPedido;
     });
   }
 
@@ -89,9 +102,10 @@ export function analisarPedidos(e: EntradaDesvio): Caso[] {
 
   return validos.map(p => {
     const perfil = perfis.get(p.pedido)!;
-    const saida = saidaRomaneio.get(p.romaneio) ?? p.dataPedido;
-    const diasAberto = p.situacao === "aberto" && saida ? Math.max(0, dias(saida, e.hoje)) : null;
+    const saida = saidaRomaneio.get(chaveRomaneio(p)) ?? p.dataPedido;
+    const diasAberto = abertoVale(p) && saida ? Math.max(0, dias(saida, e.hoje)) : null;
     const ev = porDoc.get(p.pedido) ?? null;
+    const gps = ev && ev.status !== "sem_coordenada" ? ev : null; // cliente sem coordenada: não há o que medir
     const rota = e.rotas.get(p.pedido);
     const sinais: SinalDesvio[] = [];
     const s = (chave: ChaveSinal, texto: string) => sinais.push({ chave, peso: PESOS[chave], texto });
@@ -108,7 +122,7 @@ export function analisarPedidos(e: EntradaDesvio): Caso[] {
       if (x > L.valorXX) s("valorMuitoAlto", texto);
       else if (x > L.valorX) s("valorAlto", texto);
     }
-    if (p.situacao === "aberto") {
+    if (abertoVale(p)) {
       const abertos = abertosMot.get(p.motoristaCod);
       if (abertos && abertos.size > L.romaneiosAbertos)
         s("motoristaAbertos", `O motorista tem ${abertos.size} romaneios sem acerto ao mesmo tempo (limite ${L.romaneiosAbertos})`);
@@ -117,23 +131,24 @@ export function analisarPedidos(e: EntradaDesvio): Caso[] {
     }
     const diaGps = ev?.dia ?? (rota ? diaBRT(rota.inicio) : null);
     const mudo = !!diaGps && mudos.has(`${placaNorm(rota?.placa ?? ev?.placa ?? p.placa)}|${diaGps}`);
-    if (ev && ev.distParadaM !== null && ev.distParadaM > e.raioM && ev.distParadaM <= L.pertoM)
-      s("parouPerto", `A parada do caminhão mais perto do cliente ficou a ${dist(ev.distParadaM)} (raio ${e.raioM} m)${ev.paradaInicio ? `, às ${horaBRT(ev.paradaInicio)}` : ""}: parou perto, mas não no cliente`);
+    if (gps && gps.distParadaM !== null && gps.distParadaM > e.raioM && gps.distParadaM <= L.pertoM)
+      s("parouPerto", `A parada do caminhão mais perto do cliente ficou a ${dist(gps.distParadaM)} (raio ${e.raioM} m)${gps.paradaInicio ? `, às ${horaBRT(gps.paradaInicio)}` : ""}: parou perto, mas não no cliente`);
     else if (mudo) s("semParada", "O rastreador do caminhão ficou sem sinal no dia da entrega");
-    else if (ev && (ev.distParadaM === null || ev.distParadaM > L.pertoM)) s("semParada", `Nenhuma parada do caminhão a até ${dist(L.pertoM)} do cliente`);
-    if (ev?.distAppM != null && ev.distAppM > e.raioM) s("appLonge", `O motorista registrou a entrega no app a ${dist(ev.distAppM)} do cliente`);
+    else if (gps && (gps.distParadaM === null || gps.distParadaM > L.pertoM)) s("semParada", `Nenhuma parada do caminhão a até ${dist(L.pertoM)} do cliente`);
+    if (gps?.distAppM != null && gps.distAppM > e.raioM) s("appLonge", `O motorista registrou a entrega no app a ${dist(gps.distAppM)} do cliente`);
 
     const nota = Math.min(100, sinais.reduce((t, x) => t + x.peso, 0));
     return {
       pedido: p, dia: saida ?? p.dataPedido ?? "", saida, diasAberto, motorista: rota?.motorista ?? ev?.motorista ?? p.motoristaCod,
-      nota, faixa: nota >= L.alta ? "alta" : nota >= L.media ? "media" : "baixa", sinais, perfil, evidencia: ev, semGps: !ev && !mudo,
+      nota, faixa: nota >= L.alta ? "alta" : nota >= L.media ? "media" : "baixa", sinais, perfil, evidencia: ev, semGps: !gps && !mudo,
+      desatualizado: p.situacao === "aberto" && desat.has(p.pedido),
     };
   });
 }
 
 export function romaneiosAbertos(casos: Caso[]): RomaneioAberto[] {
-  return [...agrupar(casos.filter(c => c.pedido.situacao === "aberto"), c => c.pedido.romaneio)].map(([romaneio, cs]) => ({
-    romaneio, placa: cs[0].pedido.placa, motorista: cs[0].motorista, motoristaCod: cs[0].pedido.motoristaCod,
+  return [...agrupar(casos.filter(c => c.pedido.situacao === "aberto"), c => chaveRomaneio(c.pedido))].map(([, cs]) => ({
+    romaneio: cs[0].pedido.romaneio, placa: cs[0].pedido.placa, desatualizado: cs.every(c => c.desatualizado), motorista: cs[0].motorista, motoristaCod: cs[0].pedido.motoristaCod,
     saida: cs[0].saida, dias: cs[0].diasAberto, pedidos: cs.length,
     valor: cs.reduce((s, c) => s + c.pedido.valor, 0),
     valorAvista: cs.filter(c => c.pedido.tipoCobranca === AVISTA).reduce((s, c) => s + c.pedido.valor, 0),
@@ -148,7 +163,7 @@ export function porMotorista(doPeriodo: Caso[], abertos: RomaneioAberto[]): Moto
     m.set(cod, r);
     return r;
   };
-  for (const r of abertos) de(r.motoristaCod, r.motorista).romaneiosAbertos++;
+  for (const r of abertos) if (!r.desatualizado) de(r.motoristaCod, r.motorista).romaneiosAbertos++;
   for (const c of doPeriodo) {
     const r = de(c.pedido.motoristaCod, c.motorista);
     if (c.sinais.some(s => s.chave === "avistaAtipico")) r.avistaAtipicos++;
