@@ -20,7 +20,7 @@ export interface EntradaNoite {
   clientesSeguinte: { lat: number; lon: number }[];
   sede: Sede; cfg: ConfigEntregas;
 }
-export type Classificacao = "na_malicia" | "evitavel" | "normal" | "na_base" | "sem_parada";
+export type Classificacao = "na_malicia" | "evitavel" | "normal" | "na_base" | "sem_parada" | "sem_sinal";
 export interface Sinal { ok: boolean; [k: string]: unknown }
 type ChaveSinal = "foraDaSede" | "perto" | "davaParaChegar" | "voltou" | "finalLento" | "parouCedo" | "ociosidade" | "paraTras";
 export interface Noite {
@@ -39,15 +39,17 @@ const NAO = (motivo: string): Sinal => ({ ok: false, motivo });
 const todos = (motivo: string) => Object.fromEntries((["foraDaSede", "perto", "davaParaChegar", "voltou", "finalLento", "parouCedo", "ociosidade", "paraTras"] as ChaveSinal[])
   .map(k => [k, NAO(motivo)])) as Record<ChaveSinal, Sinal>;
 
+/** Noite sem onde dormiu: rodando às 02:00 (sem_parada) ou rastreador sem nenhuma posição (sem_sinal). */
+export const noiteSemLugar = (e: Pick<EntradaNoite, "dia" | "placa" | "motorista">, classificacao: "sem_parada" | "sem_sinal"): Noite => ({
+  dia: e.dia, placa: e.placa, motorista: e.motorista, lat: null, lon: null, endereco: null, cidade: null, distSedeKm: null,
+  chegada: null, saidaManha: null, descansoMin: null, ultimoClienteSaida: null, chaveLigadaMin: null, madrugadaEventos: 0,
+  classificacao, galo: 0, sinais: todos(classificacao === "sem_sinal" ? "sem sinal GPS" : "sem parada às 02:00"),
+});
+
 export function analisarNoite(e: EntradaNoite): Noite {
   const { cfg, sede } = e;
   const seguinte = proximoDia(e.dia);
-  const vazio: Noite = {
-    dia: e.dia, placa: e.placa, motorista: e.motorista, lat: null, lon: null, endereco: null, cidade: null, distSedeKm: null,
-    chegada: null, saidaManha: null, descansoMin: null, ultimoClienteSaida: null, chaveLigadaMin: null, madrugadaEventos: 0,
-    classificacao: "sem_parada", galo: 0,
-    sinais: todos("sem parada às 02:00"),
-  };
+  const vazio = noiteSemLugar(e, "sem_parada");
   const t02 = as(seguinte, "02:00");
   const noite = e.paradas.find(p => p.inicio <= t02 && p.fim >= t02);
   if (!noite) return vazio;

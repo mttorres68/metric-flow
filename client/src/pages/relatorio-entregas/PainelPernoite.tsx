@@ -23,6 +23,7 @@ const CLASSE: Record<string, { texto: string; cor: string; letra: string; chip: 
   normal: { texto: "normal", cor: "#888780", letra: "N", chip: "bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300" },
   na_base: { texto: "na Sede", cor: "#888780", letra: "S", chip: "bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300" },
   sem_parada: { texto: "rodando às 02h", cor: "#888780", letra: "?", chip: "bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300" },
+  sem_sinal: { texto: "sem sinal GPS", cor: "#7F77DD", letra: "!", chip: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300" },
 };
 const PESO: Record<string, number> = { na_malicia: 3, evitavel: 2, normal: 1 };
 const GALO: { chave: keyof Sinais; texto: string }[] = [
@@ -80,7 +81,9 @@ function Detalhe({ n, sede, onRecalcular, recalculando }: {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800/40">
       <div className="flex flex-col gap-2">
-        {(n.classificacao === "na_base" || n.classificacao === "sem_parada"
+        {(n.classificacao === "sem_sinal"
+          ? [{ ok: true, galo: false, texto: "O rastreador não mandou nenhuma posição do dia até as 12:00 do dia seguinte, com rota no CheckNow: não dá para saber onde o caminhão rodou nem onde dormiu. Confira se o rastreador foi desligado ou desconectado." }]
+          : n.classificacao === "na_base" || n.classificacao === "sem_parada"
           ? [{ ok: false, galo: false, texto: `Sinais não se aplicam: ${sinaisDe(n).perto.motivo ?? CLASSE[n.classificacao].texto}.` }]
           : frases(n)).map((f, i) => (
           <div key={i} className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-200">
@@ -122,12 +125,14 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
   const [motorista, setMotorista] = useState<string | null>(null);
   const [soEvitaveis, setSoEvitaveis] = useState(false);
   const [soGalo, setSoGalo] = useState(false);
+  const [soSemSinal, setSoSemSinal] = useState(false);
   const [aberta, setAberta] = useState<number | null>(null);
 
   const noites = noitesQ.data ?? [];
   const filtradas = useMemo(() => (noitesQ.data ?? []).filter(n => (!motorista || n.motorista === motorista)
-    && (!soEvitaveis || n.classificacao === "na_malicia" || n.classificacao === "evitavel") && (!soGalo || n.galo >= 2)),
-  [noitesQ.data, motorista, soEvitaveis, soGalo]);
+    && (!soEvitaveis || n.classificacao === "na_malicia" || n.classificacao === "evitavel") && (!soGalo || n.galo >= 2)
+    && (!soSemSinal || n.classificacao === "sem_sinal")),
+  [noitesQ.data, motorista, soEvitaveis, soGalo, soSemSinal]);
   const sede = sedeQ.data?.centro ?? null;
   const circulo = useMemo(() => (sede ? { lat: sede.lat, lon: sede.lon, raioM: (cfg.pernoiteMaxKm / cfg.pernoiteFatorEstrada) * 1000, cor: "#4f46e5" } : undefined),
     [sede, cfg.pernoiteMaxKm, cfg.pernoiteFatorEstrada]);
@@ -185,7 +190,8 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
             <table className="w-full">
               <thead><tr>
                 <th className={th}>Motorista</th><th className={th}>Noites fora</th><th className={th}>Na malícia</th>
-                <th className={th}>Evitável</th><th className={th} title="Noites com 2 ou mais sinais de cozinhando o galo">Galo (2+ sinais)</th><th className={th}>Onde mais dorme</th>
+                <th className={th}>Evitável</th><th className={th} title="Noites com 2 ou mais sinais de cozinhando o galo">Galo (2+ sinais)</th>
+                <th className={th} title="Dias com rota no CheckNow e o rastreador sem nenhuma posição">Sem sinal GPS</th><th className={th}>Onde mais dorme</th>
               </tr></thead>
               <tbody>
                 {(resumoQ.data ?? []).map(r => (
@@ -196,6 +202,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                     <td className={`${td} ${r.naMalicia ? "text-red-600 font-bold" : ""}`}>{r.naMalicia}</td>
                     <td className={`${td} ${r.evitavel ? "text-amber-700 font-semibold" : ""}`}>{r.evitavel}</td>
                     <td className={td}>{r.comGalo}</td>
+                    <td className={`${td} ${r.semSinal ? "text-violet-700 dark:text-violet-300 font-semibold" : ""}`}>{r.semSinal}</td>
                     <td className={td}>{r.lugares.map(l => `${l.cidade} (${l.noites})`).join(", ")}</td>
                   </tr>
                 ))}
@@ -220,6 +227,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
               {motorista && <button onClick={() => setMotorista(null)} className="font-semibold text-indigo-600">{motorista} ✕</button>}
               <label className="flex items-center gap-1.5"><input type="checkbox" checked={soEvitaveis} onChange={e => setSoEvitaveis(e.target.checked)} /> só na malícia / evitável</label>
               <label className="flex items-center gap-1.5"><input type="checkbox" checked={soGalo} onChange={e => setSoGalo(e.target.checked)} /> só com galo (2+ sinais)</label>
+              <label className="flex items-center gap-1.5"><input type="checkbox" checked={soSemSinal} onChange={e => setSoSemSinal(e.target.checked)} /> só sem sinal GPS</label>
               <span className="ml-auto text-slate-400">{filtradas.length} noites · clique para o detalhe</span>
             </div>
             <table className="w-full">
@@ -240,7 +248,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                         <td className={`${td} font-mono`}>{n.placa}</td>
                         <td className={td}>{n.motorista}</td>
                         <td className={td}>{n.cidade ?? "—"}</td>
-                        <td className={td}>{n.classificacao === "na_base" ? "—" : km(n.distSedeKm)}</td>
+                        <td className={td}>{n.distSedeKm === null || n.classificacao === "na_base" ? "—" : km(n.distSedeKm)}</td>
                         <td className={`${td} font-mono`}>{hora(n.ultimoClienteSaida)} → {hora(n.chegada)} → {hora(n.saidaManha)}</td>
                         <td className={td}><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${c.chip}`}>{c.texto}</span></td>
                         <td className={td}>

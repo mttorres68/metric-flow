@@ -6,7 +6,7 @@ import type { Classificacao, Noite } from "./analisar";
 
 export type NoiteGravada = typeof pernoites.$inferSelect & { classificacao: Classificacao };
 export interface ResumoMotorista {
-  motorista: string; noitesFora: number; naMalicia: number; evitavel: number; comGalo: number;
+  motorista: string; noitesFora: number; naMalicia: number; evitavel: number; comGalo: number; semSinal: number;
   lugares: { cidade: string; noites: number }[];
 }
 
@@ -39,18 +39,19 @@ export function resumir(noites: Pick<NoiteGravada, "motorista" | "classificacao"
   const m = new Map<string, ResumoMotorista & { cidades: Map<string, number> }>();
   for (const n of noites) {
     if (n.classificacao === "na_base" || n.classificacao === "sem_parada") continue;
-    const r = m.get(n.motorista) ?? { motorista: n.motorista, noitesFora: 0, naMalicia: 0, evitavel: 0, comGalo: 0, lugares: [], cidades: new Map() };
+    const r = m.get(n.motorista) ?? { motorista: n.motorista, noitesFora: 0, naMalicia: 0, evitavel: 0, comGalo: 0, semSinal: 0, lugares: [], cidades: new Map() };
+    m.set(n.motorista, r);
+    if (n.classificacao === "sem_sinal") { r.semSinal++; continue; }
     r.noitesFora++;
     if (n.classificacao === "na_malicia") r.naMalicia++;
     if (n.classificacao === "evitavel") r.evitavel++;
     if (n.galo >= 2) r.comGalo++;
     const c = n.cidade || "?";
     r.cidades.set(c, (r.cidades.get(c) ?? 0) + 1);
-    m.set(n.motorista, r);
   }
   return [...m.values()]
     .map(({ cidades, ...r }) => ({ ...r, lugares: [...cidades].map(([cidade, noites]) => ({ cidade, noites })).sort((a, b) => b.noites - a.noites).slice(0, 3) }))
-    .sort((a, b) => b.naMalicia - a.naMalicia || b.evitavel - a.evitavel || b.noitesFora - a.noitesFora);
+    .sort((a, b) => b.naMalicia - a.naMalicia || b.evitavel - a.evitavel || b.semSinal - a.semSinal || b.noitesFora - a.noitesFora);
 }
 
 export const resumoPorMotorista = async (revendaId: number, de: string, ate: string) => resumir(await listarNoites(revendaId, de, ate));

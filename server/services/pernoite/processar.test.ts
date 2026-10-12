@@ -80,4 +80,13 @@ describe("processarNoites", () => {
     await vi.waitFor(() => expect(statusReprocessamento(7)?.rodando).toBe(false));
     expect(statusReprocessamento(7)).toMatchObject({ feitos: 2, total: 2, erros: 2, ultimoErro: "cerca Sede não encontrada no Infleet" });
   });
+  it("placa no Infleet sem nenhuma posição na janela → noite 'sem sinal GPS'; falha da API → pulada", async () => {
+    comEntregas([entrega({}), entrega({ routeId: "R2", placa: "BBB-2222", motorista: "ISRAEL" })]);
+    vi.mocked(inf.buscarGpsLinha).mockImplementation(async vId => (vId === "v1"
+      ? { ...gps, erro: "sem sinal GPS", paradas: [] } : { ...gps, erro: "falha no Infleet", paradas: [] }) as never);
+    expect(await processarNoites(1, D)).toBe(1);
+    expect(vi.mocked(gravarNoites).mock.calls[0][1]).toMatchObject([
+      { placa: "AAA-1111", motorista: "ANA", classificacao: "sem_sinal", lat: null, sinais: { perto: { ok: false, motivo: "sem sinal GPS" } } },
+    ]);
+  });
 });
