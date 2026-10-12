@@ -1,6 +1,6 @@
 /* MetricFlow — importação dos arquivos do ERP (upload no ⚙). Pedidos registram uma coleta de origem "erp". */
 import { parseProdutos } from "./parseProdutos";
-import { parsePedidosErp } from "./parsePedidosErp";
+import { parseCabecalhosPedidos, parsePedidosErp } from "./parsePedidosErp";
 import * as repo from "./repo";
 import * as cn from "../checknow/repo";
 
@@ -11,6 +11,7 @@ export async function importarProdutos(buffer: Buffer): Promise<{ produtos: numb
 
 export async function importarPedidos(revendaId: number, buffer: Buffer): Promise<{ pedidos: number; itens: number; semCadastro: string[] }> {
   const itens = parsePedidosErp(buffer);
+  const cabecalhos = parseCabecalhosPedidos(buffer); // coluna nova faltando falha antes da trava
   const datas = itens.flatMap(i => (i.dataPedido ? [i.dataPedido] : [])).sort();
   const hoje = new Date().toISOString().slice(0, 10);
   return cn.comTrava(revendaId, async () => {
@@ -21,6 +22,7 @@ export async function importarPedidos(revendaId: number, buffer: Buffer): Promis
         return { pedidos: 0, itens: 0, semCadastro: [] };
       }
       const r = await repo.gravarPedidos(revendaId, itens);
+      await repo.gravarCabecalhos(revendaId, cabecalhos);
       await cn.fecharColeta(id, revendaId, { status: "ok", rotas: r.pedidos, linhas: r.itens });
       return { ...r, semCadastro: await repo.codigosSemCadastro(itens.map(i => i.codProduto)) };
     } catch (e) {

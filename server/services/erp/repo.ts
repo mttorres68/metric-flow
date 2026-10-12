@@ -1,9 +1,9 @@
 /* MetricFlow — banco do ERP: cadastro de produtos (global), itens dos pedidos (por revenda) e pontos do "4 semanas". */
 import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { getDb } from "../../db";
-import { erpPedidoItens, produtividadeParadas, produtos } from "../../../drizzle/schema";
+import { erpPedidoItens, erpPedidos, produtividadeParadas, produtos } from "../../../drizzle/schema";
 import type { Produto } from "./parseProdutos";
-import type { ItemPedido } from "./parsePedidosErp";
+import type { ItemPedido, PedidoErp } from "./parsePedidosErp";
 
 export type ItemComProduto = ItemPedido & { produto: Pick<Produto, "litrosEmb" | "litrosUn" | "tipo" | "descricao"> | null };
 export interface PontoProdutividade { dia: string; placa: string; motorista: string; routeId: string; codCliente: string; hl: number; minDescarga: number }
@@ -80,4 +80,17 @@ export async function pontosDoMotorista(revendaId: number, motorista: string, de
     .from(produtividadeParadas)
     .where(and(eq(produtividadeParadas.revendaId, revendaId), eq(produtividadeParadas.motorista, motorista),
       gte(produtividadeParadas.dia, desde), lte(produtividadeParadas.dia, ate)));
+}
+
+/** Cabeçalho do pedido (cobrança, acerto…) para o detector de desvio; a planilha nova atualiza a situação. */
+export async function gravarCabecalhos(revendaId: number, pedidos: PedidoErp[]): Promise<void> {
+  if (!pedidos.length) return;
+  const db = await exigirDb();
+  const colunas = [...Object.keys(pedidos[0]).filter(c => c !== "pedido"), "atualizadoEm"];
+  for (const lote of lotes(pedidos)) {
+    await db.insert(erpPedidos).values(lote.map(p => ({ ...p, revendaId, atualizadoEm: new Date() }))).onConflictDoUpdate({
+      target: [erpPedidos.revendaId, erpPedidos.pedido],
+      set: Object.fromEntries(colunas.map(c => [c, sql.raw(`excluded."${c}"`)])),
+    });
+  }
 }

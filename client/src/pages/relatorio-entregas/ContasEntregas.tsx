@@ -25,6 +25,7 @@ export function ContasEntregas({ onMudou }: { onMudou: () => void }) {
   const importarProdutos = trpc.entregas.erp.importarProdutos.useMutation();
   const importarPedidos = trpc.entregas.erp.importarPedidos.useMutation();
   const [revendaErp, setRevendaErp] = useState<number | null>(null);
+  const [enviando, setEnviando] = useState<string | null>(null);
 
   async function enviarProdutos(file: File | undefined) {
     if (!file) return;
@@ -34,16 +35,30 @@ export function ContasEntregas({ onMudou }: { onMudou: () => void }) {
     } catch (e) { toast.error((e as Error).message); }
   }
 
-  async function enviarPedidos(file: File | undefined) {
+  /** Um arquivo por vez (12 meses = 12 arquivos); erro num arquivo não para os outros. */
+  async function enviarPedidos(files: File[]) {
     const revendaId = revendaErp ?? contas.data?.find(c => c.ativo)?.revendaId;
-    if (!file || !revendaId) return;
-    try {
-      const r = await importarPedidos.mutateAsync({ revendaId, csvBase64: await blobToBase64(file) });
-      const falta = r.semCadastro.length ? ` · ${r.semCadastro.length} produto(s) sem cadastro: ${r.semCadastro.slice(0, 5).join(", ")}${r.semCadastro.length > 5 ? "…" : ""}` : "";
-      toast.success(`${r.itens.toLocaleString("pt-BR")} itens · ${r.pedidos.toLocaleString("pt-BR")} pedidos${falta}`);
-      await utils.entregas.coletas.invalidate();
-      onMudou();
-    } catch (e) { toast.error((e as Error).message); }
+    if (!files.length || !revendaId) return;
+    let itens = 0, pedidos = 0, ok = 0;
+    const semCadastro = new Set<string>();
+    for (const [i, file] of files.entries()) {
+      setEnviando(`${i + 1}/${files.length}`);
+      try {
+        const r = await importarPedidos.mutateAsync({ revendaId, csvBase64: await blobToBase64(file) });
+        itens += r.itens;
+        pedidos += r.pedidos;
+        r.semCadastro.forEach(c => semCadastro.add(c));
+        ok++;
+      } catch (e) { toast.error(`${file.name}: ${(e as Error).message}`); }
+    }
+    setEnviando(null);
+    if (ok) {
+      const sem = [...semCadastro];
+      const falta = sem.length ? ` · ${sem.length} produto(s) sem cadastro: ${sem.slice(0, 5).join(", ")}${sem.length > 5 ? "…" : ""}` : "";
+      toast.success(`${ok} arquivo(s) · ${itens.toLocaleString("pt-BR")} itens · ${pedidos.toLocaleString("pt-BR")} pedidos${falta}`);
+    }
+    await utils.entregas.coletas.invalidate();
+    onMudou();
   }
 
   async function recarregar() {
@@ -159,12 +174,12 @@ export function ContasEntregas({ onMudou }: { onMudou: () => void }) {
             {(contas.data ?? []).map(c => <option key={c.revendaId} value={c.revendaId}>{c.revenda}</option>)}
           </select>
           <label className={`${botaoSec} flex items-center gap-1.5 cursor-pointer`}>
-            {importarPedidos.isPending ? <Loader2 size={12} className="animate-spin" /> : <FileUp size={12} />} Importar pedidos (CSV do mês)
-            <input type="file" accept=".csv,.CSV" className="hidden" onChange={e => { enviarPedidos(e.target.files?.[0]); e.target.value = ""; }} />
+            {enviando ? <Loader2 size={12} className="animate-spin" /> : <FileUp size={12} />} {enviando ? `Enviando ${enviando}…` : "Importar pedidos (CSV, um ou vários meses)"}
+            <input type="file" accept=".csv,.CSV" multiple disabled={!!enviando} className="hidden" onChange={e => { enviarPedidos([...(e.target.files ?? [])]); e.target.value = ""; }} />
           </label>
         </div>
         <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-snug">
-          Produtos: PRODUTOS.xlsx do ERP (volume pelo Fat.Conv1). Pedidos: o CSV do mês, reenviado todo dia — pedidos já importados são atualizados, sem duplicar.
+          Produtos: PRODUTOS.xlsx do ERP (volume pelo Fat.Conv1). Pedidos: o CSV do mês, reenviado todo dia — pedidos já importados são atualizados, sem duplicar. Para o detector de desvio, suba os últimos 12 meses uma vez.
         </p>
       </section>
     </div>

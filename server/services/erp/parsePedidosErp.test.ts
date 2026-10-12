@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parsePedidosErp } from "./parsePedidosErp";
+import { parseCabecalhosPedidos, parsePedidosErp } from "./parsePedidosErp";
 import { ArquivoErpInvalidoError } from "./parseProdutos";
 
 const CAB = "Pedido;Origem do Pedido;Lote;Romaneio;Cliente;Desc;Placa;Mot;Canc;Mot Dev;Dt.Pedido;||Item;Cod Red;Desc;Vlr Total;Quant CX;Quant UN;Retorno CX;Retorno UN;Qtd.CX Liq.;Qtd.Un Liq.";
@@ -33,5 +33,29 @@ describe("parsePedidosErp", () => {
   });
   it("colunas faltando", () => {
     expect(() => parsePedidosErp(Buffer.from("Pedido;Cliente\r\n1;2", "latin1"))).toThrow(ArquivoErpInvalidoError);
+  });
+});
+describe("parseCabecalhosPedidos", () => {
+  const CAB2 = "Pedido;Origem do Pedido;Romaneio;Cliente;Canal;Vendedor;T.C.;C.P.;Dt.Ven 1a;Banco;Placa;Mot;Canc;Dt.Acerto;Flag Romaneio;Dt.Pedido;||Item;Cod Red;Vlr Total;Vlr Retorno";
+  const l = (o: Record<string, string> = {}) => {
+    const v = { Pedido: "P1", Romaneio: "R1", Cliente: "0016-0199", TC: "1", Canc: "008", Acerto: "09/10/2026", Item: "001", Cod: "0000904113", Vlr: "100,0000", Ret: "0,0000", ...o };
+    return [v.Pedido, "G", v.Romaneio, v.Cliente, "01", "V12", v.TC, "14", "00/00/0000", "000", "SOL6B13", "729", v.Canc, v.Acerto, "N", "01/10/2026", v.Item, v.Cod, v.Vlr, v.Ret].join(";");
+  };
+  const arq = (...ls: string[]) => Buffer.from([CAB2, ...ls, ""].join("\r\n"), "latin1");
+
+  it("um registro por pedido, com valor, itens e produtos somados", () => {
+    expect(parseCabecalhosPedidos(arq(l(), l({ Item: "002", Cod: "0000904114", Vlr: "50,5000", Ret: "10,0000" })))).toEqual([{
+      pedido: "P1", romaneio: "R1", cliente: "00160199", vendedor: "V12", canal: "01", origem: "G", placa: "SOL6B13", motoristaCod: "729",
+      dataPedido: "2026-10-01", tipoCobranca: "1", condicaoPagamento: "14", banco: "000", vencimento1: null,
+      situacao: "acertado", dataAcerto: "2026-10-09", flagRomaneio: "N", valor: 150.5, valorRetorno: 10, itens: 2, produtos: 2,
+    }]);
+  });
+  it("Canc 000 = aberto (sem acerto); 009 = cancelado", () => {
+    const [a, c] = parseCabecalhosPedidos(arq(l({ Canc: "000", Acerto: "00/00/0000" }), l({ Pedido: "P2", Canc: "009" })));
+    expect(a).toMatchObject({ situacao: "aberto", dataAcerto: null });
+    expect(c.situacao).toBe("cancelado");
+  });
+  it("coluna nova faltando → erro listando", () => {
+    expect(() => parseCabecalhosPedidos(Buffer.from("Pedido;Romaneio\r\n", "latin1"))).toThrow(/T\.C\./);
   });
 });
