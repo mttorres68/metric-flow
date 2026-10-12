@@ -38,9 +38,10 @@ export async function listarNoites(revendaId: number, de: string, ate: string): 
 export function resumir(noites: Pick<NoiteGravada, "motorista" | "classificacao" | "galo" | "cidade">[]): ResumoMotorista[] {
   const m = new Map<string, ResumoMotorista & { cidades: Map<string, number> }>();
   for (const n of noites) {
-    if (n.classificacao === "na_base" || n.classificacao === "sem_parada") continue;
+    // Todo motorista com noite no período aparece; na Sede e rodando às 02h não contam como noite fora.
     const r = m.get(n.motorista) ?? { motorista: n.motorista, noitesFora: 0, naMalicia: 0, evitavel: 0, comGalo: 0, semSinal: 0, lugares: [], cidades: new Map() };
     m.set(n.motorista, r);
+    if (n.classificacao === "na_base" || n.classificacao === "sem_parada") continue;
     if (n.classificacao === "sem_sinal") { r.semSinal++; continue; }
     r.noitesFora++;
     if (n.classificacao === "na_malicia") r.naMalicia++;

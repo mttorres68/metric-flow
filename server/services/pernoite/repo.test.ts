@@ -15,4 +15,9 @@ describe("resumir", () => {
       { motorista: "ISRAEL", noitesFora: 0, naMalicia: 0, evitavel: 0, comGalo: 0, semSinal: 2, lugares: [] },
     ]);
   });
+  it("motorista que só dormiu na Sede aparece com tudo zerado", () => {
+    expect(resumir([{ motorista: "JOSIELTON", classificacao: "na_base", cidade: "X", galo: 0 } as never])).toEqual([
+      { motorista: "JOSIELTON", noitesFora: 0, naMalicia: 0, evitavel: 0, comGalo: 0, semSinal: 0, lugares: [] },
+    ]);
+  });
 });
