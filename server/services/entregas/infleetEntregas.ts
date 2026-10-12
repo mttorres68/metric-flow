@@ -7,6 +7,7 @@ import { infleetQuery } from "../../routers/infleetRouter";
 import { detectarParadas, trajetoAcumulado, type Posicao } from "./detectarParadas";
 import type { EventoGps, GpsLinha, TipoEvento } from "./cruzar";
 import { LIMITES, diaBRT } from "@shared/entregas";
+import { centroDoPoligono, type Sede } from "../pernoite/sede";
 
 /** Fator do `speed` do Infleet para km/h — medido na sonda (spec §2): já vem em km/h. */
 export const SPEED_PARA_KMH = 1;
@@ -53,6 +54,15 @@ export async function kmNoPeriodo(vehicleId: string, inicio: Date, fim: Date, to
 export async function listarCercasInfleet(token?: string): Promise<{ id: string; name: string }[]> {
   const { listGeofences } = await consultar<{ listGeofences: { id: string; name: string }[] }>(`query { listGeofences { id name } }`, {}, token);
   return listGeofences;
+}
+
+/** Sede da conta: cerca cujo nome contém "sede", com o polígono (`area`, GeoJSON). */
+export async function sedeDaConta(token?: string): Promise<Sede | null> {
+  const { listGeofences } = await consultar<{ listGeofences: { id: string; name: string; area: { coordinates?: [number, number][][] } | null }[] }>(
+    `query { listGeofences { id name area } }`, {}, token);
+  const g = listGeofences.find(c => /sede/i.test(c.name));
+  const poligono = g?.area?.coordinates?.[0];
+  return g && poligono?.length ? { cercaId: g.id, centro: centroDoPoligono(poligono), poligono } : null;
 }
 
 export const gpsErro = (erro: string): GpsLinha =>
