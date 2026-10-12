@@ -60,5 +60,12 @@ describe("fila", () => {
     const f = await fila(1, "2026-10-01", "2026-10-12");
     expect(f[0]).toMatchObject({ desatualizado: true, nota: 30 }); // só o à vista atípico
   });
+  it("romaneio aberto de antes do período entra na fila (é problema de hoje); acertado antigo não", async () => {
+    vi.mocked(repo.versao).mockResolvedValue("v7");
+    const antigoAberto = ped({ pedido: "A", romaneio: "RA", tipoCobranca: "1", situacao: "aberto", dataAcerto: null, dataPedido: "2026-09-10" });
+    const antigoAcertado = ped({ pedido: "B", romaneio: "RB", tipoCobranca: "1", dataPedido: "2026-09-11" });
+    vi.mocked(repo.carregarPedidos).mockResolvedValue([...historico, antigoAberto, antigoAcertado]);
+    expect((await fila(1, "2026-10-01", "2026-10-12")).map(c => c.pedido.pedido)).toEqual(["A"]);
+  });
 });
 

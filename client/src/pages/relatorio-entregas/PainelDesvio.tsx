@@ -233,7 +233,7 @@ export function PainelDesvio({ revendaId, raioM }: { revendaId: number; raioM: n
             <div className="flex items-center gap-4 px-4 py-2 text-xs text-slate-600 dark:text-slate-300">
               <b>Fila</b>
               <label className="flex items-center gap-1.5"><input type="checkbox" checked={incluirRevisados} onChange={e => setIncluirRevisados(e.target.checked)} /> mostrar revisados como OK</label>
-              <span className="ml-auto text-slate-400">{fila.length} pedidos com nota ≥ 30 · clique para o detalhe</span>
+              <span className="ml-auto text-slate-400">{fila.length} pedidos com nota ≥ 30 (inclui romaneios ainda abertos de antes do período) · clique para o detalhe</span>
             </div>
             {fila.length ? <TabelaCasos casos={fila} revendaId={revendaId} raioM={raioM} />
               : <p className="px-4 pb-4 text-xs text-slate-400">Nenhum pedido com nota ≥ 30 no período.</p>}

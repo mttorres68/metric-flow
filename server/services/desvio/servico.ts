@@ -49,7 +49,9 @@ const ordem = (a: Caso, b: Caso) => b.nota - a.nota || b.pedido.valor - a.pedido
 
 export async function fila(revendaId: number, de: string, ate: string, incluirRevisados = false): Promise<CasoTela[]> {
   const b = await base(revendaId);
-  const cs = await paraTela(revendaId, b.casos.filter(c => c.nota >= 30 && noPeriodo(c, de, ate)), b);
+  // Romaneio aberto (com a planilha em dia) é problema de hoje: entra qualquer que seja o período.
+  const vale = (c: Caso) => noPeriodo(c, de, ate) || (c.pedido.situacao === "aberto" && !c.desatualizado && c.dia < de);
+  const cs = await paraTela(revendaId, b.casos.filter(c => c.nota >= 30 && vale(c)), b);
   return cs.filter(c => incluirRevisados || c.revisao?.situacao !== "ok").sort(ordem);
 }
 
