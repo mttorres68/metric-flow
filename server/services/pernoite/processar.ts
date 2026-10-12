@@ -28,12 +28,13 @@ export async function processarNoites(revendaId: number, dia: string): Promise<n
     if (!vId) continue;
     const janela = { inicio: new Date(`${dia}T00:00:00-03:00`), fim: new Date(`${seguinte}T12:00:00-03:00`) };
     const gps = await buscarGpsLinha(vId, janela, { token, saidaMinima: cfg.saidaMinima });
-    if (gps.erro) continue;
+    if (gps.erro) { console.warn(`[pernoite] ${revendaId} ${dia} ${placa}: ${gps.erro}`); continue; }
     const rotas = new Set(ls.map(l => l.routeId));
     const daPlaca = entregas.filter(e => rotas.has(e.routeId));
     const baixas = ls.flatMap(l => cruzar(l, daPlaca.filter(e => e.routeId === l.routeId), gps, cfg).baixas);
     const pendentes = daPlaca.filter(e => e.situacao === "AGUARDANDO" || !e.baixaEm || diaBRT(e.baixaEm) > dia);
-    const clientesSeguinte = doSeguinte.filter(e => e.placa === placa && e.lat !== null && e.lon !== null).map(e => ({ lat: e.lat!, lon: e.lon! }));
+    // Rota de vários dias volta inteira no dia seguinte: cliente já entregue em D não é cliente da manhã.
+    const clientesSeguinte = doSeguinte.filter(e => e.placa === placa && e.lat !== null && e.lon !== null && (!e.baixaEm || diaBRT(e.baixaEm) > dia)).map(e => ({ lat: e.lat!, lon: e.lon! }));
     const motorista = [...ls].sort((a, b) => a.janela.inicio.getTime() - b.janela.inicio.getTime()).at(-1)!.motorista;
     noites.push(analisarNoite({ dia, placa, motorista, paradas: gps.paradas, eventos: gps.eventos, baixas, pendentes, clientesSeguinte, sede, cfg }));
   }
@@ -41,7 +42,7 @@ export async function processarNoites(revendaId: number, dia: string): Promise<n
   return noites.length;
 }
 
-const status = new Map<number, { feitos: number; total: number; rodando: boolean }>();
+const status = new Map<number, { feitos: number; total: number; rodando: boolean; erros: number; ultimoErro: string | null }>();
 export const statusReprocessamento = (revendaId: number) => status.get(revendaId) ?? null;
 
 /** Um dia por vez, em segundo plano; erros de um dia não param os outros. */
@@ -49,11 +50,16 @@ export function reprocessar(revendaId: number, de: string, ate: string): void {
   if (status.get(revendaId)?.rodando) return;
   const dias: string[] = [];
   for (let d = de; d <= ate; d = somaDias(d, 1)) dias.push(d);
-  status.set(revendaId, { feitos: 0, total: dias.length, rodando: true });
+  status.set(revendaId, { feitos: 0, total: dias.length, rodando: true, erros: 0, ultimoErro: null });
   void (async () => {
     for (const d of dias) {
-      await processarNoites(revendaId, d).catch(e => console.warn(`[pernoite] ${revendaId} ${d}: ${(e as Error).message}`));
-      status.get(revendaId)!.feitos++;
+      const s = status.get(revendaId)!;
+      await processarNoites(revendaId, d).catch(e => {
+        s.erros++;
+        s.ultimoErro = (e as Error).message;
+        console.warn(`[pernoite] ${revendaId} ${d}: ${s.ultimoErro}`);
+      });
+      s.feitos++;
     }
     status.get(revendaId)!.rodando = false;
   })();

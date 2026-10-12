@@ -26,6 +26,6 @@ export const pernoiteRouter = router({
     return statusReprocessamento(input.revendaId);
   }),
   sede: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(async ({ input }) =>
-    sedeDaConta(await tokenInfleet(input.revendaId)).catch(() => null)),
+    tokenInfleet(input.revendaId).then(sedeDaConta).catch(() => null)),
   status: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(({ input }) => statusReprocessamento(input.revendaId)),
 });

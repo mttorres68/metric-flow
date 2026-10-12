@@ -9,7 +9,7 @@ vi.mock("./repo", () => ({ gravarNoites: vi.fn() }));
 import * as cn from "../checknow/repo";
 import * as inf from "../entregas/infleetEntregas";
 import { gravarNoites } from "./repo";
-import { processarNoites } from "./processar";
+import { processarNoites, reprocessar, statusReprocessamento } from "./processar";
 import type { Entrega } from "../entregas/parseCheckNow";
 
 const brt = (s: string) => new Date(`${s}:00-03:00`);
@@ -61,5 +61,23 @@ describe("processarNoites", () => {
     ]);
     expect(await processarNoites(1, D)).toBe(1);
     expect(vi.mocked(gravarNoites).mock.calls[0][1]).toMatchObject([{ motorista: "BETO" }]);
+  });
+  it("cliente já entregue no dia não conta como cliente da manhã seguinte (rota de vários dias)", async () => {
+    const e = entrega({ lat: -7.1 });
+    vi.mocked(cn.entregasDoPeriodo).mockImplementation(async () => [e]); // rota aberta: volta também no dia seguinte
+    vi.mocked(inf.buscarGpsLinha).mockResolvedValue({ ...gps, paradas: [
+      { lat: -7.11, lon: -43.02, inicio: brt(`${D}T15:00`), fim: brt("2026-10-06T05:30"), min: 870 },
+      { lat: -7.1, lon: -43.02, inicio: brt("2026-10-06T05:35"), fim: brt("2026-10-06T05:40"), min: 5 }, // perto do cliente de ontem
+      { lat: -6.77, lon: -43.02, inicio: brt("2026-10-06T07:00"), fim: brt("2026-10-06T07:30"), min: 30 }, // Sede
+    ] } as never);
+    await processarNoites(1, D);
+    expect(vi.mocked(gravarNoites).mock.calls[0][1]).toMatchObject([{ classificacao: "na_malicia" }]);
+  });
+  it("reprocessar conta os dias que falharam", async () => {
+    comEntregas([entrega({})]);
+    vi.mocked(inf.sedeDaConta).mockResolvedValue(null);
+    reprocessar(7, D, "2026-10-06");
+    await vi.waitFor(() => expect(statusReprocessamento(7)?.rodando).toBe(false));
+    expect(statusReprocessamento(7)).toMatchObject({ feitos: 2, total: 2, erros: 2, ultimoErro: "cerca Sede não encontrada no Infleet" });
   });
 });

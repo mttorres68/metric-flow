@@ -36,6 +36,8 @@ const proximoDia = (d: string) => new Date(Date.parse(`${d}T12:00:00Z`) + DIA_MS
 const as = (dia: string, hm: string) => new Date(`${dia}T${hm}:00-03:00`);
 const mediana = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : 0; };
 const NAO = (motivo: string): Sinal => ({ ok: false, motivo });
+const todos = (motivo: string) => Object.fromEntries((["foraDaSede", "perto", "davaParaChegar", "voltou", "finalLento", "parouCedo", "ociosidade", "paraTras"] as ChaveSinal[])
+  .map(k => [k, NAO(motivo)])) as Record<ChaveSinal, Sinal>;
 
 export function analisarNoite(e: EntradaNoite): Noite {
   const { cfg, sede } = e;
@@ -44,8 +46,7 @@ export function analisarNoite(e: EntradaNoite): Noite {
     dia: e.dia, placa: e.placa, motorista: e.motorista, lat: null, lon: null, endereco: null, cidade: null, distSedeKm: null,
     chegada: null, saidaManha: null, descansoMin: null, ultimoClienteSaida: null, chaveLigadaMin: null, madrugadaEventos: 0,
     classificacao: "sem_parada", galo: 0,
-    sinais: Object.fromEntries((["foraDaSede", "perto", "davaParaChegar", "voltou", "finalLento", "parouCedo", "ociosidade", "paraTras"] as ChaveSinal[])
-      .map(k => [k, NAO("sem parada às 02:00")])) as Record<ChaveSinal, Sinal>,
+    sinais: todos("sem parada às 02:00"),
   };
   const t02 = as(seguinte, "02:00");
   const noite = e.paradas.find(p => p.inicio <= t02 && p.fim >= t02);
@@ -75,7 +76,7 @@ export function analisarNoite(e: EntradaNoite): Noite {
     chegada: noite.inicio, saidaManha: noite.fim, descansoMin: Math.round(noite.min), ultimoClienteSaida,
     chaveLigadaMin: desligou ? Math.round((desligou.em.getTime() - noite.inicio.getTime()) / 60000) : null, madrugadaEventos: madrugada,
   };
-  if (naBase) return { ...r, classificacao: "na_base", sinais: { ...r.sinais, foraDaSede: NAO("dormiu na Sede") } };
+  if (naBase) return { ...r, classificacao: "na_base", sinais: todos("dormiu na Sede") };
 
   // Sinais de "na malícia".
   const foraDaSede: Sinal = { ok: true };
@@ -99,15 +100,17 @@ export function analisarNoite(e: EntradaNoite): Noite {
   const classificacao: Classificacao = perto.ok && davaParaChegar.ok ? (voltou.ok ? "na_malicia" : "evitavel") : "normal";
 
   // Sinais de "cozinhando o galo".
-  const ordem = e.baixas.map((b, i) => ({ b, i })).sort((x, y) =>
+  // Só as paradas no cliente até parar para dormir: a da noite (perto de um cliente do dia) não é descarga.
+  const doDia = e.baixas.map(b => ({ ...b, paradasNoRaio: b.paradasNoRaio.filter(p => p.fim <= noite.inicio) }));
+  const ordem = doDia.map((b, i) => ({ b, i })).sort((x, y) =>
     (x.b.paradasNoRaio[0]?.inicio.getTime() ?? x.b.entrega.baixaEm?.getTime() ?? 0) - (y.b.paradasNoRaio[0]?.inicio.getTime() ?? y.b.entrega.baixaEm?.getTime() ?? 0));
-  const tempos = tempoDeDescarga(e.baixas, e.baixas.map(() => null));
+  const tempos = tempoDeDescarga(doDia, doDia.map(() => null));
   const comTempo = ordem.filter(o => tempos[o.i] > 0).map(o => tempos[o.i]);
   const finalMin = mediana(comTempo.slice(-FINAL_N)), diaMin = mediana(comTempo);
   const finalLento: Sinal = comTempo.length >= FINAL_MIN_ENTREGAS
     ? { ok: finalMin > cfg.pernoiteFinalLentoX * diaMin, finalMin: Math.round(finalMin), diaMin: Math.round(diaMin) }
     : NAO(`menos de ${FINAL_MIN_ENTREGAS} entregas com parada`);
-  const parouCedo: Sinal = { ok: horaBRT(noite.inicio) < cfg.pernoiteParouCedo, chegada: horaBRT(noite.inicio), limite: cfg.pernoiteParouCedo };
+  const parouCedo: Sinal = { ok: noite.inicio < as(e.dia, cfg.pernoiteParouCedo), chegada: horaBRT(noite.inicio), limite: cfg.pernoiteParouCedo };
   const janela = noite.inicio.getTime() - OCIOSIDADE.janelaH * 3_600_000;
   const clientes = e.baixas.map(b => b.entrega).filter(x => x.lat !== null && x.lon !== null);
   const ociosaMin = e.paradas.filter(p => p !== noite && p.min >= OCIOSIDADE.paradaMin && p.fim.getTime() > janela && p.inicio < noite.inicio

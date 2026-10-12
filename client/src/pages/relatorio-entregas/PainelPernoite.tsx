@@ -80,7 +80,9 @@ function Detalhe({ n, sede, onRecalcular, recalculando }: {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800/40">
       <div className="flex flex-col gap-2">
-        {frases(n).map((f, i) => (
+        {(n.classificacao === "na_base" || n.classificacao === "sem_parada"
+          ? [{ ok: false, galo: false, texto: `Sinais não se aplicam: ${sinaisDe(n).perto.motivo ?? CLASSE[n.classificacao].texto}.` }]
+          : frases(n)).map((f, i) => (
           <div key={i} className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-200">
             {f.ok
               ? <Check size={14} className={`mt-0.5 shrink-0 ${f.galo ? "text-amber-600" : "text-red-600"}`} />

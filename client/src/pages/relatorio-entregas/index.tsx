@@ -881,7 +881,7 @@ export default function RelatorioEntregas() {
             )}
 
           {/* ── Abas: por dia × por rota × pernoite (Pernoite independe do dia visto) ── */}
-          {revenda && (aba === "pernoite" || (!processar.isPending && !!resultados.length)) && (
+          {revenda && (
             <div className="mx-6 mt-4 inline-flex rounded-xl border border-slate-200 dark:border-slate-600 p-0.5 bg-white dark:bg-[var(--card)]">
               {(
                 [

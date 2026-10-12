@@ -65,7 +65,8 @@ function Reprocessar({ revendaId }: { revendaId: number }) {
         {rodando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />} Reprocessar últimas 4 semanas
       </button>
       <span className="text-[11px] text-slate-400 dark:text-slate-500">
-        {rodando ? `${s!.feitos} de ${s!.total} dias…` : s?.total ? `Pronto: ${s.total} dias analisados.` : "Analisa cada noite com o GPS; leva alguns minutos."}
+        {rodando ? `${s!.feitos} de ${s!.total} dias…` : s?.total ? `Pronto: ${s.total - s.erros} de ${s.total} dias analisados.` : "Analisa cada noite com o GPS; leva alguns minutos."}
+        {!!s?.erros && <span className="block text-red-500">{s.erros} dia(s) com erro: {s.ultimoErro}</span>}
       </span>
     </div>
   );

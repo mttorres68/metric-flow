@@ -27,10 +27,13 @@ export function proximaExecucao(agora: Date): { em: Date; tipo: Tipo } {
   throw new Error("inalcançável");
 }
 
-/** Pernoites: todo dia às 07:30 (BRT) analisa a noite anterior. */
+/**
+ * Pernoites: às 07:30 (BRT) analisa a noite anterior e às 12:30 de novo, com a manhã completa
+ * (a volta à Sede e a saída de manhã são vistas até 12:00; o upsert troca a análise das 07:30).
+ */
 export function proximaExecucaoPernoite(agora: Date): Date {
-  const hoje = em(diaBRT(agora), "07:30");
-  return hoje > agora ? hoje : em(menosDias(diaBRT(agora), -1), "07:30");
+  const hoje = diaBRT(agora);
+  return [em(hoje, "07:30"), em(hoje, "12:30")].find(t => t > agora) ?? em(menosDias(hoje, -1), "07:30");
 }
 
 export const periodoAuto =(hoje: string) => ({ de: menosDias(hoje, 6), ate: hoje });

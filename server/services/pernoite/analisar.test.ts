@@ -77,4 +77,23 @@ describe("analisarNoite", () => {
     expect(n.sinais.paraTras).toMatchObject({ ok: true, clientes: 1 });
     expect(n.galo).toBeGreaterThanOrEqual(3);
   });
+  it("parou depois da meia-noite não é 'parou cedo'", () => {
+    const n = analisarNoite(base({ paradas: [parada(LAT_CLI, "2026-10-05T15:00", "2026-10-05T15:20"), parada(LAT_CLI - 0.01, "2026-10-06T00:40", "2026-10-06T05:30")] }));
+    expect(n.sinais.parouCedo.ok).toBe(false);
+  });
+  it("a parada da noite perto de um cliente não entra no ritmo das últimas entregas", () => {
+    const noite = { inicio: brt("2026-10-05T15:40"), fim: brt("2026-10-06T05:30"), distM: 100, lat: LAT_CLI, lon: -43.02 };
+    const rapidas = ["08", "09", "10", "11", "12"].map(h => baixa(`2026-10-05T${h}:00`, `2026-10-05T${h}:05`));
+    const ultimas = ["13", "14"].map(h => {
+      const b = baixa(`2026-10-05T${h}:00`, `2026-10-05T${h}:05`);
+      return { ...b, paradasNoRaio: [...b.paradasNoRaio, noite] };
+    });
+    const n = analisarNoite(base({ baixas: [...rapidas, ...ultimas] as never, paradas: [parada(LAT_CLI, "2026-10-05T14:00", "2026-10-05T14:05"), parada(LAT_CLI, "2026-10-05T15:40", "2026-10-06T05:30")] }));
+    expect(n.sinais.finalLento).toMatchObject({ ok: false, finalMin: 5 });
+  });
+  it("na Sede: os sinais dizem que dormiu na Sede", () => {
+    const n = analisarNoite(base({ paradas: [parada(-6.77, "2026-10-05T18:00", "2026-10-06T06:00")] }));
+    expect(n.sinais.perto).toEqual({ ok: false, motivo: "dormiu na Sede" });
+    expect(n.sinais.parouCedo).toEqual({ ok: false, motivo: "dormiu na Sede" });
+  });
 });

@@ -26,5 +26,6 @@ describe("períodos", () => {
 
 describe("proximaExecucaoPernoite", () => {
   it("antes das 07:30 → 07:30 do dia", () => expect(proximaExecucaoPernoite(brt("2026-10-07T06:00:00"))).toEqual(brt("2026-10-07T07:30:00")));
-  it("depois das 07:30 → 07:30 do dia seguinte", () => expect(proximaExecucaoPernoite(brt("2026-10-07T08:00:00"))).toEqual(brt("2026-10-08T07:30:00")));
+  it("depois das 07:30 → 12:30 do dia (2º passe, com a manhã completa)", () => expect(proximaExecucaoPernoite(brt("2026-10-07T08:00:00"))).toEqual(brt("2026-10-07T12:30:00")));
+  it("depois das 12:30 → 07:30 do dia seguinte", () => expect(proximaExecucaoPernoite(brt("2026-10-07T13:00:00"))).toEqual(brt("2026-10-08T07:30:00")));
 });
