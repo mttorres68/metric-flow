@@ -15,6 +15,7 @@ import { SituacaoColeta } from "./SituacaoColeta";
 import { MapaEntrega } from "./MapaEntrega";
 import { PainelDiaNew } from "./PainelDiaNew";
 import { PainelPernoite } from "./PainelPernoite";
+import { PainelDesvio } from "./PainelDesvio";
 import {
   Popover,
   PopoverContent,
@@ -481,7 +482,7 @@ export default function RelatorioEntregas() {
   });
   const resultados = processar.data?.linhas ?? [];
   const rotas = processar.data?.rotas ?? [];
-  const [aba, setAba] = useState<"dia" | "rota" | "dianew" | "pernoite">("dia");
+  const [aba, setAba] = useState<"dia" | "rota" | "dianew" | "pernoite" | "desvio">("dia");
 
   const utils = trpc.useUtils();
   const recalcular = (cerca = cercaId) => {
@@ -845,7 +846,7 @@ export default function RelatorioEntregas() {
             </div>
           )}
 
-          {revenda && aba !== "pernoite" && processar.isPending && (
+          {revenda && aba !== "pernoite" && aba !== "desvio" && processar.isPending && (
             <div className="flex items-center justify-center h-40 text-slate-400 dark:text-slate-500 text-sm">
               <Loader2 size={16} className="animate-spin mr-2" /> Cruzando as
               entregas de {revenda.revenda} em {fmtDia(dia)} com o GPS...
@@ -854,6 +855,7 @@ export default function RelatorioEntregas() {
 
           {revenda &&
             aba !== "pernoite" &&
+            aba !== "desvio" &&
             !processar.isPending &&
             processar.data &&
             !resultados.length && (
@@ -889,6 +891,7 @@ export default function RelatorioEntregas() {
                   ["rota", "Por rota"],
                   ["dianew", "Por dia new"],
                   ["pernoite", "Pernoite"],
+                  ["desvio", "Desvio"],
                 ] as const
               ).map(([v, rotulo]) => (
                 <button
@@ -913,6 +916,8 @@ export default function RelatorioEntregas() {
             aba === "dianew" && <PainelDiaNew linhas={linhas} raioM={raioM} />}
 
           {revenda && aba === "pernoite" && <PainelPernoite revendaId={revenda.revendaId} />}
+
+          {revenda && aba === "desvio" && <PainelDesvio revendaId={revenda.revendaId} raioM={raioM} />}
 
           {revenda &&
             !processar.isPending &&
