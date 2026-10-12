@@ -316,6 +316,17 @@ describe("cruzar", () => {
     expect(r.totalRota).toBe(3);
   });
 
+  it("a entregar no dia: clientes que ainda faltavam no início do dia (no 1º dia, o total da rota)", () => {
+    const rota = [
+      entrega({ codCliente: "1", baixaEm: brt("2026-10-04T10:00") }),                          // entregue na véspera
+      entrega({ codCliente: "2", situacao: "PROBLEMA", baixaEm: brt("2026-10-04T11:00") }),    // devolvida na véspera
+      entrega({ codCliente: "3" }),                                                            // entregue hoje
+      entrega({ codCliente: "4", situacao: "AGUARDANDO", baixaEm: null }),                     // ainda falta
+    ];
+    expect(cruzar(linha(), rota, gps([])).aEntregar).toBe(2);
+    expect(cruzar(linha({ data: "2026-10-04" }), rota, gps([])).aEntregar).toBe(4);
+  });
+
   // Review Focus 5
   it("após 14h conta só ENTREGUE e inclui 14:00 exato", () => {
     const r = cruzar(linha(), [

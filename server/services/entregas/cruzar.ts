@@ -90,6 +90,7 @@ export interface ResultadoLinha {
   retorno: Date | null;
   entregasDia: number;
   totalRota: number;
+  aEntregar: number; // clientes que ainda faltavam no início do dia (sem baixa em dia anterior); no 1º dia = totalRota
   apos14h: number;
   baixasComCoord: number;
   noRaio: number;
@@ -268,6 +269,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
     retorno: null,
     entregasDia: entregues.length,
     totalRota: entregasRota.length,
+    aEntregar: entregasRota.filter(e => !(e.situacao !== "AGUARDANDO" && e.baixaEm && diaBRT(e.baixaEm) < linha.data)).length,
     apos14h: entregues.filter(e => horaBRT(e.baixaEm!) >= LIMITES.apos14h).length,
     baixasComCoord: 0,
     noRaio: 0,

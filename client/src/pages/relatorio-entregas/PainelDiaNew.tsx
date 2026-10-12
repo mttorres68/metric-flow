@@ -173,7 +173,7 @@ function Cartao({ l, aberto, onClick }: { l: Linha; aberto: boolean; onClick: ()
         <span><b className={p.dev ? "text-red-600 dark:text-red-400" : "text-slate-800 dark:text-slate-100"}>{n(p.dev)}</b> hL dev.</span>
         <span><b className="text-slate-800 dark:text-slate-100">{n(p.hlPorKm, 2)}</b> hL/km</span>
         <span><b className="text-slate-800 dark:text-slate-100">{n(p.hlPorParada, 2)}</b> hL/parada</span>
-        <span>{l.entregasDia}/{l.totalRota} entregas</span>
+        <span title="Entregues no dia / clientes que ainda faltavam no início do dia">{l.entregasDia}/{l.aEntregar} entregas</span>
       </div>
       <Trilho l={l} />
       {!!p.etiquetas.length && (

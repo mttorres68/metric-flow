@@ -287,7 +287,7 @@ export default function RelatorioEntregas() {
       linhas: linhas.length,
       placas: new Set(linhas.map(r => r.linha.placa)).size,
       entregas: soma(linhas, r => r.entregasDia),
-      totalEntregas: soma(linhas, r => r.totalRota),
+      totalEntregas: soma(linhas, r => r.aEntregar),
       noRaioPct: pct(noRaio, soma(gps, r => r.baixasComCoord)),
       semParada: soma(gps, r => r.semParada),
       relampPct: pct(relamp, noRaio + relamp),
@@ -463,7 +463,7 @@ export default function RelatorioEntregas() {
               <div className="px-6 pt-4 pb-2 grid grid-cols-5 gap-3">
                 {[
                   { label: "Placas · motoristas / caminhões", value: `${k.linhas}/${k.placas}`, color: "text-slate-700 dark:text-slate-200", icon: <Truck size={16} className="text-indigo-400" /> },
-                  { label: "Entregues / total de entregas", value: `${k.entregas}/${k.totalEntregas}`, color: "text-slate-700 dark:text-slate-200", icon: <MapPin size={16} className="text-green-400" /> },
+                  { label: "Entregues / a entregar no dia", value: `${k.entregas}/${k.totalEntregas}`, color: "text-slate-700 dark:text-slate-200", icon: <MapPin size={16} className="text-green-400" /> },
                   { label: "Entregas no raio", value: fmtPct(k.noRaioPct), color: k.noRaioPct < 100 ? "text-red-600" : "text-green-600", icon: <MapPin size={16} className="text-indigo-400" /> },
                   { label: "Entregas sem parada", value: String(k.semParada), color: k.semParada > 0 ? "text-red-600" : "text-green-600", icon: <AlertTriangle size={16} className="text-red-400" /> },
                   { label: "Relâmpago", value: fmtPct(k.relampPct), color: k.relampPct > LIMITES.relampagoMaxPct ? "text-red-600" : "text-green-600", icon: <Zap size={16} className="text-amber-400" /> },
@@ -513,7 +513,7 @@ export default function RelatorioEntregas() {
                           <Th center title="Tempo em cliente: soma de (saída − chegada) no app × paradas no raio pelo GPS">Em cliente (tempo)</Th>
                           <Th center title="Da saída (revenda 📍 quando pela cerca, ou pernoite) até chegar ao 1º cliente: tempo · km pela estrada">Saída → 1º PDV (tempo · km)</Th>
                           <Th center title="Do último cliente até o retorno (revenda 📍 quando pela cerca): tempo · km pela estrada">Último PDV → retorno (tempo · km)</Th>
-                          <Th center title="Entregues no dia / total de clientes da rota">Entregas</Th>
+                          <Th center title="Entregues no dia / clientes que ainda faltavam no início do dia (no 1º dia da rota, o total)">Entregas</Th>
                           <Th center title={`% das entregas registradas após as 14h (vermelho se < ${LIMITES.apos14hMinPct}%)`}>Após 14h</Th>
                           <Th center title={`Entregas com o caminhão parado de ${LIMITES.relampagoMin} min ou mais a até ${raioM} m do cliente`}>No raio</Th>
                           <Th center title="Entregas sem nenhuma parada do caminhão perto do cliente">Sem parada</Th>
@@ -582,7 +582,7 @@ export default function RelatorioEntregas() {
                                     </span>
                                   ) : vazio}
                                 </Td>
-                                <Td center mono className={neutro}>{r.entregasDia}/{r.totalRota}</Td>
+                                <Td center mono className={neutro}>{r.entregasDia}/{r.aEntregar}</Td>
                                 <Td center mono>
                                   {r.entregasDia > 0 ? (
                                     <span className={pTarde < LIMITES.apos14hMinPct ? vermelho : `${neutro} font-bold`}>
