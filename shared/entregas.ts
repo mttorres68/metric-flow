@@ -10,6 +10,12 @@ export const LIMITES = {
   paradaSemClienteMin: 10,
   saidaAte: "08:00",
   saidaMinima: "04:00", // movimento que termina antes disso não é saída (madrugada fora da base)
+  pernoiteMaxKm: 80, // pernoite "na malícia": dormiu até esta distância da Sede (estrada estimada)…
+  pernoiteChegarAte: "21:00", // …quando dava para chegar na Sede até este horário…
+  pernoiteFatorEstrada: 1.3, // linha reta × fator = distância pela estrada (estimada)
+  pernoiteVelKmh: 60, // velocidade média para estimar a chegada na Sede
+  pernoiteParouCedo: "17:00", // "cozinhando o galo": parou de vez antes deste horário
+  pernoiteFinalLentoX: 2, // "cozinhando o galo": 3 últimas entregas mais lentas que este múltiplo do dia
   apos14h: "14:00",
   apos14hMinPct: 25,
   relampagoMaxPct: 10,
@@ -44,6 +50,12 @@ export interface ConfigEntregas {
   lentoMinMin: number;
   lentoMaxKmh: number;
   saidaMinima: string; // "hh:mm" BRT
+  pernoiteMaxKm: number;
+  pernoiteChegarAte: string; // "hh:mm"
+  pernoiteFatorEstrada: number;
+  pernoiteVelKmh: number;
+  pernoiteParouCedo: string; // "hh:mm"
+  pernoiteFinalLentoX: number;
 }
 export const CONFIG_ENTREGAS_PADRAO: ConfigEntregas = {
   raioM: LIMITES.raioM,
@@ -52,4 +64,10 @@ export const CONFIG_ENTREGAS_PADRAO: ConfigEntregas = {
   lentoMinMin: LIMITES.lentoMinMin,
   lentoMaxKmh: LIMITES.lentoMaxKmh,
   saidaMinima: LIMITES.saidaMinima,
+  pernoiteMaxKm: LIMITES.pernoiteMaxKm,
+  pernoiteChegarAte: LIMITES.pernoiteChegarAte,
+  pernoiteFatorEstrada: LIMITES.pernoiteFatorEstrada,
+  pernoiteVelKmh: LIMITES.pernoiteVelKmh,
+  pernoiteParouCedo: LIMITES.pernoiteParouCedo,
+  pernoiteFinalLentoX: LIMITES.pernoiteFinalLentoX,
 };

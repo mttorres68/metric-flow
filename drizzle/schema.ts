@@ -354,6 +354,12 @@ export const entregasConfig = pgTable("entregas_config", {
   lentoMinMin: integer("lentoMinMin").notNull().default(20),         // trecho com mais que estes minutos…
   lentoMaxKmh: integer("lentoMaxKmh").notNull().default(15),         // …a menos que esta média = lento
   saidaMinima: varchar("saidaMinima", { length: 5 }).notNull().default("04:00"), // movimento antes disso não é saída
+  pernoiteMaxKm:        doublePrecision("pernoiteMaxKm").notNull().default(80),
+  pernoiteChegarAte:    varchar("pernoiteChegarAte", { length: 5 }).notNull().default("21:00"),
+  pernoiteFatorEstrada: doublePrecision("pernoiteFatorEstrada").notNull().default(1.3),
+  pernoiteVelKmh:       doublePrecision("pernoiteVelKmh").notNull().default(60),
+  pernoiteParouCedo:    varchar("pernoiteParouCedo", { length: 5 }).notNull().default("17:00"),
+  pernoiteFinalLentoX:  doublePrecision("pernoiteFinalLentoX").notNull().default(2),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
@@ -481,6 +487,34 @@ export const produtividadeParadas = pgTable("produtividade_paradas", {
 }, t => [
   uniqueIndex("uq_produtividade_paradas").on(t.revendaId, t.routeId, t.codCliente, t.dia),
   index("ix_produtividade_paradas_motorista").on(t.revendaId, t.motorista, t.dia),
+]);
+
+// Pernoite de cada caminhão por noite (spec pernoite §6): classificação e sinais com os números que os explicam.
+export const pernoites = pgTable("pernoites", {
+  id:                 serial("id").primaryKey(),
+  revendaId:          integer("revendaId").notNull().references(() => revendas.id),
+  placa:              varchar("placa", { length: 20 }).notNull(),
+  motorista:          varchar("motorista", { length: 120 }).notNull(),
+  dia:                date("dia", { mode: "string" }).notNull(),
+  lat:                doublePrecision("lat"),
+  lon:                doublePrecision("lon"),
+  endereco:           text("endereco"),
+  cidade:             varchar("cidade", { length: 120 }),
+  distSedeKm:         doublePrecision("distSedeKm"),
+  chegada:            timestamp("chegada", { withTimezone: true }),
+  saidaManha:         timestamp("saidaManha", { withTimezone: true }),
+  descansoMin:        integer("descansoMin"),
+  ultimoClienteSaida: timestamp("ultimoClienteSaida", { withTimezone: true }),
+  chaveLigadaMin:     integer("chaveLigadaMin"),
+  madrugadaEventos:   integer("madrugadaEventos").notNull().default(0),
+  classificacao:      varchar("classificacao", { length: 12 }).notNull(), // na_malicia | evitavel | normal | na_base | sem_parada
+  sinais:             jsonb("sinais").notNull(),
+  galo:               integer("galo").notNull().default(0),
+  calculadoEm:        timestamp("calculadoEm", { withTimezone: true }).defaultNow().notNull(),
+}, t => [
+  uniqueIndex("uq_pernoites").on(t.revendaId, t.placa, t.dia),
+  index("ix_pernoites_dia").on(t.revendaId, t.dia),
+  index("ix_pernoites_motorista").on(t.revendaId, t.motorista, t.dia),
 ]);
 
 // ---------------------------------------------------------------------------

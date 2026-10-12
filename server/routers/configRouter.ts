@@ -73,6 +73,12 @@ export const configRouter = router({
             lentoMinMin: z.number().int().min(1).max(600),
             lentoMaxKmh: z.number().int().min(1).max(120),
             saidaMinima: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+            pernoiteMaxKm: z.number().min(1).max(500),
+            pernoiteChegarAte: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+            pernoiteFatorEstrada: z.number().min(1).max(3),
+            pernoiteVelKmh: z.number().min(10).max(120),
+            pernoiteParouCedo: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+            pernoiteFinalLentoX: z.number().min(1).max(10),
         }))
         .mutation(async ({ input }) => {
             const db = await getDb();

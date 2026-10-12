@@ -9,7 +9,7 @@ import { trpc } from "@/lib/trpc";
 import { CONFIG_ENTREGAS_PADRAO, type ConfigEntregas } from "@shared/entregas";
 import { ContasEntregas } from "./ContasEntregas";
 
-type ChaveNum = Exclude<keyof ConfigEntregas, "saidaMinima">;
+type ChaveNum = Exclude<keyof ConfigEntregas, "saidaMinima" | "pernoiteChegarAte" | "pernoiteParouCedo">;
 interface Campo { chave: ChaveNum; rotulo: string; un: string; min: number; max: number; step: number; inteiro: boolean; ajuda: string }
 
 /** Limites iguais aos do zod em configRouter.saveEntregasConfig. */
