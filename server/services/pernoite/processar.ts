@@ -6,6 +6,8 @@ import { buscarGpsLinha, mapaVeiculos, normalizarPlaca, sedeDaConta } from "../e
 import { getConfigEntregas } from "../configService";
 import { analisarNoite, noiteSemLugar, type Noite } from "./analisar";
 import { gravarNoites } from "./repo";
+import { evidenciaDe, type EvidenciaNova } from "../desvio/evidencias";
+import { gravarEvidencias } from "../desvio/repo";
 
 const DIA_MS = 86_400_000;
 const somaDias = (d: string, n: number) => new Date(Date.parse(`${d}T12:00:00Z`) + n * DIA_MS).toISOString().slice(0, 10);
@@ -23,6 +25,7 @@ export async function processarNoites(revendaId: number, dia: string): Promise<n
   for (const l of linhas) porPlaca.set(l.placa, [...(porPlaca.get(l.placa) ?? []), l]);
 
   const noites: Noite[] = [];
+  const evidencias: EvidenciaNova[] = []; // GPS de cada entrega do dia, para o detector de desvio
   for (const [placa, ls] of porPlaca) {
     const vId = veiculos.get(normalizarPlaca(placa));
     if (!vId) continue;
@@ -35,12 +38,14 @@ export async function processarNoites(revendaId: number, dia: string): Promise<n
     const rotas = new Set(ls.map(l => l.routeId));
     const daPlaca = entregas.filter(e => rotas.has(e.routeId));
     const baixas = ls.flatMap(l => cruzar(l, daPlaca.filter(e => e.routeId === l.routeId), gps, cfg).baixas);
+    evidencias.push(...baixas.map(b => evidenciaDe(dia, b)));
     const pendentes = daPlaca.filter(e => e.situacao === "AGUARDANDO" || !e.baixaEm || diaBRT(e.baixaEm) > dia);
     // Rota de vários dias volta inteira no dia seguinte: cliente já entregue em D não é cliente da manhã.
     const clientesSeguinte = doSeguinte.filter(e => e.placa === placa && e.lat !== null && e.lon !== null && (!e.baixaEm || diaBRT(e.baixaEm) > dia)).map(e => ({ lat: e.lat!, lon: e.lon! }));
     noites.push(analisarNoite({ dia, placa, motorista, paradas: gps.paradas, eventos: gps.eventos, baixas, pendentes, clientesSeguinte, sede, cfg }));
   }
   await gravarNoites(revendaId, noites);
+  await gravarEvidencias(revendaId, evidencias);
   return noites.length;
 }
 

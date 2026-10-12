@@ -6,9 +6,11 @@ vi.mock("../entregas/infleetEntregas", () => ({
 }));
 vi.mock("../configService", async () => ({ getConfigEntregas: async () => (await import("@shared/entregas")).CONFIG_ENTREGAS_PADRAO }));
 vi.mock("./repo", () => ({ gravarNoites: vi.fn() }));
+vi.mock("../desvio/repo", () => ({ gravarEvidencias: vi.fn() }));
 import * as cn from "../checknow/repo";
 import * as inf from "../entregas/infleetEntregas";
 import { gravarNoites } from "./repo";
+import { gravarEvidencias } from "../desvio/repo";
 import { processarNoites, reprocessar, statusReprocessamento } from "./processar";
 import type { Entrega } from "../entregas/parseCheckNow";
 
@@ -43,6 +45,7 @@ describe("processarNoites", () => {
     const [rev, noites] = vi.mocked(gravarNoites).mock.calls[0];
     expect(rev).toBe(1);
     expect(noites).toMatchObject([{ dia: D, placa: "AAA-1111", motorista: "ANA", classificacao: "evitavel" }]); // perto, dava para chegar, não voltou de manhã
+    expect(gravarEvidencias).toHaveBeenCalledWith(1, [expect.objectContaining({ dia: D, routeId: "R1", codCliente: "1", documentos: [] })]);
   });
   it("placa sem rastreador é pulada", async () => {
     comEntregas([entrega({}), entrega({ routeId: "R2", placa: "ZZZ-9999" })]);
