@@ -76,9 +76,16 @@ async function fetchUnificadoBase64(
     return { base64, filename, blob };
 }
 
+type Aba = "detalhado" | "porSetor";
+const ABAS: { id: Aba; label: string }[] = [
+    { id: "detalhado", label: "Detalhado" },
+    { id: "porSetor", label: "Distorção por Setor" },
+];
+
 export function RecorrenciaSemanal({ dataInicio, dataFim, revendaFiltro, setAnalise }: RecorrenciaSemanalProps) {
     const habilitado = !!dataInicio && !!dataFim;
 
+    const [aba, setAba] = useState<Aba>("detalhado");
     const [downloadingPDF, setDownloadingPDF] = useState<string | null>(null);
     const [sendingWA, setSendingWA] = useState<string | null>(null);
     const [downloadingUnificado, setDownloadingUnificado] = useState(false);
@@ -257,6 +264,22 @@ export function RecorrenciaSemanal({ dataInicio, dataFim, revendaFiltro, setAnal
 
     return (
         <div className="px-6 pb-6 pt-4 flex flex-col gap-6">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 w-fit">
+                {ABAS.map(a => (
+                    <button
+                        key={a.id}
+                        onClick={() => setAba(a.id)}
+                        className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                            aba === a.id
+                                ? "bg-white dark:bg-slate-600 text-indigo-600 dark:text-indigo-300 shadow-sm"
+                                : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                        }`}
+                    >
+                        {a.label}
+                    </button>
+                ))}
+            </div>
+
             {revendas.length > 0 && (
                 <div className="flex items-center justify-end gap-2">
                     <button
@@ -281,7 +304,54 @@ export function RecorrenciaSemanal({ dataInicio, dataFim, revendaFiltro, setAnal
                 </div>
             )}
 
-            {revendas.map(rev => {
+            {aba === "porSetor" && (
+                <div className="bg-white dark:bg-[var(--card)] rounded-xl border border-slate-100 dark:border-[var(--border)] overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                            <thead>
+                                <tr className="bg-green-950 text-slate-100">
+                                    <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide">Flag</th>
+                                    {revendas.map(rev => (
+                                        <th key={rev} className="px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wide whitespace-nowrap">
+                                            {rev}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {flags.map((f, i) => (
+                                    <tr key={f.id} className={i % 2 ? "bg-slate-50 dark:bg-slate-800/30" : ""}>
+                                        <td className="px-3 py-2 font-semibold text-slate-600 dark:text-slate-300 border-b border-slate-100 dark:border-slate-700/40">
+                                            {f.label}
+                                        </td>
+                                        {revendas.map(rev => {
+                                            const soma = (porRevenda[rev] ?? []).reduce((s: number, v: any) => s + (v.metricas[f.id]?.dias ?? 0), 0);
+                                            return (
+                                                <td key={rev} className="px-2 py-2 text-center text-slate-600 dark:text-slate-300 border-b border-slate-100 dark:border-slate-700/40">
+                                                    {soma > 0 ? soma : <span className="text-slate-300 dark:text-slate-600">—</span>}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                                <tr className="bg-amber-50/60 dark:bg-amber-900/10">
+                                    <td className="px-3 py-2 font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide">Total Distorção</td>
+                                    {revendas.map(rev => {
+                                        const total = (porRevenda[rev] ?? []).reduce((s: number, v: any) => s + v.scoreDistorcao, 0);
+                                        return (
+                                            <td key={rev} className="px-2 py-2 text-center font-bold text-amber-700 dark:text-amber-400 border-t-2 border-amber-200 dark:border-amber-800">
+                                                {total}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {aba === "detalhado" && revendas.map(rev => {
                 const lista = (porRevenda[rev] ?? []).filter((v: any) => v.scoreCritico > 0);
                 return (
                     <div key={rev} className="bg-white dark:bg-[var(--card)] rounded-xl border border-slate-100 dark:border-[var(--border)] overflow-hidden">
@@ -323,6 +393,7 @@ export function RecorrenciaSemanal({ dataInicio, dataFim, revendaFiltro, setAnal
                                         <th className="px-2 py-2 text-left text-[11px] font-bold uppercase tracking-wide align-bottom">Vend.</th>
                                         <th className="px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wide whitespace-nowrap align-bottom" title="Dias com operação (visitas dentro do raio)">Dias ativos</th>
                                         <th className="px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wide align-bottom" title="Número de flags recorrentes do vendedor">Score</th>
+                                        <th className="px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wide align-bottom" title="Soma de todos os dias com flag disparada no período (sem exigir recorrência)">Distorção</th>
                                         {flags.map(f => (
                                             <th key={f.id} title={f.label} className="px-2 py-2 text-center text-[11px] font-bold uppercase tracking-tight leading-tight align-bottom">
                                                 {FLAG_SHORT[f.id] ?? f.label}
@@ -337,6 +408,9 @@ export function RecorrenciaSemanal({ dataInicio, dataFim, revendaFiltro, setAnal
                                             <td className="px-1 py-2 text-center text-slate-600 dark:text-slate-300 border-b border-slate-100 dark:border-slate-700/40">{v.diasAtivos}</td>
                                             <td className={`px-1 py-2 text-center font-bold border-b border-slate-100 dark:border-slate-700/40 ${v.scoreCritico > 0 ? "text-red-600 dark:text-red-400" : "text-slate-600 dark:text-slate-300"}`}>
                                                 {v.scoreCritico}
+                                            </td>
+                                            <td className="px-1 py-2 text-center font-bold text-amber-600 dark:text-amber-400 border-b border-slate-100 dark:border-slate-700/40">
+                                                {v.scoreDistorcao}
                                             </td>
                                             {flags.map(f => {
                                                 const m = v.metricas[f.id];

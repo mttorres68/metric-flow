@@ -33,11 +33,7 @@ export const analiseRouter = router({
             vendedor:   z.number().optional(),
         }))
         .query(async ({ input }) => {
-            let visitas = await getVisitasData();
-            if (input.revenda)    visitas = visitas.filter(v => v.revenda  === input.revenda);
-            if (input.vendedor)   visitas = visitas.filter(v => v.vendedor === input.vendedor);
-            if (input.dataInicio) visitas = visitas.filter(v => v.data >= input.dataInicio!);
-            if (input.dataFim)    visitas = visitas.filter(v => v.data <= input.dataFim!);
+            const visitas = await getVisitasData(input);
 
             const cfg = await getConfigMetricas();
             const resultados = calcularAnalisePeriodo(visitas, cfg.diaria);
@@ -58,10 +54,7 @@ export const analiseRouter = router({
             vendedor:   z.number().optional(),
         }))
         .query(async ({ input }) => {
-            let visitas = await getVisitasData();
-            if (input.revenda)  visitas = visitas.filter(v => v.revenda  === input.revenda);
-            if (input.vendedor) visitas = visitas.filter(v => v.vendedor === input.vendedor);
-            visitas = visitas.filter(v => v.data >= input.dataInicio && v.data <= input.dataFim);
+            const visitas = await getVisitasData(input);
 
             const cfg = await getConfigMetricas();
             const porRevenda = computarRecorrenciaPeriodo(visitas, cfg.recorrencia);
@@ -74,7 +67,7 @@ export const analiseRouter = router({
     getComparativoScores: publicProcedure
         .input(z.object({
             granularidade: z.enum(["diario", "semanal", "mensal"]),
-            metrica:       z.enum(["scoreCritico", "flagsDiarias"]).default("scoreCritico"),
+            metrica:       z.enum(["scoreCritico", "flagsDiarias", "scoreDistorcao"]).default("scoreCritico"),
             dataFim:       z.string().optional(),
             quantidade:    z.number().min(2).max(24).default(6),
             revenda:       z.string().optional(),
@@ -115,14 +108,14 @@ export const analiseRouter = router({
                 };
             }
 
-            let visitas = await getVisitasData();
-            if (input.revenda) visitas = visitas.filter(v => v.revenda === input.revenda);
+            const visitas = await getVisitasData({ revenda: input.revenda });
 
             const datas = [...new Set(visitas.map(v => v.data))].sort();
             const dataFim = input.dataFim ?? datas[datas.length - 1] ?? new Date().toISOString().slice(0, 10);
 
             const cfg = await getConfigMetricas();
-            const resultado = computarComparativo(visitas, input.granularidade, dataFim, input.quantidade, cfg.recorrencia);
+            const campo = input.metrica === "scoreDistorcao" ? "scoreDistorcao" : "scoreCritico";
+            const resultado = computarComparativo(visitas, input.granularidade, dataFim, input.quantidade, cfg.recorrencia, campo);
 
             return {
                 ...resultado,
@@ -139,10 +132,7 @@ export const analiseRouter = router({
             dataFim:    z.string(),
         }))
         .mutation(async ({ input }) => {
-            let visitas = await getVisitasData();
-            visitas = visitas.filter(v =>
-                v.revenda === input.revenda && v.data >= input.dataInicio && v.data <= input.dataFim
-            );
+            const visitas = await getVisitasData(input);
 
             const cfg = await getConfigMetricas();
             const listaCompleta = computarRecorrenciaPeriodo(visitas, cfg.recorrencia)[input.revenda] ?? [];
@@ -291,9 +281,11 @@ export const analiseRouter = router({
     getVisitasDoDia: publicProcedure
         .input(z.object({ vendedor: z.number(), revenda: z.string(), data: z.string() }))
         .query(async ({ input }) => {
-            const visitas = await getVisitasData();
+            const visitas = await getVisitasData({
+                vendedor: input.vendedor, revenda: input.revenda,
+                dataInicio: input.data, dataFim: input.data,
+            });
             return visitas
-                .filter(v => v.vendedor === input.vendedor && v.revenda === input.revenda && v.data === input.data)
                 .sort((a, b) => {
                     const at = a.horaInicio === "ND" || !a.horaInicio ? "99:99" : a.horaInicio;
                     const bt = b.horaInicio === "ND" || !b.horaInicio ? "99:99" : b.horaInicio;
@@ -309,13 +301,13 @@ export const analiseRouter = router({
             horaFim:    z.string().optional(),
         }))
         .query(async ({ input }) => {
-            const visitas = await getVisitasData();
+            const visitas = await getVisitasData({
+                revenda: input.revenda, dataInicio: input.data, dataFim: input.data,
+            });
             const cfg = await getConfigMetricas();
             const RAIO = cfg.diaria.raioPDV;
 
-            const todasVisitas = visitas.filter(v =>
-                v.revenda === input.revenda && v.data === input.data && v.horaInicio && v.horaInicio !== "ND"
-            );
+            const todasVisitas = visitas.filter(v => v.horaInicio && v.horaInicio !== "ND");
 
             // Identifica clientes com qualquer visita dentro do raio
             const clienteTemDentro: Record<number, Record<string, boolean>> = {};

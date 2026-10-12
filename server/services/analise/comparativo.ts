@@ -138,6 +138,7 @@ export function computarComparativo(
     dataFim: string,
     quantidade: number,
     cfg: ConfigMetricasRecorrencia,
+    campo: "scoreCritico" | "scoreDistorcao" = "scoreCritico",
 ): ComparativoScoreResult {
     const periodos = gerarPeriodos(granularidade, dataFim, quantidade);
     const { porRevenda, porRevendaVendedor, garantirLinha } = criarAgregador(periodos);
@@ -180,11 +181,11 @@ export function computarComparativo(
         for (const [revenda, lista] of Object.entries(porRev)) {
             const ativos = lista.filter(v => v.diasAtivos > 0);
             garantirLinha(revenda);
-            porRevenda[revenda][idx] = media(ativos.map(v => v.scoreCritico));
+            porRevenda[revenda][idx] = media(ativos.map(v => v[campo]));
             for (const v of ativos) {
                 const vendedorKey = String(v.vendedor);
                 garantirLinha(revenda, vendedorKey);
-                porRevendaVendedor[revenda][vendedorKey][idx] = v.scoreCritico;
+                porRevendaVendedor[revenda][vendedorKey][idx] = v[campo];
             }
         }
     });

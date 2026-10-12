@@ -36,13 +36,12 @@ export const dashboardRouter = router({
       })
     )
     .query(async ({ input }) => {
-      let visitas = await getVisitasData();
-
-      // Filtros de dimensão
-      if (input.gerente !== undefined) visitas = visitas.filter((v) => v.gerente === input.gerente);
-      if (input.revenda)               visitas = visitas.filter((v) => v.revenda === input.revenda);
-      if (input.dataInicio)            visitas = visitas.filter((v) => v.data >= input.dataInicio!);
-      if (input.dataFim)               visitas = visitas.filter((v) => v.data <= input.dataFim!);
+      // Nota: input.vendedor é o identificador usado por calcularMetricas
+      // (string), diferente do código numérico de VisitasFiltro — não filtra a query.
+      const visitas = await getVisitasData({
+        gerente: input.gerente, revenda: input.revenda,
+        dataInicio: input.dataInicio, dataFim: input.dataFim,
+      });
 
       return calcularMetricas(visitas, input.vendedor, input.status, input.config);
     }),

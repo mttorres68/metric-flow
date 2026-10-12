@@ -368,7 +368,7 @@ export default function Analise() {
                             <div className="bg-amber-50 dark:bg-amber-900/10 border-b border-amber-100 dark:border-amber-800/30 px-6 py-3">
                                 <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-slate-600 dark:text-slate-300 max-w-5xl">
                                     {[
-                                        ["Início", "Alerta se primeiro atendimento após 09:30"],
+                                        ["Início", "Alerta se primeiro atendimento após 08:45"],
                                         ["Visitas / IV", "Visitados dentro do raio / carteira. Alerta se < 90%"],
                                         ["Relâmpago", "Visitas < 3 min dentro do raio. Alerta se > 10%"],
                                         ["Pedido SFA", "Pedidos realizados pelo vendedor via sistema SFA"],

@@ -4,7 +4,7 @@
  * todos os routers existentes, sem nenhuma mudança necessária neles.
  */
 import { alias } from "drizzle-orm/pg-core";
-import { eq } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import { getDb } from "../db";
 import {
     pathtrackerVisitas,
@@ -17,12 +17,28 @@ import { ProcessedVisita, classificarVisita } from "./xlsxService";
 const vendedorAlias = alias(pathtrackerHierarquia, "vendedorH");
 const gerenteAlias  = alias(pathtrackerHierarquia, "gerenteH");
 
-export async function loadFromDatabase(): Promise<ProcessedVisita[]> {
+/** Filtros aplicados como WHERE no banco — evita trazer e classificar linhas descartadas em seguida. */
+export interface VisitasFiltro {
+    revenda?: string;
+    vendedor?: number;
+    gerente?: number;
+    dataInicio?: string; // YYYY-MM-DD, inclusivo
+    dataFim?: string;    // YYYY-MM-DD, inclusivo
+}
+
+export async function loadFromDatabase(filtro: VisitasFiltro = {}): Promise<ProcessedVisita[]> {
     const db = await getDb();
     if (!db) throw new Error("[pgDataService] Banco não disponível — verifique DATABASE_URL");
 
-    console.log("[pgDataService] Carregando visitas do PostgreSQL...");
+    console.log("[pgDataService] Carregando visitas do PostgreSQL...", filtro);
     const t0 = Date.now();
+
+    const condicoes = [];
+    if (filtro.revenda)             condicoes.push(eq(revendas.nome, filtro.revenda));
+    if (filtro.vendedor != null)    condicoes.push(eq(vendedorAlias.codigo, filtro.vendedor));
+    if (filtro.gerente != null)     condicoes.push(eq(gerenteAlias.codigo, filtro.gerente));
+    if (filtro.dataInicio)          condicoes.push(gte(pathtrackerVisitas.data, filtro.dataInicio));
+    if (filtro.dataFim)             condicoes.push(lte(pathtrackerVisitas.data, filtro.dataFim));
 
     const rows = await db
         .select({
@@ -48,7 +64,8 @@ export async function loadFromDatabase(): Promise<ProcessedVisita[]> {
         .innerJoin(revendas,            eq(pathtrackerVisitas.revendaId,  revendas.id))
         .innerJoin(pathtrackerClientes, eq(pathtrackerVisitas.clienteId,  pathtrackerClientes.id))
         .innerJoin(vendedorAlias,       eq(pathtrackerVisitas.vendedorId, vendedorAlias.id))
-        .leftJoin(gerenteAlias,         eq(pathtrackerVisitas.gerenteId,  gerenteAlias.id));
+        .leftJoin(gerenteAlias,         eq(pathtrackerVisitas.gerenteId,  gerenteAlias.id))
+        .where(and(...condicoes));
 
     console.log(`[pgDataService] ✓ ${rows.length} registros em ${Date.now() - t0}ms`);
 

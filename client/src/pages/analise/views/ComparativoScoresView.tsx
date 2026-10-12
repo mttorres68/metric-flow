@@ -1,17 +1,21 @@
 import { Fragment, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Minus, Info, Printer } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { exportarComparativoScoresPDF } from "@/lib/pdfExport";
 import {
     LEGENDA_REGRA_RECORRENCIA,
     LEGENDA_SCORE_CRITICO,
+    LEGENDA_SCORE_DISTORCAO,
     LEGENDA_FLAGS_RECORRENCIA,
     LEGENDA_FLAGS_DIARIAS,
 } from "@shared/const";
 import { trpc } from "@/lib/trpc";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Badge } from "../components/Badge";
 import { FilterSelect } from "../components/FilterControls";
 
 type Granularidade = "diario" | "semanal" | "mensal";
-type Metrica = "scoreCritico" | "flagsDiarias";
+type Metrica = "scoreCritico" | "flagsDiarias" | "scoreDistorcao";
 
 const TABS: { id: Granularidade; label: string }[] = [
     { id: "diario", label: "Diário" },
@@ -22,9 +26,15 @@ const TABS: { id: Granularidade; label: string }[] = [
 const METRICAS: { id: Metrica; label: string }[] = [
     { id: "scoreCritico", label: "Score Crítico (recorrência)" },
     { id: "flagsDiarias", label: "Flags Diárias (manual)" },
+    { id: "scoreDistorcao", label: "Score de Distorção (soma)" },
 ];
 
-const QUANTIDADES = [4, 6, 8, 12];
+const QUANTIDADES = [4, 5, 7, 8,15, 12];
+
+// Paleta categórica validada (CVD-safe, ordem fixa) — ver skill dataviz/references/palette.md
+const SERIE_CORES_LIGHT = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"];
+const SERIE_CORES_DARK = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"];
+const MAX_SERIES_GRAFICO = SERIE_CORES_LIGHT.length;
 
 function ordenarVendedores(a: string, b: string): number {
     const na = Number(a), nb = Number(b);
@@ -60,6 +70,9 @@ function TrendIcon({ atual, anterior }: { atual: number | null; anterior: number
 }
 
 export function ComparativoScoresView() {
+    const { theme } = useTheme();
+    const isDark = theme === "dark";
+
     const [granularidade, setGranularidade] = useState<Granularidade>("semanal");
     const [metrica, setMetrica] = useState<Metrica>("scoreCritico");
     const [quantidade, setQuantidade] = useState(6);
@@ -80,6 +93,38 @@ export function ComparativoScoresView() {
     const porRevenda = data?.porRevenda ?? {};
     const porRevendaVendedor = data?.porRevendaVendedor ?? {};
     const linhasRevenda = Object.keys(porRevenda).sort();
+
+    const seriesGrafico = linhasRevenda.slice(0, MAX_SERIES_GRAFICO);
+    const setoresOmitidos = linhasRevenda.length - seriesGrafico.length;
+    const dadosGrafico = periodos.map((p, i) => {
+        const linha: Record<string, number | string | null> = { periodo: p.label };
+        seriesGrafico.forEach(rev => { linha[rev] = porRevenda[rev]?.[i] ?? null; });
+        return linha;
+    });
+    const coresGrafico = isDark ? SERIE_CORES_DARK : SERIE_CORES_LIGHT;
+
+    function handleExportarSetor(rev: string) {
+        const setor = {
+            nome: rev,
+            mediaSetor: porRevenda[rev],
+            vendedores: Object.keys(porRevendaVendedor[rev] ?? {})
+                .sort(ordenarVendedores)
+                .map(v => ({ vendedor: v, valores: porRevendaVendedor[rev][v] })),
+        };
+        const metricaLabel = METRICAS.find(m => m.id === metrica)?.label ?? metrica;
+        const filtroInfo = `Granularidade: ${TABS.find(t => t.id === granularidade)?.label} · Período: ${periodos[0]?.label ?? "—"} – ${periodos[periodos.length - 1]?.label ?? "—"}`;
+        const explicacao = metrica === "flagsDiarias"
+            ? {
+                label: "Flags Diárias",
+                desc: "Marcações manuais feitas pelo gestor por vendedor/dia na tela Diária. O valor exibido é a média de flags marcadas (0 a 3) entre os dias com registro salvo no período.",
+                itens: LEGENDA_FLAGS_DIARIAS,
+            }
+            : {
+                ...(metrica === "scoreCritico" ? LEGENDA_SCORE_CRITICO : LEGENDA_SCORE_DISTORCAO),
+                itens: LEGENDA_FLAGS_RECORRENCIA,
+            };
+        exportarComparativoScoresPDF(periodos, [setor], metricaLabel, filtroInfo, explicacao);
+    }
 
     const podeAvancar = !data || !data.dataMaxDisponivel || data.dataFimUsada < data.dataMaxDisponivel;
 
@@ -181,15 +226,19 @@ export function ComparativoScoresView() {
             {/* ── Legenda da métrica ── */}
             {legendaAberta && (
                 <div className="bg-white dark:bg-[var(--card)] rounded-2xl px-5 py-4 flex flex-col gap-2 border border-slate-100 dark:border-[var(--border)]">
-                    {metrica === "scoreCritico" ? (
+                    {metrica === "scoreCritico" || metrica === "scoreDistorcao" ? (
                         <>
                             <p className="text-xs text-slate-600 dark:text-slate-300">
-                                <span className="font-bold text-indigo-600 dark:text-indigo-400">{LEGENDA_SCORE_CRITICO.label}:</span>{" "}
-                                {LEGENDA_SCORE_CRITICO.desc}
+                                <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                    {(metrica === "scoreCritico" ? LEGENDA_SCORE_CRITICO : LEGENDA_SCORE_DISTORCAO).label}:
+                                </span>{" "}
+                                {(metrica === "scoreCritico" ? LEGENDA_SCORE_CRITICO : LEGENDA_SCORE_DISTORCAO).desc}
                             </p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                <span className="font-semibold">{LEGENDA_REGRA_RECORRENCIA.label}:</span> {LEGENDA_REGRA_RECORRENCIA.desc}
-                            </p>
+                            {metrica === "scoreCritico" && (
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    <span className="font-semibold">{LEGENDA_REGRA_RECORRENCIA.label}:</span> {LEGENDA_REGRA_RECORRENCIA.desc}
+                                </p>
+                            )}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-1">
                                 {LEGENDA_FLAGS_RECORRENCIA.map(item => (
                                     <p key={item.label} className="text-xs text-slate-500 dark:text-slate-400">
@@ -262,9 +311,18 @@ export function ComparativoScoresView() {
                                                 className={`cursor-pointer hover:bg-indigo-50/80 dark:hover:bg-indigo-900/20 ${i % 2 ? "bg-slate-50 dark:bg-slate-800/30" : ""}`}
                                             >
                                                 <td className="px-3 py-2 font-bold text-indigo-600 dark:text-indigo-400 border-b border-slate-100 dark:border-slate-700/40">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <ChevronDown size={12} className={`transition-transform ${isOpen ? "" : "-rotate-90"}`} />
-                                                        {rev}
+                                                    <div className="flex items-center justify-between gap-1.5">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <ChevronDown size={12} className={`transition-transform ${isOpen ? "" : "-rotate-90"}`} />
+                                                            {rev}
+                                                        </div>
+                                                        <button
+                                                            onClick={e => { e.stopPropagation(); handleExportarSetor(rev); }}
+                                                            className="flex items-center justify-center w-5 h-5 rounded text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                                                            title={`Exportar PDF de ${rev}`}
+                                                        >
+                                                            <Printer size={12} />
+                                                        </button>
                                                     </div>
                                                 </td>
                                                 {scores.map((s, idx) => (
@@ -300,6 +358,38 @@ export function ComparativoScoresView() {
                             </tbody>
                         </table>
                     </div>
+                </div>
+            )}
+
+            {/* ── Gráfico ── */}
+            {!isLoading && !error && linhasRevenda.length > 0 && (
+                <div className="bg-white dark:bg-[var(--card)] rounded-xl border border-slate-100 dark:border-[var(--border)] p-4">
+                    <ResponsiveContainer width="100%" height={320}>
+                        <BarChart data={dadosGrafico} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#1e2a3a" : "#F1F5F9"} vertical={false} />
+                            <XAxis dataKey="periodo" tick={{ fontSize: 10, fill: isDark ? "#64748b" : "#94A3B8" }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 10, fill: isDark ? "#64748b" : "#94A3B8" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                            <Tooltip
+                                contentStyle={{
+                                    background: isDark ? "#1a2436" : "#ffffff",
+                                    border: `1px solid ${isDark ? "#2d3f55" : "#E2E8F0"}`,
+                                    borderRadius: 12,
+                                    fontSize: 12,
+                                    color: isDark ? "#e2e8f0" : "#334155",
+                                }}
+                                cursor={{ fill: isDark ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.06)" }}
+                            />
+                            {seriesGrafico.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
+                            {seriesGrafico.map((rev, i) => (
+                                <Bar key={rev} dataKey={rev} name={rev} fill={coresGrafico[i % coresGrafico.length]} radius={[4, 4, 0, 0]} />
+                            ))}
+                        </BarChart>
+                    </ResponsiveContainer>
+                    {setoresOmitidos > 0 && (
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 text-center">
+                            +{setoresOmitidos} setor(es) não exibido(s) no gráfico — refine o filtro de Setor.
+                        </p>
+                    )}
                 </div>
             )}
         </div>

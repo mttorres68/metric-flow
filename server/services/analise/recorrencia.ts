@@ -69,8 +69,11 @@ export function computarRecorrenciaPeriodo(
         const scoreCritico = FLAGS_RECORRENCIA.reduce(
             (s, f) => f.id === "ociosidadeAlta" ? s : s + (metricas[f.id].recorrente ? 1 : 0), 0
         );
+        const scoreDistorcao = FLAGS_RECORRENCIA.reduce(
+            (s, f) => f.id === "ociosidadeAlta" ? s : s + metricas[f.id].dias, 0
+        );
 
-        (porRevenda[revenda] ??= []).push({ revenda, vendedor, diasAtivos, metricas, scoreCritico });
+        (porRevenda[revenda] ??= []).push({ revenda, vendedor, diasAtivos, metricas, scoreCritico, scoreDistorcao });
     }
 
     for (const rev of Object.keys(porRevenda)) {

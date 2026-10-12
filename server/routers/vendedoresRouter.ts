@@ -20,12 +20,7 @@ export const vendedoresRouter = router({
       })
     )
     .query(async ({ input }) => {
-      let visitas = await getVisitasData();
-
-      if (input.gerente !== undefined) visitas = visitas.filter((v) => v.gerente === input.gerente);
-      if (input.revenda)               visitas = visitas.filter((v) => v.revenda === input.revenda);
-      if (input.dataInicio)            visitas = visitas.filter((v) => v.data >= input.dataInicio!);
-      if (input.dataFim)               visitas = visitas.filter((v) => v.data <= input.dataFim!);
+      const visitas = await getVisitasData(input);
 
       const vendedoresMap: Record<
         number,
@@ -101,12 +96,7 @@ export const vendedoresRouter = router({
       })
     )
     .query(async ({ input }) => {
-      let visitas = await getVisitasData();
-
-      visitas = visitas.filter((v) => v.vendedor === input.vendedor && v.revenda === input.revenda);
-      if (input.gerente !== undefined) visitas = visitas.filter((v) => v.gerente === input.gerente);
-      if (input.dataInicio)            visitas = visitas.filter((v) => v.data >= input.dataInicio!);
-      if (input.dataFim)               visitas = visitas.filter((v) => v.data <= input.dataFim!);
+      const visitas = await getVisitasData(input);
 
       const totalVisitas        = visitas.length;
       const visitasConvertidas  = visitas.filter((v) => v.status === "convertido").length;
@@ -160,12 +150,7 @@ export const vendedoresRouter = router({
       })
     )
     .query(async ({ input }) => {
-      let visitas = await getVisitasData();
-
-      visitas = visitas.filter((v) => v.vendedor === input.vendedor && v.revenda === input.revenda);
-      if (input.gerente !== undefined) visitas = visitas.filter((v) => v.gerente === input.gerente);
-      if (input.dataInicio)            visitas = visitas.filter((v) => v.data >= input.dataInicio!);
-      if (input.dataFim)               visitas = visitas.filter((v) => v.data <= input.dataFim!);
+      const visitas = await getVisitasData(input);
 
       const clientesMap: Record<
         number,

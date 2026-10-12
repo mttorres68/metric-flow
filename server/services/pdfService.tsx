@@ -18,7 +18,7 @@ import {
   renderToBuffer,
   type DocumentProps,
 } from "@react-pdf/renderer";
-import { LEGENDA_REGRA_RECORRENCIA, LEGENDA_SCORE_CRITICO, LEGENDA_FLAGS_RECORRENCIA } from "@shared/const";
+import { LEGENDA_REGRA_RECORRENCIA, LEGENDA_SCORE_CRITICO, LEGENDA_SCORE_DISTORCAO, LEGENDA_FLAGS_RECORRENCIA } from "@shared/const";
 
 // ---------------------------------------------------------------------------
 // Tipos públicos
@@ -810,6 +810,7 @@ export interface PDFSemanalData {
     vendedor: number;
     diasAtivos: number;
     scoreCritico: number;
+    scoreDistorcao?: number;
     metricas: Record<string, { dias: number; recorrente: boolean }>;
   }>;
   insightHtml: string;
@@ -832,6 +833,7 @@ const LEGENDA_SEMANAL = [
   },
   LEGENDA_REGRA_RECORRENCIA,
   { label: "Score", desc: LEGENDA_SCORE_CRITICO.desc },
+  { label: "Distorção", desc: LEGENDA_SCORE_DISTORCAO.desc },
   ...LEGENDA_FLAGS_RECORRENCIA,
 ];
 
@@ -839,11 +841,12 @@ const LEGENDA_SEMANAL = [
 const S_VW = 38;
 const S_DW = 38;
 const S_SW = 32;
+const S_TW = 44;
 
 const PaginaRecorrencia = ({ d }: { d: PDFSemanalData }) => {
   const vendedores = d.vendedores.filter(v => v.scoreCritico > 0);
   const flagCount = d.flags.length;
-  const FW = (886 - S_VW - S_DW - S_SW) / Math.max(1, flagCount);
+  const FW = (886 - S_VW - S_DW - S_SW - S_TW) / Math.max(1, flagCount);
 
   return (
     <Page size="A4" orientation="landscape" style={s.page}>
@@ -874,6 +877,7 @@ const PaginaRecorrencia = ({ d }: { d: PDFSemanalData }) => {
           <Text style={[s.th, { width: S_VW, textAlign: "left" }]}>Vend.</Text>
           <Text style={[s.th, { width: S_DW }]}>Dias ativos</Text>
           <Text style={[s.th, { width: S_SW }]}>Score</Text>
+          <Text style={[s.th, { width: S_TW }]}>Distorção</Text>
           {d.flags.map(f => (
             <Text key={f.id} style={[s.th, { width: FW }]}>
               {FLAG_SHORT_PDF[f.id] ?? f.label}
@@ -890,6 +894,9 @@ const PaginaRecorrencia = ({ d }: { d: PDFSemanalData }) => {
             <Text style={[s.td, { width: S_DW }]}>{v.diasAtivos}</Text>
             <Text style={[v.scoreCritico > 0 ? s.tdAlert : s.td, { width: S_SW }]}>
               {v.scoreCritico}
+            </Text>
+            <Text style={[s.td, { width: S_TW, color: COR_PARCIAL, fontFamily: "Helvetica-Bold" }]}>
+              {v.scoreDistorcao ?? 0}
             </Text>
             {d.flags.map(f => {
               const m = v.metricas[f.id];
