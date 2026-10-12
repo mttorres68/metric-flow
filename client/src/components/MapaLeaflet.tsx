@@ -62,7 +62,7 @@ export function MapaLeaflet({ pontos, linhas = [], circulo, altura = 420 }: {
         L.marker([p.lat, p.lon], { icon: icone }).bindPopup(`
           <div style="font-family:monospace;font-size:12px;min-width:160px">
             <div style="font-weight:700;margin-bottom:4px">${esc(p.titulo)}</div>
-            <div style="color:#64748b;font-size:11px">${esc(p.info ?? "")}</div>
+            <div style="color:#64748b;font-size:11px;white-space:pre-line">${esc(p.info ?? "")}</div>
             <div style="color:#94a3b8;font-size:10px;margin-top:2px">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</div>
           </div>`).addTo(map);
       }

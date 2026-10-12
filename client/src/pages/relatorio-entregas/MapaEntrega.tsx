@@ -9,7 +9,7 @@ import { horaBRT } from "@shared/entregas";
 const COR = { cliente: "#475569", app: "#eb6834", parada: "#2a78d6" };
 
 /** Distância em metros (haversine) — a mesma conta do servidor (detectarParadas.distM). */
-function distM(lat1: number, lon1: number, lat2: number, lon2: number): number {
+export function distM(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const r = Math.PI / 180;
   const a = Math.sin(((lat2 - lat1) * r) / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(((lon2 - lon1) * r) / 2) ** 2;
   return 2 * 6_371_000 * Math.asin(Math.sqrt(a));

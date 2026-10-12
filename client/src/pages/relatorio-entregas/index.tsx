@@ -14,6 +14,7 @@ import { PainelRota } from "./PainelRota";
 import { SituacaoColeta } from "./SituacaoColeta";
 import { MapaEntrega } from "./MapaEntrega";
 import { PainelDiaNew } from "./PainelDiaNew";
+import { PainelPernoite } from "./PainelPernoite";
 import {
   Popover,
   PopoverContent,
@@ -480,7 +481,7 @@ export default function RelatorioEntregas() {
   });
   const resultados = processar.data?.linhas ?? [];
   const rotas = processar.data?.rotas ?? [];
-  const [aba, setAba] = useState<"dia" | "rota" | "dianew">("dia");
+  const [aba, setAba] = useState<"dia" | "rota" | "dianew" | "pernoite">("dia");
 
   const utils = trpc.useUtils();
   const recalcular = (cerca = cercaId) => {
@@ -741,6 +742,7 @@ export default function RelatorioEntregas() {
         </div>
 
         <ConfigEntregasModal
+          revendaId={revenda?.revendaId}
           open={!!configAberto}
           abaInicial={configAberto || "limites"}
           onClose={() => setConfigAberto(false)}
@@ -843,7 +845,7 @@ export default function RelatorioEntregas() {
             </div>
           )}
 
-          {revenda && processar.isPending && (
+          {revenda && aba !== "pernoite" && processar.isPending && (
             <div className="flex items-center justify-center h-40 text-slate-400 dark:text-slate-500 text-sm">
               <Loader2 size={16} className="animate-spin mr-2" /> Cruzando as
               entregas de {revenda.revenda} em {fmtDia(dia)} com o GPS...
@@ -851,6 +853,7 @@ export default function RelatorioEntregas() {
           )}
 
           {revenda &&
+            aba !== "pernoite" &&
             !processar.isPending &&
             processar.data &&
             !resultados.length && (
@@ -877,14 +880,15 @@ export default function RelatorioEntregas() {
               </div>
             )}
 
-          {/* ── Abas: por dia × por rota ── */}
-          {revenda && !processar.isPending && !!resultados.length && (
+          {/* ── Abas: por dia × por rota × pernoite (Pernoite independe do dia visto) ── */}
+          {revenda && (aba === "pernoite" || (!processar.isPending && !!resultados.length)) && (
             <div className="mx-6 mt-4 inline-flex rounded-xl border border-slate-200 dark:border-slate-600 p-0.5 bg-white dark:bg-[var(--card)]">
               {(
                 [
                   ["dia", "Por dia"],
                   ["rota", "Por rota"],
                   ["dianew", "Por dia new"],
+                  ["pernoite", "Pernoite"],
                 ] as const
               ).map(([v, rotulo]) => (
                 <button
@@ -907,6 +911,8 @@ export default function RelatorioEntregas() {
             !processar.isPending &&
             !!resultados.length &&
             aba === "dianew" && <PainelDiaNew linhas={linhas} raioM={raioM} />}
+
+          {revenda && aba === "pernoite" && <PainelPernoite revendaId={revenda.revendaId} />}
 
           {revenda &&
             !processar.isPending &&

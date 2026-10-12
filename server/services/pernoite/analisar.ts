@@ -83,7 +83,8 @@ export function analisarNoite(e: EntradaNoite): Noite {
   const limite = as(e.dia, cfg.pernoiteChegarAte);
   const estimada = ultimoClienteSaida ? new Date(ultimoClienteSaida.getTime() + (distSedeKm / cfg.pernoiteVelKmh) * 3_600_000) : null;
   const davaParaChegar: Sinal = estimada
-    ? { ok: estimada <= limite, estimada: horaBRT(estimada), limite: cfg.pernoiteChegarAte, saiuDoUltimo: horaBRT(ultimoClienteSaida!) }
+    ? { ok: estimada <= limite, estimada: horaBRT(estimada), limite: cfg.pernoiteChegarAte, saiuDoUltimo: horaBRT(ultimoClienteSaida!),
+        ultimo: ultimoLocal?.lat != null && ultimoLocal.lon != null ? { lat: ultimoLocal.lat, lon: ultimoLocal.lon } : null }
     : NAO("sem entrega no dia");
   const fimManha = (() => {
     const cli = e.paradas.find(p => p.inicio >= noite.fim && e.clientesSeguinte.some(c => distM(p.lat, p.lon, c.lat, c.lon) <= cfg.raioM));

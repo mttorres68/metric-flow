@@ -4,6 +4,8 @@ import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { listarNoites, resumoPorMotorista } from "../services/pernoite/repo";
 import { processarNoites, reprocessar, statusReprocessamento } from "../services/pernoite/processar";
+import { tokenInfleet } from "../services/checknow/repo";
+import { sedeDaConta } from "../services/entregas/infleetEntregas";
 
 const dia = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const periodo = z.object({ revendaId: z.number().int(), de: dia, ate: dia })
@@ -23,5 +25,7 @@ export const pernoiteRouter = router({
     reprocessar(input.revendaId, input.de, input.ate);
     return statusReprocessamento(input.revendaId);
   }),
+  sede: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(async ({ input }) =>
+    sedeDaConta(await tokenInfleet(input.revendaId)).catch(() => null)),
   status: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(({ input }) => statusReprocessamento(input.revendaId)),
 });

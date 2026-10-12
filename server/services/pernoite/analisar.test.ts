@@ -30,7 +30,7 @@ describe("analisarNoite", () => {
     expect(n.classificacao).toBe("na_malicia");
     expect(n.distSedeKm).toBeGreaterThan(45);
     expect(n.distSedeKm).toBeLessThan(80);
-    expect(n.sinais.davaParaChegar).toMatchObject({ ok: true });
+    expect(n.sinais.davaParaChegar).toMatchObject({ ok: true, ultimo: { lat: LAT_CLI, lon: -43.02 } });
     expect(String(n.sinais.davaParaChegar.estimada)).toMatch(/^1[6-7]:\d\d$/);
     expect(n.sinais.voltou.ok).toBe(true);
     expect(n.chegada?.toISOString()).toBe(brt("2026-10-05T15:40").toISOString());

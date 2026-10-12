@@ -1,12 +1,12 @@
 /*
  * MetricFlow — Configuração do Relatório de Entregas (tabela entregas_config).
- * Abas: Limites (raio, desvio e trecho lento) e Contas (CheckNow/Infleet por revenda). Mesmo visual do ConfigMetricasModal.
+ * Abas: Limites (raio, desvio, trecho lento, jornada e pernoite) e Contas (CheckNow/Infleet por revenda). Mesmo visual do ConfigMetricasModal.
  */
 import { useEffect, useState } from "react";
 import { Loader2, RotateCcw, Save, Settings2, X } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import { CONFIG_ENTREGAS_PADRAO, type ConfigEntregas } from "@shared/entregas";
+import { CONFIG_ENTREGAS_PADRAO, diaBRT, type ConfigEntregas } from "@shared/entregas";
 import { ContasEntregas } from "./ContasEntregas";
 
 type ChaveNum = Exclude<keyof ConfigEntregas, "saidaMinima" | "pernoiteChegarAte" | "pernoiteParouCedo">;
@@ -30,13 +30,52 @@ const GRUPOS: { titulo: string; campos: Campo[] }[] = [
     { chave: "lentoMaxKmh", rotulo: "Média abaixo de", un: "km/h", min: 1, max: 120, step: 1, inteiro: true,
       ajuda: "…com velocidade média abaixo deste valor." },
   ] },
+  { titulo: "Pernoite", campos: [
+    { chave: "pernoiteMaxKm", rotulo: "Dormiu a até", un: "km da Sede", min: 1, max: 500, step: 5, inteiro: false,
+      ajuda: "Pernoite \"na malícia\": fora da Sede e a até esta distância dela pela estrada (estimada)…" },
+    { chave: "pernoiteFatorEstrada", rotulo: "Estrada estimada", un: "× a reta", min: 1, max: 3, step: 0.1, inteiro: false,
+      ajuda: "Distância pela estrada = linha reta até a Sede × este fator." },
+    { chave: "pernoiteVelKmh", rotulo: "Velocidade média de volta", un: "km/h", min: 10, max: 120, step: 5, inteiro: false,
+      ajuda: "Para estimar a que horas chegaria na Sede saindo do último cliente." },
+    { chave: "pernoiteFinalLentoX", rotulo: "Final lento acima de", un: "× o ritmo do dia", min: 1, max: 10, step: 0.5, inteiro: false,
+      ajuda: "Cozinhando o galo: as 3 últimas entregas mais lentas que este múltiplo do tempo típico do dia." },
+  ] },
 ];
+
+const HORAS: { chave: "pernoiteChegarAte" | "pernoiteParouCedo"; rotulo: string; ajuda: string }[] = [
+  { chave: "pernoiteChegarAte", rotulo: "Dava para chegar na Sede até", ajuda: "…quando, saindo do último cliente, chegaria na Sede até este horário." },
+  { chave: "pernoiteParouCedo", rotulo: "Parou cedo: antes de", ajuda: "Cozinhando o galo: parou de vez (para dormir) antes deste horário." },
+];
+const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Carga/recálculo das noites das últimas 4 semanas (em segundo plano no servidor), com o andamento. */
+function Reprocessar({ revendaId }: { revendaId: number }) {
+  const utils = trpc.useUtils();
+  const status = trpc.pernoite.status.useQuery({ revendaId }, { refetchInterval: q => (q.state.data?.rodando ? 3000 : false) });
+  const disparar = trpc.pernoite.reprocessar.useMutation({ onSuccess: () => status.refetch(), onError: e => toast.error(e.message) });
+  const s = status.data;
+  const rodando = !!s?.rodando;
+  useEffect(() => { if (s && !s.rodando && s.total) { utils.pernoite.listar.invalidate(); utils.pernoite.resumo.invalidate(); } }, [s?.rodando]); // eslint-disable-line react-hooks/exhaustive-deps
+  const ontem = diaBRT(new Date(Date.now() - 86_400_000));
+  const de = new Date(Date.parse(`${ontem}T12:00:00Z`) - 27 * 86_400_000).toISOString().slice(0, 10);
+  return (
+    <div className="flex items-center gap-3">
+      <button onClick={() => disparar.mutate({ revendaId, de, ate: ontem })} disabled={rodando || disparar.isPending}
+        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 disabled:opacity-50 font-semibold">
+        {rodando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />} Reprocessar últimas 4 semanas
+      </button>
+      <span className="text-[11px] text-slate-400 dark:text-slate-500">
+        {rodando ? `${s!.feitos} de ${s!.total} dias…` : s?.total ? `Pronto: ${s.total} dias analisados.` : "Analisa cada noite com o GPS; leva alguns minutos."}
+      </span>
+    </div>
+  );
+}
 
 const valido = (c: Campo, v: number) => Number.isFinite(v) && v >= c.min && v <= c.max && (!c.inteiro || Number.isInteger(v));
 
 type Aba = "limites" | "contas";
 
-export function ConfigEntregasModal({ open, onClose, onSalvo, abaInicial = "limites" }: { open: boolean; onClose: () => void; onSalvo: () => void; abaInicial?: Aba }) {
+export function ConfigEntregasModal({ open, onClose, onSalvo, abaInicial = "limites", revendaId }: { open: boolean; onClose: () => void; onSalvo: () => void; abaInicial?: Aba; revendaId?: number }) {
   const utils = trpc.useUtils();
   const { data: salvo, isLoading } = trpc.config.getEntregasConfig.useQuery(undefined, { enabled: open });
   const salvar = trpc.config.saveEntregasConfig.useMutation();
@@ -48,8 +87,8 @@ export function ConfigEntregasModal({ open, onClose, onSalvo, abaInicial = "limi
 
   useEffect(() => { if (salvo) setCfg(salvo); }, [salvo, open]);
 
-  const horaOk = /^([01]\d|2[0-3]):[0-5]\d$/.test(cfg.saidaMinima);
-  const todosValidos = horaOk && GRUPOS.every(g => g.campos.every(c => valido(c, cfg[c.chave])));
+  const horaOk = HORA.test(cfg.saidaMinima);
+  const todosValidos = horaOk && HORAS.every(h => HORA.test(cfg[h.chave])) && GRUPOS.every(g => g.campos.every(c => valido(c, cfg[c.chave])));
 
   async function aplicar(acao: () => Promise<unknown>, msg: string) {
     try {
@@ -139,6 +178,20 @@ export function ConfigEntregasModal({ open, onClose, onSalvo, abaInicial = "limi
                       : "Informe um horário (hh:mm)."}
                   </span>
                 </label>
+              </section>
+              <section className="flex flex-col gap-3">
+                <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Pernoite · horários</h3>
+                {HORAS.map(h => (
+                  <label key={h.chave} className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{h.rotulo}</span>
+                    <input type="time" value={cfg[h.chave]} onChange={e => setCfg({ ...cfg, [h.chave]: e.target.value })}
+                      className="w-28 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-[var(--background)] text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600" />
+                    <span className={`text-[11px] leading-snug ${HORA.test(cfg[h.chave]) ? "text-slate-400 dark:text-slate-500" : "text-red-500"}`}>
+                      {HORA.test(cfg[h.chave]) ? `${h.ajuda} Padrão: ${CONFIG_ENTREGAS_PADRAO[h.chave]}.` : "Informe um horário (hh:mm)."}
+                    </span>
+                  </label>
+                ))}
+                {revendaId && <Reprocessar revendaId={revendaId} />}
               </section>
             </div>
           )}
