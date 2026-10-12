@@ -1,4 +1,5 @@
-import { formatDate, parseEmojis } from "./helpers";
+import { formatDate, formatMesAno, parseEmojis } from "./helpers";
+import type { ConclusaoRevenda } from "./conclusao";
 
 export async function exportarPDF(data: any[], dataAtual: string) {
   const { pdf, Document, Page, Text, View, StyleSheet } = await import("@react-pdf/renderer");
@@ -115,6 +116,54 @@ export async function exportarPDF(data: any[], dataAtual: string) {
   const a = document.createElement("a");
   a.href = url;
   a.download = `relatorio-trello-atraso-${dataAtual.replace(/\//g, "-")}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function corConclusao(concluidos: number, total: number) {
+  if (total === 0) return "#E2E8F0";
+  const pct = (concluidos / total) * 100;
+  if (pct >= 90) return "#92D050";
+  if (pct >= 70) return "#FFC000";
+  return "#FF5050";
+}
+
+export async function exportarConclusaoPDF(dados: ConclusaoRevenda[], mes: number, ano: number) {
+  const { pdf, Document, Page, Text, View, StyleSheet } = await import("@react-pdf/renderer");
+  const label = formatMesAno(mes, ano);
+
+  const styles = StyleSheet.create({
+    page: { padding: 32, fontFamily: "Helvetica", fontSize: 10 },
+    title: {
+      fontSize: 14, fontWeight: "bold", textAlign: "center",
+      backgroundColor: "#B4C6E7", color: "#1e293b", padding: 8,
+    },
+    row: { flexDirection: "row" },
+    nameCell: { width: 170, padding: "6 8", border: "1 solid #cbd5e1", backgroundColor: "#fff", fontWeight: "bold" },
+    statusCell: { width: 90, padding: "6 8", border: "1 solid #cbd5e1", textAlign: "center", fontWeight: "bold" },
+  });
+
+  const doc = (
+    <Document title={`Conclusão Agenda — ${label}`}>
+      <Page size="A5" style={styles.page}>
+        <Text style={styles.title}>{label}</Text>
+        {dados.map((r) => (
+          <View key={r.revenda} style={styles.row} wrap={false}>
+            <Text style={styles.nameCell}>{r.revenda}</Text>
+            <Text style={[styles.statusCell, { backgroundColor: corConclusao(r.concluidos, r.total) }]}>
+              {r.erro ? "erro" : r.total === 0 ? "sem dados" : `${r.concluidos}/${r.total}`}
+            </Text>
+          </View>
+        ))}
+      </Page>
+    </Document>
+  );
+
+  const blob = await pdf(doc).toBlob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `conclusao-agenda-${label}.pdf`;
   a.click();
   URL.revokeObjectURL(url);
 }

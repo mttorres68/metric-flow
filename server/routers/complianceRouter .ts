@@ -18,14 +18,7 @@ export const complianceRouter = router({
       dataFim:    z.string().optional(),
     }))
     .query(async ({ input }) => {
-      let visitas = await getVisitasData();
-
-      // Aplica filtros
-      visitas = visitas.filter(v => v.status === "nao_convertido");
-      if (input.revenda)    visitas = visitas.filter(v => v.revenda === input.revenda);
-      if (input.vendedor)   visitas = visitas.filter(v => v.vendedor === input.vendedor);
-      if (input.dataInicio) visitas = visitas.filter(v => v.data >= input.dataInicio!);
-      if (input.dataFim)    visitas = visitas.filter(v => v.data <= input.dataFim!);
+      const visitas = (await getVisitasData(input)).filter(v => v.status === "nao_convertido");
 
       const total = visitas.length;
 
@@ -75,15 +68,9 @@ export const complianceRouter = router({
       dataFim:    z.string().optional(),
     }))
     .query(async ({ input }) => {
-      let visitas = await getVisitasData();
-
-      visitas = visitas.filter(v =>
+      const visitas = (await getVisitasData(input)).filter(v =>
         v.status === "nao_convertido" && v.motivo === input.motivo
       );
-      if (input.revenda)    visitas = visitas.filter(v => v.revenda === input.revenda);
-      if (input.vendedor)   visitas = visitas.filter(v => v.vendedor === input.vendedor);
-      if (input.dataInicio) visitas = visitas.filter(v => v.data >= input.dataInicio!);
-      if (input.dataFim)    visitas = visitas.filter(v => v.data <= input.dataFim!);
 
       // Agrupa por cliente para mostrar histórico
       const clienteMap: Record<number, {
@@ -143,13 +130,7 @@ export const complianceRouter = router({
       topN:       z.number().min(1).max(10).default(5),
     }))
     .query(async ({ input }) => {
-      let visitas = await getVisitasData();
-
-      visitas = visitas.filter(v => v.status === "nao_convertido");
-      if (input.revenda)    visitas = visitas.filter(v => v.revenda === input.revenda);
-      if (input.vendedor)   visitas = visitas.filter(v => v.vendedor === input.vendedor);
-      if (input.dataInicio) visitas = visitas.filter(v => v.data >= input.dataInicio!);
-      if (input.dataFim)    visitas = visitas.filter(v => v.data <= input.dataFim!);
+      const visitas = (await getVisitasData(input)).filter(v => v.status === "nao_convertido");
 
       if (visitas.length === 0) return { datas: [], series: [], pontos: [] };
 
@@ -189,8 +170,7 @@ export const complianceRouter = router({
   vendedores: publicProcedure
     .input(z.object({ revenda: z.string().optional() }))
     .query(async ({ input }) => {
-      let visitas = await getVisitasData();
-      if (input.revenda) visitas = visitas.filter(v => v.revenda === input.revenda);
+      const visitas = await getVisitasData({ revenda: input.revenda });
       const mapa: Record<number, string> = {};
       for (const v of visitas) mapa[v.vendedor] = `V0${v.vendedor}`;
       return Object.entries(mapa)

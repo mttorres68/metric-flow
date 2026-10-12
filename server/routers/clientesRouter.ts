@@ -25,12 +25,7 @@ export const clientesRouter = router({
     listar: publicProcedure
         .input(filtrosSchema)
         .query(async ({ input }) => {
-            let visitas = await getVisitasData();
-
-            if (input.revenda) visitas = visitas.filter(v => v.revenda === input.revenda);
-            if (input.vendedor) visitas = visitas.filter(v => v.vendedor === input.vendedor);
-            if (input.dataInicio) visitas = visitas.filter(v => v.data >= input.dataInicio!);
-            if (input.dataFim) visitas = visitas.filter(v => v.data <= input.dataFim!);
+            const visitas = await getVisitasData(input);
 
             // Agrupa todas as visitas por cliente
             const mapa: Record<number, {
@@ -155,9 +150,8 @@ export const clientesRouter = router({
     vendedores: publicProcedure
         .input(z.object({ revenda: z.string().optional() }))
         .query(async ({ input }) => {
-            let visitas = await getVisitasData();
-            if (input.revenda) visitas = visitas.filter(v => v.revenda === input.revenda);
-            
+            const visitas = await getVisitasData({ revenda: input.revenda });
+
             const mapa: Record<string, { id: number, revenda: string, nome: string }> = {};
             for (const v of visitas) {
                 const key = `${v.revenda}__${v.vendedor}`;

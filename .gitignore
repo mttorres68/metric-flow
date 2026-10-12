@@ -97,3 +97,5 @@ rota_coaching_all.json
 conversas_resolvidas*.json
 fluxo-analise.ini
 client.txt
+
+task/*

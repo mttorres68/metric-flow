@@ -350,6 +350,72 @@ export const crmRouter = router({
     return result;
   }),
 
+  // Conclusão mensal: para cada revenda, quantos cards do board (em qualquer lista,
+  // ou só nas listas selecionadas) com due dentro do mês/ano estão concluídos (dueComplete).
+  // Varre o board inteiro (não só uma lista) porque o card pode ser movido de lista
+  // (ex: "A fazer" → "Concluído") ao longo do fluxo, e ainda assim deve contar.
+  getConclusaoMensal: publicProcedure
+    .input(z.object({
+      mes: z.number().int().min(1).max(12),
+      ano: z.number().int(),
+      listasPermitidas: z.array(z.string()).optional(),
+    }))
+    .query(async ({ input }) => {
+      const { apiKey, token, boards } = getTrelloConfig();
+      const agora = new Date();
+      interface CardAtrasadoResumo { id: string; nome: string; due: string; lista: string }
+      const resultado: {
+        revenda: string; boardId: string; total: number; concluidos: number;
+        todasListas: string[]; cardsAtrasados: CardAtrasadoResumo[]; erro?: string;
+      }[] = [];
+      const listasSet = input.listasPermitidas && input.listasPermitidas.length > 0
+        ? new Set(input.listasPermitidas)
+        : null;
+
+      for (const board of boards) {
+        try {
+          const listas = await trelloFetch<TrelloList[]>(
+            `/boards/${board.boardId}/lists?fields=id,name&filter=open`,
+            apiKey, token,
+          );
+          await sleep(200);
+          const listMap = new Map(listas.map((l) => [l.id, l.name]));
+
+          const cards = await trelloFetch<{ id: string; name: string; due: string | null; dueComplete: boolean; idList: string }[]>(
+            `/boards/${board.boardId}/cards?filter=all&fields=id,name,due,dueComplete,idList`,
+            apiKey, token,
+          );
+          await sleep(200);
+
+          // due é UTC; converte para horário de Brasília (UTC-3, sem horário de verão) antes de checar o mês
+          const doMes = cards.filter((c) => {
+            if (!c.due) return false;
+            if (listasSet && !listasSet.has(listMap.get(c.idList) ?? "")) return false;
+            const brt = new Date(new Date(c.due).getTime() - 3 * 60 * 60 * 1000);
+            return brt.getUTCMonth() + 1 === input.mes && brt.getUTCFullYear() === input.ano;
+          });
+
+          const cardsAtrasados = doMes
+            .filter((c) => !c.dueComplete && new Date(c.due!) < agora)
+            .map((c) => ({ id: c.id, nome: c.name, due: c.due!, lista: listMap.get(c.idList) ?? "Lista desconhecida" }))
+            .sort((a, b) => new Date(a.due).getTime() - new Date(b.due).getTime());
+
+          resultado.push({
+            revenda: board.revenda,
+            boardId: board.boardId,
+            total: doMes.length,
+            concluidos: doMes.filter((c) => c.dueComplete).length,
+            todasListas: listas.map((l) => l.name),
+            cardsAtrasados,
+          });
+        } catch (e: any) {
+          resultado.push({ revenda: board.revenda, boardId: board.boardId, total: 0, concluidos: 0, todasListas: [], cardsAtrasados: [], erro: e.message });
+        }
+        await sleep(300);
+      }
+      return resultado;
+    }),
+
   // Configuração de etiqueta global
   getLabelConfig: publicProcedure.query(async () => {
     const raw = await getCrmConfig("label_config");

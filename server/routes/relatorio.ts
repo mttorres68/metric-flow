@@ -346,8 +346,8 @@ relatorioRouter.get("/revendas", async (req: Request, res: Response) => {
     return;
   }
   try {
-    const visitas = await getVisitasData();
-    const revendas = [...new Set(visitas.filter((v) => v.data === data).map((v) => v.revenda))]
+    const visitas = await getVisitasData({ dataInicio: data, dataFim: data });
+    const revendas = [...new Set(visitas.map((v) => v.revenda))]
       .filter(Boolean).sort();
     res.json({ revendas });
   } catch (err) {
@@ -393,8 +393,10 @@ relatorioRouter.get("/gerar", async (req: Request, res: Response) => {
   }
 
   try {
-    const [visitas, coachingAll] = await Promise.all([getVisitasData(), getRotaCoachingData()]);
-    const visitasData = visitas.filter((v) => v.data === data);
+    const [visitasData, coachingAll] = await Promise.all([
+      getVisitasData({ dataInicio: data, dataFim: data }),
+      getRotaCoachingData(),
+    ]);
 
     if (visitasData.length === 0) {
       res.status(404).json({ error: `Sem dados para a data ${data}.` });
@@ -431,8 +433,10 @@ relatorioRouter.post("/gerar", async (req: Request, res: Response) => {
     : {};
 
   try {
-    const [visitas, coachingAll] = await Promise.all([getVisitasData(), getRotaCoachingData()]);
-    const visitasData = visitas.filter((v) => v.data === data);
+    const [visitasData, coachingAll] = await Promise.all([
+      getVisitasData({ dataInicio: data, dataFim: data }),
+      getRotaCoachingData(),
+    ]);
 
     if (visitasData.length === 0) {
       res.status(404).json({ error: `Sem dados para a data ${data}.` });
@@ -468,8 +472,10 @@ relatorioRouter.post("/gerar-unificado", async (req: Request, res: Response) => 
     : {};
 
   try {
-    const [visitas, coachingAll] = await Promise.all([getVisitasData(), getRotaCoachingData()]);
-    const visitasData = visitas.filter((v) => v.data === data);
+    const [visitasData, coachingAll] = await Promise.all([
+      getVisitasData({ dataInicio: data, dataFim: data }),
+      getRotaCoachingData(),
+    ]);
 
     if (visitasData.length === 0) {
       res.status(404).json({ error: `Sem dados para a data ${data}.` });

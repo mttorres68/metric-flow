@@ -57,6 +57,21 @@ export function urgencyColor(dias: number) {
   return { bg: "bg-yellow-50 dark:bg-yellow-900/20", badge: "bg-yellow-400", text: "text-yellow-700 dark:text-yellow-300" };
 }
 
+const MESES_ABREV = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+export function formatMesAno(mes: number, ano: number) {
+  return `${MESES_ABREV[mes - 1]}-${String(ano).slice(-2)}`;
+}
+
+// total === 0 significa "nenhuma tarefa cadastrada nesse mês" — não é 0% de conclusão
+export function conclusaoColor(concluidos: number, total: number) {
+  if (total === 0) return { bg: "bg-slate-200 dark:bg-slate-700", text: "text-slate-500 dark:text-slate-400", hex: "#e2e8f0" };
+  const pct = (concluidos / total) * 100;
+  if (pct >= 90) return { bg: "bg-green-500", text: "text-white", hex: "#22c55e" };
+  if (pct >= 70) return { bg: "bg-amber-400", text: "text-slate-900", hex: "#fbbf24" };
+  return { bg: "bg-red-500", text: "text-white", hex: "#ef4444" };
+}
+
 export const LABEL_COLORS: Record<string, string> = {
   red: "bg-red-400",
   orange: "bg-orange-400",

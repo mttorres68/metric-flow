@@ -112,6 +112,11 @@ export const LEGENDA_SCORE_CRITICO: LegendaItem = {
     desc: "Número de flags recorrentes do vendedor no período (0 a 7). Quanto maior, mais padrões críticos se repetiram.",
 };
 
+export const LEGENDA_SCORE_DISTORCAO: LegendaItem = {
+    label: "Score de Distorção",
+    desc: "Soma de todos os dias em que cada flag disparou no período (sem exigir recorrência). Quanto maior, mais ocorrências de distorção no total.",
+};
+
 /** Descrição das 7 flags que compõem o Score Crítico (ociosidadeAlta fica de fora — ver recorrencia.ts). */
 export const LEGENDA_FLAGS_RECORRENCIA: LegendaItem[] = [
     { label: "Relâmpago alto",        desc: "% de visitas dentro do raio com duração < 3 min acima de 10%." },

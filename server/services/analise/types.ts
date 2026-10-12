@@ -69,4 +69,6 @@ export interface RecorrenciaVendedor {
     diasAtivos: number;
     metricas: Record<FlagId, MetricaRecorrencia>;
     scoreCritico: number;
+    /** Soma dos dias com flag disparada, entre todas as flags (ociosidadeAlta fora, como no scoreCritico). Mede volume de distorções, não recorrência. */
+    scoreDistorcao: number;
 }

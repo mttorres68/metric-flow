@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   Calendar,
   CalendarDays,
+  CheckSquare,
   Download,
   Loader2,
   RefreshCw,
@@ -19,6 +20,7 @@ import { toast } from "sonner";
 import { TabConfiguracoes } from "../agenda-gv/components/TabConfiguracoes";
 import { TabNovoCiclo } from "../agenda-gv/components/TabNovoCiclo";
 import { AtividadeRevendaSection } from "./components/AtividadeRevendaSection";
+import { ConclusaoTab } from "./components/ConclusaoTab";
 import { FiltroListas } from "./components/FiltroListas";
 import { RevendaSection } from "./components/RevendaSection";
 import { TemplateConfigModal } from "./components/TemplateConfigModal";
@@ -42,9 +44,9 @@ export default function TrelloAtraso() {
     return raw ? raw.split(",").filter(Boolean) : [];
   }, [search]);
 
-  const activeTab = useMemo<"atrasos" | "atividades" | "agenda">(() => {
+  const activeTab = useMemo<"atrasos" | "atividades" | "agenda" | "conclusao">(() => {
     const tab = new URLSearchParams(search).get("tab");
-    return tab === "atividades" || tab === "agenda" ? tab : "atrasos";
+    return tab === "atividades" || tab === "agenda" || tab === "conclusao" ? tab : "atrasos";
   }, [search]);
 
   function setListasFiltro(listas: string[]) {
@@ -54,7 +56,7 @@ export default function TrelloAtraso() {
     setLocation(`/trello-atraso?${p.toString()}`, { replace: true });
   }
 
-  function setActiveTab(tab: "atrasos" | "atividades" | "agenda") {
+  function setActiveTab(tab: "atrasos" | "atividades" | "agenda" | "conclusao") {
     const p = new URLSearchParams(search);
     p.set("tab", tab);
     setLocation(`/trello-atraso?${p.toString()}`, { replace: true });
@@ -165,14 +167,14 @@ export default function TrelloAtraso() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {activeTab !== "agenda" && todasListas.length > 0 && (
+            {(activeTab === "atrasos" || activeTab === "atividades") && todasListas.length > 0 && (
               <FiltroListas
                 todasListas={todasListas}
                 selecionadas={listasFiltro}
                 onChange={setListasFiltro}
               />
             )}
-            {activeTab !== "agenda" && (
+            {(activeTab === "atrasos" || activeTab === "atividades") && (
               <button
                 onClick={handleRefetch}
                 disabled={isCurrentFetching}
@@ -258,6 +260,17 @@ export default function TrelloAtraso() {
           >
             <CalendarDays className="w-4 h-4" />
             Agenda GV
+          </button>
+          <button
+            onClick={() => setActiveTab("conclusao")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "conclusao"
+                ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            }`}
+          >
+            <CheckSquare className="w-4 h-4" />
+            Conclusão Mensal
           </button>
         </div>
 
@@ -406,6 +419,9 @@ export default function TrelloAtraso() {
             {agendaSubTab === "config" && <TabConfiguracoes />}
           </>
         )}
+
+        {/* Aba: Conclusão Mensal */}
+        {activeTab === "conclusao" && <ConclusaoTab />}
       </main>
 
       {showTemplateModal && (
