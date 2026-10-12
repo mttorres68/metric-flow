@@ -517,6 +517,71 @@ export const pernoites = pgTable("pernoites", {
   index("ix_pernoites_motorista").on(t.revendaId, t.motorista, t.dia),
 ]);
 
+export const erpPedidos = pgTable("erp_pedidos", {
+  id:                serial("id").primaryKey(),
+  revendaId:         integer("revendaId").notNull().references(() => revendas.id),
+  pedido:            varchar("pedido", { length: 20 }).notNull(),
+  romaneio:          varchar("romaneio", { length: 20 }).notNull().default(""),
+  cliente:           varchar("cliente", { length: 20 }).notNull().default(""),
+  vendedor:          varchar("vendedor", { length: 12 }).notNull().default(""),
+  canal:             varchar("canal", { length: 12 }).notNull().default(""),
+  origem:            varchar("origem", { length: 4 }).notNull().default(""),
+  placa:             varchar("placa", { length: 12 }).notNull().default(""),
+  motoristaCod:      varchar("motoristaCod", { length: 12 }).notNull().default(""),
+  dataPedido:        date("dataPedido", { mode: "string" }),
+  tipoCobranca:      varchar("tipoCobranca", { length: 4 }).notNull().default(""), // T.C.: 1 = à vista
+  condicaoPagamento: varchar("condicaoPagamento", { length: 4 }).notNull().default(""),
+  banco:             varchar("banco", { length: 6 }).notNull().default(""),
+  vencimento1:       date("vencimento1", { mode: "string" }),
+  situacao:          varchar("situacao", { length: 10 }).notNull(), // aberto | acertado | cancelado (Canc 000/008/009)
+  dataAcerto:        date("dataAcerto", { mode: "string" }),
+  flagRomaneio:      varchar("flagRomaneio", { length: 2 }).notNull().default(""),
+  valor:             doublePrecision("valor").notNull().default(0),
+  valorRetorno:      doublePrecision("valorRetorno").notNull().default(0),
+  itens:             integer("itens").notNull().default(0),
+  produtos:          integer("produtos").notNull().default(0),
+  atualizadoEm:      timestamp("atualizadoEm", { withTimezone: true }).defaultNow().notNull(),
+}, t => [
+  uniqueIndex("uq_erp_pedidos").on(t.revendaId, t.pedido),
+  index("ix_erp_pedidos_data").on(t.revendaId, t.dataPedido),
+  index("ix_erp_pedidos_cliente").on(t.revendaId, t.cliente),
+  index("ix_erp_pedidos_romaneio").on(t.revendaId, t.romaneio),
+]);
+
+/** Evidência de GPS por entrega (gravada pelo processamento diário do pernoite). Spec desvio §4. */
+export const entregasEvidencias = pgTable("entregas_evidencias", {
+  id:           serial("id").primaryKey(),
+  revendaId:    integer("revendaId").notNull().references(() => revendas.id),
+  dia:          date("dia", { mode: "string" }).notNull(),
+  routeId:      varchar("routeId", { length: 40 }).notNull(),
+  codCliente:   varchar("codCliente", { length: 40 }).notNull(),
+  placa:        varchar("placa", { length: 20 }).notNull(),
+  motorista:    varchar("motorista", { length: 120 }).notNull(),
+  documentos:   text("documentos").array().notNull().default(sql`'{}'::text[]`),
+  status:       varchar("status", { length: 20 }).notNull(),
+  distParadaM:  doublePrecision("distParadaM"),
+  paradaLat:    doublePrecision("paradaLat"),
+  paradaLon:    doublePrecision("paradaLon"),
+  paradaInicio: timestamp("paradaInicio", { withTimezone: true }),
+  paradaFim:    timestamp("paradaFim", { withTimezone: true }),
+  distAppM:     doublePrecision("distAppM"),
+  clienteLat:   doublePrecision("clienteLat"),
+  clienteLon:   doublePrecision("clienteLon"),
+  calculadoEm:  timestamp("calculadoEm", { withTimezone: true }).defaultNow().notNull(),
+}, t => [
+  uniqueIndex("uq_entregas_evidencias").on(t.revendaId, t.routeId, t.codCliente, t.dia),
+  index("ix_entregas_evidencias_dia").on(t.revendaId, t.dia),
+]);
+
+export const desvioRevisoes = pgTable("desvio_revisoes", {
+  id:         serial("id").primaryKey(),
+  revendaId:  integer("revendaId").notNull().references(() => revendas.id),
+  pedido:     varchar("pedido", { length: 20 }).notNull(),
+  situacao:   varchar("situacao", { length: 12 }).notNull(), // ok | suspeito | investigando
+  observacao: text("observacao").notNull().default(""),
+  revisadoEm: timestamp("revisadoEm", { withTimezone: true }).defaultNow().notNull(),
+}, t => [uniqueIndex("uq_desvio_revisoes").on(t.revendaId, t.pedido)]);
+
 // ---------------------------------------------------------------------------
 // Análise Diária — flags de ocorrência por vendedor × dia
 // Persistidas ao marcar "Desl." (início tardio) ou "Prob." (pathtracker).
