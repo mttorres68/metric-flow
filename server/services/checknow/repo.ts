@@ -2,7 +2,7 @@
  * MetricFlow — acesso ao banco da coleta do CheckNow (spec checknow-coleta §4–5).
  * Contas (segredos cifrados), entregas por revenda, registro de coletas e trava por revenda.
  */
-import { and, desc, eq, gte, inArray, isNull, lte, notInArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, notInArray, or } from "drizzle-orm";
 import type { Pool } from "pg";
 import { getDb } from "../../db";
 import { checknowColetas, checknowEntregas, entregasContas, revendas } from "../../../drizzle/schema";
@@ -31,30 +31,18 @@ export function deLinha(r: Linha): Entrega {
   return { ...e, situacao: e.situacao as Situacao };
 }
 
-/**
- * Grava cliente a cliente (revenda + rota + cliente): atualiza quem veio no arquivo e insere quem é novo, numa
- * transação. Nunca apaga: o CheckNow manda rota parcial (só os clientes movimentados no período), e apagar a rota
- * inteira perdia os outros clientes. Entregas sem início de rota ficam de fora.
- */
+/** Troca só as rotas presentes em `entregas` (transação). Entregas sem início de rota ficam de fora. */
 export async function gravarEntregas(revendaId: number, entregas: Entrega[]): Promise<{ rotas: number; linhas: number }> {
   const unicas = new Map(entregas.filter(e => e.rotaInicio).map(e => [`${e.routeId}|${e.codCliente}`, e]));
   if (!unicas.size) return { rotas: 0, linhas: 0 };
-  const rotas = new Set([...unicas.values()].map(e => e.routeId));
+  const rotas = [...new Set([...unicas.values()].map(e => e.routeId))];
   const linhas = [...unicas.values()].map(e => paraLinha(revendaId, e));
-  const atualizar = Object.fromEntries(
-    Object.keys(linhas[0]).filter(c => !["revendaId", "routeId", "codCliente"].includes(c))
-      .map(c => [c, sql.raw(`excluded."${c}"`)]),
-  );
   const db = await exigirDb();
   await db.transaction(async tx => {
-    for (let i = 0; i < linhas.length; i += 500) {
-      await tx.insert(checknowEntregas).values(linhas.slice(i, i + 500)).onConflictDoUpdate({
-        target: [checknowEntregas.revendaId, checknowEntregas.routeId, checknowEntregas.codCliente],
-        set: { ...atualizar, coletadoEm: new Date() },
-      });
-    }
+    await tx.delete(checknowEntregas).where(and(eq(checknowEntregas.revendaId, revendaId), inArray(checknowEntregas.routeId, rotas)));
+    for (let i = 0; i < linhas.length; i += 500) await tx.insert(checknowEntregas).values(linhas.slice(i, i + 500));
   });
-  return { rotas: rotas.size, linhas: linhas.length };
+  return { rotas: rotas.length, linhas: linhas.length };
 }
 
 /**
