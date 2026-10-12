@@ -28,7 +28,19 @@ const COR = {
 /** Ordem real de visita: chegada da parada mais próxima (GPS); sem parada, a hora da entrega no app. */
 const ordemVisita = (b: Baixa) =>
   b.paradasNoRaio.length ? b.paradasNoRaio.reduce((m, p) => (p.distM < m.distM ? p : m)).inicio.getTime() : b.entrega.baixaEm?.getTime() ?? 0;
-const minPorHl = (b: Baixa, v: Volume) => (v && v.hl > 0 && b.status === "no_raio" && b.permanenciaMin > 0 ? b.permanenciaMin / v.hl : null);
+
+/** Avaliação de cada entrega pelo ritmo (min/hL) comparado com o ritmo típico (mediana) do motorista no dia. */
+type Avaliacao = "produtiva" | "lenta" | "muito lenta" | "sem medição" | "sem pedido";
+const AVALIACAO: Record<Avaliacao, { texto: string; regra: string; ponto: string; chip: string }> = {
+  "produtiva": { texto: "Produtiva", regra: "no ritmo típico ou mais rápida", ponto: "bg-green-500", chip: "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300" },
+  "lenta": { texto: "Lenta", regra: "até 2× o ritmo típico", ponto: "bg-amber-500", chip: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300" },
+  "muito lenta": { texto: "Muito lenta", regra: "mais de 2× o ritmo típico", ponto: "bg-red-500", chip: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300" },
+  "sem medição": { texto: "Sem medição", regra: "sem parada no raio", ponto: "bg-slate-300 dark:bg-slate-600", chip: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400" },
+  "sem pedido": { texto: "Sem pedido no ERP", regra: "", ponto: "bg-slate-300 dark:bg-slate-600", chip: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400" },
+};
+const avaliar = (m: number | null, mediana: number | null): Avaliacao =>
+  m === null || mediana === null ? "sem medição" : m <= mediana ? "produtiva" : m <= 2 * mediana ? "lenta" : "muito lenta";
+const duracao = (min: number) => (min < 60 ? `${Math.round(min)} min` : `${Math.floor(min / 60)}h${String(Math.round(min % 60)).padStart(2, "0")}`);
 
 /** Linha do dia: rodando entre saída e retorno, paradas no cliente / sem cliente e, no tamanho grande, os registros no app. */
 function Trilho({ l, grande }: { l: Linha; grande?: boolean }) {
@@ -88,12 +100,17 @@ function Dispersao({ pontos, reta }: { pontos: { hl: number; min: number }[]; re
 function Detalhe({ l, raioM }: { l: Linha; raioM: number }) {
   const [mapa, setMapa] = useState<number | null>(null);
   const p = l.produtividade;
-  const itens = l.baixas.map((b, i) => ({ b, v: l.volumes[i], mph: minPorHl(b, l.volumes[i]) })).sort((x, y) => ordemVisita(x.b) - ordemVisita(y.b));
+  // Tempo de descarga com a parada compartilhada (vários clientes na mesma parada) dividida pelo hL de cada um.
+  const itens = l.baixas.map((b, i) => {
+    const v = l.volumes[i], min = p.minutos[i] ?? b.permanenciaMin;
+    return { b, v, min, mph: v && v.hl > 0 && b.status === "no_raio" && min > 0 ? min / v.hl : null };
+  }).sort((x, y) => ordemVisita(x.b) - ordemVisita(y.b));
   const valores = itens.flatMap(i => (i.mph === null ? [] : [i.mph])).sort((a, b) => a - b);
   const mediana = valores.length ? valores[Math.floor(valores.length / 2)] : null;
   const maxHl = Math.max(0.01, ...itens.map(i => i.v?.hl ?? 0));
-  const cor = (m: number | null) => (m === null || mediana === null ? "bg-slate-300 dark:bg-slate-600" : m <= mediana ? "bg-green-500" : m <= 2 * mediana ? "bg-amber-500" : "bg-red-500");
-  const pontos = itens.flatMap(i => (i.mph === null ? [] : [{ hl: i.v!.hl, min: i.b.permanenciaMin }]));
+  const nota = (m: number | null) => avaliar(m, mediana);
+  const produtivas = itens.filter(i => nota(i.mph) === "produtiva").length, medidas = valores.length;
+  const pontos = itens.flatMap(i => (i.mph === null ? [] : [{ hl: i.v!.hl, min: i.min }]));
 
   return (
     <div className="col-span-full bg-white dark:bg-[var(--card)] rounded-2xl border border-indigo-200 dark:border-indigo-800 p-4 flex flex-col gap-4">
@@ -103,25 +120,55 @@ function Detalhe({ l, raioM }: { l: Linha; raioM: number }) {
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-6">
         <div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">Clientes na ordem da visita — barra = hL entregue · cor = min/hL (verde até a mediana do dia, âmbar até 2×, vermelho acima)</div>
-          <div className="flex flex-col gap-1">
-            {itens.map(({ b, v, mph }, i) => (
-              <React.Fragment key={i}>
-                <div className="grid grid-cols-[150px_minmax(0,1fr)_150px] items-center gap-2 text-xs">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+            <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Clientes na ordem da visita</div>
+            {medidas > 0 && (
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                <b className="text-green-600 dark:text-green-400">{produtivas} de {medidas}</b> entregas produtivas
+              </div>
+            )}
+          </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2 leading-snug">
+            <b>Parado</b> = tempo do caminhão no raio do cliente (GPS); <span className="text-indigo-500">÷</span> = parada que atendeu vários clientes, dividida pelo hL de cada um. <b>Ritmo</b> = parado ÷ hL entregue.
+            {mediana !== null && <> Ritmo típico deste motorista no dia: <b>{n(mediana, 0)} min/hL</b>.</>}
+          </p>
+          <div className="flex flex-wrap gap-3 mb-3 text-[11px] text-slate-500 dark:text-slate-400">
+            {(["produtiva", "lenta", "muito lenta"] as const).map(k => (
+              <span key={k} className="flex items-center gap-1"><span className={`w-2.5 h-2.5 rounded-full ${AVALIACAO[k].ponto}`} />{AVALIACAO[k].texto} <span className="text-slate-400">({AVALIACAO[k].regra})</span></span>
+            ))}
+          </div>
+          <div className="grid grid-cols-[minmax(110px,1.1fr)_minmax(60px,1fr)_62px_70px_80px_104px] items-center gap-x-3 gap-y-1.5 text-xs">
+            <span className="text-[11px] uppercase tracking-wide text-slate-400">Cliente</span>
+            <span className="text-[11px] uppercase tracking-wide text-slate-400">Volume</span>
+            <span className="text-[11px] uppercase tracking-wide text-slate-400 text-right">hL</span>
+            <span className="text-[11px] uppercase tracking-wide text-slate-400 text-right">Parado</span>
+            <span className="text-[11px] uppercase tracking-wide text-slate-400 text-right">Ritmo</span>
+            <span className="text-[11px] uppercase tracking-wide text-slate-400">Avaliação</span>
+            {itens.map(({ b, v, min, mph }, i) => {
+              const dividida = min < b.permanenciaMin - 0.5;
+              const k = !v?.casou ? "sem pedido" : nota(mph);
+              return (
+                <React.Fragment key={i}>
                   <button onClick={() => setMapa(m => (m === i ? null : i))} title={`${b.entrega.cliente} — clique para ver no mapa`}
                     className="flex items-center gap-1 text-left text-indigo-600 dark:text-indigo-400 hover:underline truncate">
                     {mapa === i ? <ChevronDown size={12} /> : <MapPin size={12} />} {primeiroNome(b.entrega.cliente)}
                   </button>
                   <div className="h-2.5 rounded bg-slate-100 dark:bg-slate-800">
-                    <div className={`h-2.5 rounded ${cor(mph)}`} style={{ width: `${((v?.hl ?? 0) / maxHl) * 100}%` }} />
+                    <div className={`h-2.5 rounded ${AVALIACAO[k].ponto}`} style={{ width: `${((v?.hl ?? 0) / maxHl) * 100}%` }} />
                   </div>
-                  <span className="text-slate-500 dark:text-slate-400 font-mono">
-                    {!v?.casou ? "sem pedido no ERP" : `${n(v.hl, 2)} hL${mph !== null ? ` · ${n(mph)} min/hL` : ""}${v.dev ? ` · dev ${n(v.dev, 2)}` : ""}`}
+                  <span className="text-right font-mono text-slate-700 dark:text-slate-200" title={v?.dev ? `Devolvido: ${n(v.dev, 2)} hL` : undefined}>
+                    {v?.casou ? n(v.hl, 2) : "—"}{v?.dev ? <span className="text-red-500"> ↩</span> : null}
                   </span>
-                </div>
-                {mapa === i && <MapaEntrega b={b} raioM={raioM} />}
-              </React.Fragment>
-            ))}
+                  <span className="text-right font-mono text-slate-700 dark:text-slate-200"
+                    title={dividida ? `Parada de ${duracao(b.permanenciaMin)} dividida com os outros clientes atendidos nela (pelo hL de cada um)` : undefined}>
+                    {b.status === "no_raio" || b.status === "relampago" ? <>{duracao(min)}{dividida && <span className="text-indigo-500"> ÷</span>}</> : "—"}
+                  </span>
+                  <span className="text-right font-mono text-slate-500 dark:text-slate-400">{mph === null ? "—" : `${n(mph, mph < 10 ? 1 : 0)} min/hL`}</span>
+                  <span className={`justify-self-start text-[11px] px-2 py-0.5 rounded-lg ${AVALIACAO[k].chip}`}>{AVALIACAO[k].texto}</span>
+                  {mapa === i && <div className="col-span-full"><MapaEntrega b={b} raioM={raioM} /></div>}
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
         <div className="flex flex-col gap-3">

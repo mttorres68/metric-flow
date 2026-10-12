@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ajustarReta, produtividadeLinha, volumeEntrega, volumeItem } from "./produtividade";
+import { ajustarReta, produtividadeLinha, tempoDeDescarga, volumeEntrega, volumeItem } from "./produtividade";
 import type { ItemComProduto } from "../erp/repo";
 
 const prod = (litrosEmb: number, un: number, tipo: "retornavel" | "descartavel" | "barril" = "descartavel") =>
@@ -42,6 +42,33 @@ describe("ajustarReta", () => {
     expect(ajustarReta([1, 2, 3].map(hl => ({ hl, min: hl })))).toBeNull();
     expect(ajustarReta(Array(6).fill({ hl: 1, min: 5 }))).toBeNull();
     expect(ajustarReta([1, 2, 3, 4, 5, 6].map(hl => ({ hl, min: 20 - hl })))).toBeNull();
+  });
+});
+
+describe("tempo de descarga (parada compartilhada)", () => {
+  const parada = (ini: string, min: number) => {
+    const inicio = new Date(`2026-10-05T${ini}:00Z`);
+    return { inicio, fim: new Date(inicio.getTime() + min * 60000), distM: 10, lat: -7, lon: -43 };
+  };
+  const vol = (hl: number) => ({ hl, dev: 0, porTipo: { retornavel: 0, descartavel: hl, barril: 0 }, dominante: "descartavel", motivos: [], semCadastro: [], casou: true });
+  const b = (ps: ReturnType<typeof parada>[]) => ({ status: "no_raio", permanenciaMin: ps.reduce((s, p) => s + (p.fim.getTime() - p.inicio.getTime()) / 60000, 0), paradasNoRaio: ps });
+
+  it("parada que atendeu vários clientes é dividida pelo hL de cada um; parada só de um cliente fica inteira", () => {
+    const p1 = parada("10:00", 60), p2 = parada("12:00", 10);
+    expect(tempoDeDescarga([b([p1]), b([p1]), b([p2])] as never, [vol(1), vol(3), vol(2)] as never)).toEqual([15, 45, 10]);
+  });
+  it("sem volume conhecido, a parada compartilhada é dividida em partes iguais", () => {
+    const p1 = parada("10:00", 60);
+    expect(tempoDeDescarga([b([p1]), b([p1])] as never, [null, null])).toEqual([30, 30]);
+  });
+  it("o ritmo do dia usa o tempo dividido (não conta a mesma parada duas vezes)", () => {
+    const p1 = parada("10:00", 60);
+    const r = { saida: null, retorno: null, kmGps: null, gpsClientes: { primeiraChegada: null, ultimaSaida: null }, app: { primeira: null, ultima: null, emClienteMin: 0 },
+      baixas: [{ ...b([p1]), entrega: { lat: -7, lon: -43, latApp: null, lonApp: null, baixaEm: null, situacao: "ENTREGUE" } }, { ...b([p1]), entrega: { lat: -7, lon: -43, latApp: null, lonApp: null, baixaEm: null, situacao: "ENTREGUE" } }],
+      paradasSemCliente: { qtd: 0, min: 0 }, desvios: 0, trechosLentos: 0, semGps: null };
+    const p = produtividadeLinha(r as never, [vol(1), vol(3)] as never, 200);
+    expect(p.minutos).toEqual([15, 45]);
+    expect(p.porTipo).toEqual([{ tipo: "descartavel", hl: 4, minPorHl: 15 }]);
   });
 });
 

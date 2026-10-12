@@ -56,6 +56,7 @@ export function ajustarReta(pontos: { hl: number; min: number }[]): { fixoMin: n
 }
 
 export interface ProdutividadeLinha {
+  minutos: number[]; // tempo de descarga de cada entrega (alinhado a baixas), com a parada compartilhada dividida
   hl: number; dev: number; devPct: number | null; hlPorHora: number | null; parcial: boolean;
   hlPorKm: number | null; hlPorParada: number | null; menorHl: number | null;
   reta: ReturnType<typeof ajustarReta>; reta4s: (NonNullable<ReturnType<typeof ajustarReta>> & { dias: number }) | null;
@@ -64,8 +65,29 @@ export interface ProdutividadeLinha {
   semVolume: number; etiquetas: { texto: string; nivel: "alerta" | "aviso" }[];
 }
 
-const descarregou = (b: EntregaCruzada, v: VolumeEntrega | null): v is VolumeEntrega =>
-  !!v && v.hl > 0 && b.status === "no_raio" && b.permanenciaMin > 0;
+const descarregou = (b: EntregaCruzada, v: VolumeEntrega | null, min: number): v is VolumeEntrega =>
+  !!v && v.hl > 0 && b.status === "no_raio" && min > 0;
+
+/**
+ * Tempo de descarga de cada entrega. Uma parada no raio que atendeu vários clientes (caminhão estacionado uma vez
+ * para vizinhos) é dividida entre eles pelo hL de cada um — sem hL conhecido, em partes iguais —, para não contar
+ * a mesma parada uma vez por cliente. Sem paradas listadas, vale a permanência.
+ */
+export function tempoDeDescarga(baixas: EntregaCruzada[], volumes: (VolumeEntrega | null)[]): number[] {
+  const chave = (p: { inicio: Date; fim: Date }) => `${p.inicio.getTime()}|${p.fim.getTime()}`;
+  const quem = new Map<string, number[]>();
+  baixas.forEach((b, i) => (b.paradasNoRaio ?? []).forEach(p => quem.set(chave(p), [...(quem.get(chave(p)) ?? []), i])));
+  return baixas.map((b, i) => {
+    const ps = b.paradasNoRaio ?? [];
+    if (!ps.length) return b.permanenciaMin;
+    return ps.reduce((s, p) => {
+      const juntos = quem.get(chave(p))!;
+      const total = juntos.reduce((t, j) => t + (volumes[j]?.hl ?? 0), 0);
+      const parte = total > 0 ? (volumes[i]?.hl ?? 0) / total : 1 / juntos.length;
+      return s + ((p.fim.getTime() - p.inicio.getTime()) / 60000) * parte;
+    }, 0);
+  });
+}
 
 export function produtividadeLinha(
   r: ResultadoLinha, volumes: (VolumeEntrega | null)[], raioM: number,
@@ -79,14 +101,15 @@ export function produtividadeLinha(
   const fim = r.retorno ?? r.gpsClientes.ultimaSaida;
   const horas = r.saida && fim ? (fim.getTime() - r.saida.getTime()) / 3_600_000 : 0;
   const comHl = vs.filter(v => v.hl > 0);
-  const pontos = r.baixas.flatMap((b, i) => (descarregou(b, volumes[i]) ? [{ hl: volumes[i]!.hl, min: b.permanenciaMin }] : []));
+  const minutos = tempoDeDescarga(r.baixas, volumes);
+  const pontos = r.baixas.flatMap((b, i) => (descarregou(b, volumes[i], minutos[i]) ? [{ hl: volumes[i]!.hl, min: minutos[i] }] : []));
 
   const grupos = new Map<Tipo | "misto", { hl: number; min: number }>();
   r.baixas.forEach((b, i) => {
     const v = volumes[i];
-    if (!descarregou(b, v) || !v.dominante) return;
+    if (!descarregou(b, v, minutos[i]) || !v.dominante) return;
     const g = grupos.get(v.dominante) ?? { hl: 0, min: 0 };
-    grupos.set(v.dominante, { hl: g.hl + v.hl, min: g.min + b.permanenciaMin });
+    grupos.set(v.dominante, { hl: g.hl + v.hl, min: g.min + minutos[i] });
   });
 
   const reta4 = ajustarReta(pontos4s.map(p => ({ hl: p.hl, min: p.minDescarga })));
@@ -122,12 +145,13 @@ export function produtividadeLinha(
     reta: ajustarReta(pontos),
     reta4s: reta4 && { ...reta4, dias: new Set(pontos4s.map(p => p.dia)).size },
     porTipo: [...grupos].map(([tipo, g]) => ({ tipo, hl: r3(g.hl), minPorHl: g.min / g.hl })),
-    incompleto: semVolume > 0, semVolume, etiquetas,
+    incompleto: semVolume > 0, semVolume, etiquetas, minutos,
   };
 }
 
 export function pontosDaLinha(r: ResultadoLinha, volumes: (VolumeEntrega | null)[]): PontoProdutividade[] {
-  return r.baixas.flatMap((b, i) => (descarregou(b, volumes[i])
-    ? [{ dia: r.linha.data, placa: r.linha.placa, motorista: r.linha.motorista, routeId: r.linha.routeId, codCliente: b.entrega.codCliente, hl: volumes[i]!.hl, minDescarga: b.permanenciaMin }]
+  const minutos = tempoDeDescarga(r.baixas, volumes);
+  return r.baixas.flatMap((b, i) => (descarregou(b, volumes[i], minutos[i])
+    ? [{ dia: r.linha.data, placa: r.linha.placa, motorista: r.linha.motorista, routeId: r.linha.routeId, codCliente: b.entrega.codCliente, hl: volumes[i]!.hl, minDescarga: minutos[i] }]
     : []));
 }
