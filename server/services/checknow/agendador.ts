@@ -7,6 +7,7 @@
 import { diaBRT } from "@shared/entregas";
 import { contasParaColeta, ultimoPeriodoOk } from "./repo";
 import { coletarRevenda } from "./sincronizar";
+import { processarNoites } from "../pernoite/processar";
 
 type Tipo = "hora" | "noite";
 const DIA_MS = 86_400_000;
@@ -26,7 +27,13 @@ export function proximaExecucao(agora: Date): { em: Date; tipo: Tipo } {
   throw new Error("inalcançável");
 }
 
-export const periodoAuto = (hoje: string) => ({ de: menosDias(hoje, 6), ate: hoje });
+/** Pernoites: todo dia às 07:30 (BRT) analisa a noite anterior. */
+export function proximaExecucaoPernoite(agora: Date): Date {
+  const hoje = em(diaBRT(agora), "07:30");
+  return hoje > agora ? hoje : em(menosDias(diaBRT(agora), -1), "07:30");
+}
+
+export const periodoAuto =(hoje: string) => ({ de: menosDias(hoje, 6), ate: hoje });
 
 export function periodoRecuperacao(ultimoOk: string | null, hoje: string): { de: string; ate: string } {
   const limite = menosDias(hoje, 7);
@@ -57,4 +64,14 @@ export function iniciarAgendador(): void {
     }, p.em.getTime() - Date.now());
   };
   agendar();
+  const agendarPernoite = () => setTimeout(async () => {
+    const ontem = menosDias(diaBRT(new Date()), 1);
+    for (const revendaId of await contasParaColeta().catch(() => [] as number[])) {
+      await processarNoites(revendaId, ontem)
+        .then(n => console.log(`[Pernoite] revenda ${revendaId} ${ontem}: ${n} noites`))
+        .catch(e => console.warn(`[Pernoite] revenda ${revendaId} ${ontem}: ${(e as Error).message}`));
+    }
+    agendarPernoite();
+  }, proximaExecucaoPernoite(new Date()).getTime() - Date.now());
+  agendarPernoite();
 }
