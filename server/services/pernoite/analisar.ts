@@ -66,8 +66,11 @@ export function analisarNoite(e: EntradaNoite): Noite {
   const naBase = dentroDoPoligono(noite.lat, noite.lon, sede.poligono);
   const evento = e.eventos.filter(ev => ev.endereco && Math.abs(ev.em.getTime() - noite.inicio.getTime()) <= 30 * 60000)
     .sort((a, b) => Math.abs(a.em.getTime() - noite.inicio.getTime()) - Math.abs(b.em.getTime() - noite.inicio.getTime()))[0];
-  const cidade = e.baixas.map(b => b.entrega).filter(x => x.lat !== null && x.lon !== null)
-    .map(x => ({ x, d: distM(noite.lat, noite.lon, x.lat!, x.lon!) })).sort((a, b) => a.d - b.d)[0]?.x.cidade || null;
+  // Cidade onde dormiu: a do endereço do Infleet ("Rua, Cidade, Estado, Brasil"); sem ele, a do cliente mais próximo.
+  const partes = evento?.endereco?.split(",").map(p => p.trim()) ?? [];
+  const cidade = (partes.length >= 3 && partes.at(-1) === "Brasil" ? partes.at(-3)!.toUpperCase() : null)
+    ?? (e.baixas.map(b => b.entrega).filter(x => x.lat !== null && x.lon !== null)
+      .map(x => ({ x, d: distM(noite.lat, noite.lon, x.lat!, x.lon!) })).sort((a, b) => a.d - b.d)[0]?.x.cidade || null);
 
   const desligou = e.eventos.find(ev => ev.tipo === "ignitionOff" && ev.em >= noite.inicio && ev.em <= noite.fim);
   const madrugada = e.eventos.filter(ev => (ev.tipo === "ignitionOn" || ev.tipo === "deviceMoving") && ev.em >= noite.inicio && ev.em <= noite.fim

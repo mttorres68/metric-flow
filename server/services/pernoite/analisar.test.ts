@@ -104,5 +104,10 @@ describe("analisarNoite", () => {
     expect(longe.classificacao).toBe("normal");
     expect(longe.sinais.rotaConcluida.ok).toBe(false); // só vale para na malícia / evitável
   });
+  it("cidade onde dormiu vem do endereço do Infleet; sem endereço completo, a do cliente mais próximo", () => {
+    const ev = (endereco: string) => [{ tipo: "deviceStopped", em: brt("2026-10-05T15:40"), endereco, lat: 0, lon: 0, cercaId: null, cerca: null, duracaoMin: null }];
+    expect(analisarNoite(base({ eventos: ev("Avenida Dom Edilberto, Tanque do Piauí, Piauí, Brasil") as never })).cidade).toBe("TANQUE DO PIAUÍ");
+    expect(analisarNoite(base({ eventos: ev("Rua X") as never })).cidade).toBe("AMARANTE");
+  });
 });
 
