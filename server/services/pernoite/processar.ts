@@ -39,7 +39,7 @@ export async function processarNoites(revendaId: number, dia: string): Promise<n
     const rotas = new Set(ls.map(l => l.routeId));
     const daPlaca = entregas.filter(e => rotas.has(e.routeId));
     const baixas = ls.flatMap(l => cruzar(l, daPlaca.filter(e => e.routeId === l.routeId), gps, cfg).baixas);
-    evidencias.push(...baixas.map(b => evidenciaDe(dia, b)));
+    evidencias.push(...baixas.map(b => evidenciaDe(dia, b, gps.paradas, cfg.saidaMinima)));
     const pendentes = daPlaca.filter(e => e.situacao === "AGUARDANDO" || !e.baixaEm || diaBRT(e.baixaEm) > dia);
     // Rota de vários dias volta inteira no dia seguinte: cliente já entregue em D não é cliente da manhã.
     const clientesSeguinte = doSeguinte.filter(e => e.placa === placa && e.lat !== null && e.lon !== null && (!e.baixaEm || diaBRT(e.baixaEm) > dia)).map(e => ({ lat: e.lat!, lon: e.lon! }));

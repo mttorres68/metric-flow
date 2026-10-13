@@ -20,4 +20,18 @@ describe("evidenciaDe", () => {
     const ev = evidenciaDe("2026-10-07", cruzada({ maisProxima: null }, { latApp: null, lonApp: null }));
     expect(ev).toMatchObject({ distParadaM: null, paradaInicio: null, distAppM: null });
   });
+  it("com as paradas do GPS: só as do dia de trabalho (a partir da saída mínima, até 3 h) contam — a noite não é 'parou perto'", () => {
+    const p = (ini: string, min: number, lat: number) => ({ inicio: new Date(`${ini}:00-03:00`), fim: new Date(new Date(`${ini}:00-03:00`).getTime() + min * 60000), min, lat, lon: -43 });
+    const paradas = [
+      p("2026-10-07T00:07", 457, -6.801),  // dormiu a ~100 m do cliente (noite anterior)
+      p("2026-10-07T10:00", 30, -6.811),   // parada do dia a ~1,2 km
+      p("2026-10-07T19:00", 600, -6.8005), // dormiu de novo perto do cliente
+    ];
+    const ev = evidenciaDe("2026-10-07", cruzada(), paradas, "04:00");
+    expect(ev.paradaInicio).toEqual(new Date("2026-10-07T10:00:00-03:00"));
+    expect(ev.distParadaM).toBeGreaterThan(1150);
+    expect(ev.distParadaM).toBeLessThan(1300);
+    expect(evidenciaDe("2026-10-07", cruzada(), [paradas[0]], "04:00")).toMatchObject({ distParadaM: null, paradaInicio: null });
+  });
 });
+
