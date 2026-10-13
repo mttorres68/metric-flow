@@ -54,6 +54,10 @@ const km = (x: number | null) => (x === null ? "—" : `${x.toFixed(0)} km`);
 const duracao = (min: number) => (min < 60 ? `${Math.round(min)} min` : `${Math.floor(min / 60)}h${String(Math.round(min % 60)).padStart(2, "0")}`);
 const fora = (n: Noite) => n.classificacao !== "na_base" && n.classificacao !== "sem_parada" && n.lat !== null && n.lon !== null;
 const sinaisDe = (n: Noite) => n.sinais as Sinais;
+/** A análise olha o GPS até 12:00 do dia seguinte: parada que vai até lá é "ainda parado", não uma saída. */
+const aindaParado = (n: Noite) => !!n.saidaManha && diaBRT(n.saidaManha) > n.dia && horaBRT(n.saidaManha) >= "11:50";
+/** Na Sede a "cidade" gravada é a do cliente mais próximo da parada — sem sentido ali. */
+const ondeDormiu = (n: Noite) => (n.classificacao === "na_base" ? "Sede" : n.cidade ?? "—");
 
 /** Números em negrito ("~21:35", "134 km", "2h38") para o olho achar o que mede o sinal. */
 function destacar(texto: string): React.ReactNode {
@@ -143,7 +147,7 @@ function Detalhe({ n, sede, onRecalcular, recalculando }: {
           </>
         )}
         <div className="text-[11px] text-slate-400 dark:text-slate-500 border-t border-slate-200 dark:border-slate-700 pt-2">
-          Descanso de {n.descansoMin === null ? "—" : duracao(n.descansoMin)}
+          Descanso de {n.descansoMin === null ? "—" : `${duracao(n.descansoMin)}${aindaParado(n) ? " ou mais (ainda parado às 12:00 do dia seguinte, fim da análise)" : ""}`}
           {n.chaveLigadaMin !== null && ` · chave desligada ${duracao(n.chaveLigadaMin)} depois de parar`}
           {n.madrugadaEventos > 0 && ` · ${n.madrugadaEventos} movimento(s)/ignição de madrugada`}
           {n.endereco && ` · ${n.endereco}`}
@@ -362,7 +366,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                           <span className="px-1.5 py-0.5 rounded-md bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 font-mono text-[11px] font-semibold">{n.placa}</span>
                         </td>
                         <td className={`${td} font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap`}>{n.motorista}</td>
-                        <td className={`${td} text-slate-500 dark:text-slate-400`}>{n.cidade ?? "—"}</td>
+                        <td className={`${td} ${n.classificacao === "na_base" ? "text-emerald-700 dark:text-emerald-300 font-semibold" : "text-slate-500 dark:text-slate-400"}`}>{ondeDormiu(n)}</td>
                         <td className={`${td} whitespace-nowrap tabular-nums ${perto ? "text-amber-600 dark:text-amber-400 font-bold" : "text-slate-600 dark:text-slate-300"}`}>
                           {n.distSedeKm === null || n.classificacao === "na_base" ? "—" : km(n.distSedeKm)}
                         </td>
@@ -371,7 +375,9 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                           <span className="mx-1.5 text-slate-300">→</span>
                           <span className="inline-flex items-center gap-1 font-bold text-slate-800 dark:text-slate-100" title="Parou para dormir"><BedDouble size={12} className="text-indigo-500" />{hora(n.chegada)}</span>
                           <span className="mx-1.5 text-slate-300">→</span>
-                          <span className="inline-flex items-center gap-1" title="Saiu de manhã"><Truck size={11} className="text-slate-400" />{hora(n.saidaManha)}</span>
+                          {aindaParado(n)
+                            ? <span className="inline-flex items-center gap-1 text-slate-400" title="Ainda parado às 12:00 do dia seguinte (fim da análise): não saiu de manhã"><Truck size={11} />12:00+</span>
+                            : <span className="inline-flex items-center gap-1" title="Saiu de manhã"><Truck size={11} className="text-slate-400" />{hora(n.saidaManha)}</span>}
                         </td>
                         <td className={td}><span className={`px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${c.chip}`}>{c.texto}</span></td>
                         <td className={td}>
