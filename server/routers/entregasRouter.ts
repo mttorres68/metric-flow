@@ -8,8 +8,10 @@ import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { PlanilhaInvalidaError } from "../services/entregas/parseCheckNow";
 import { cruzarDia } from "../services/entregas/cruzarDia";
-import { gravarLinhas } from "../services/produtividadeRota/registrar";
-import { listarCercasInfleet, mapaVeiculos } from "../services/entregas/infleetEntregas";
+import { deveGravarTela, gravarLinhas } from "../services/produtividadeRota/registrar";
+import { fecharRotas } from "../services/produtividadeRota/repo";
+import { diaBRT } from "@shared/entregas";
+import { listarCercasInfleet, mapaVeiculos, sedeDaConta } from "../services/entregas/infleetEntregas";
 import * as repo from "../services/checknow/repo";
 import { coletarRevenda, importarPlanilha } from "../services/checknow/sincronizar";
 import { testarLogin } from "../services/checknow/coletor";
@@ -64,8 +66,15 @@ export const entregasRouter = router({
   erp,
   processar: publicProcedure.input(periodo.and(z.object({ cercaId: z.string().optional() }))).mutation(async ({ input }) => {
     const r = await cruzarDia(input.revendaId, input.de, input.ate, input.cercaId);
-    // O dia visto entra no histórico da produtividade da rota; falha aqui não quebra a tela.
-    await gravarLinhas(input.revendaId, r).catch(e => console.warn(`[produtividade-rota] gravar: ${(e as Error).message}`));
+    // O dia visto entra no histórico da produtividade da rota só com o mesmo critério do processamento diário
+    // (dia passado, cerca Sede); falha aqui não quebra a tela.
+    const gravar = async () => {
+      const sede = input.cercaId ? await sedeDaConta(await repo.tokenInfleet(input.revendaId)) : null;
+      if (!deveGravarTela({ de: input.de, ate: input.ate, cercaId: input.cercaId, sedeId: sede?.cercaId ?? null, hoje: diaBRT(new Date()) })) return;
+      await gravarLinhas(input.revendaId, r);
+      await fecharRotas(input.revendaId);
+    };
+    await gravar().catch(e => console.warn(`[produtividade-rota] gravar: ${(e as Error).message}`));
     return { linhas: r.linhas, rotas: r.rotas };
   }),
   importar: publicProcedure.input(z.object({ revendaId: z.number().int(), xlsxBase64: z.string().min(1) }))

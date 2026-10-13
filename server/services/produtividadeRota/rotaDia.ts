@@ -38,7 +38,8 @@ export function rotaDiaDe(l: LinhaProcessada, entregasDaRota: Entrega[]): RotaDi
     idaMin: l.ida?.min ?? null, voltaMin: l.volta?.min ?? null,
     entregas: l.entregasDia, aEntregar: l.aEntregar, totalRota: l.totalRota,
     hl: l.produtividade.hl, hlPorHora: l.produtividade.hlPorHora, devPct: l.produtividade.devPct, kmGps: l.kmGps,
-    semGps: l.semGps, parcial: l.produtividade.parcial, incompleto: l.produtividade.incompleto,
+    semGps: l.semGps?.slice(0, 80) ?? null, // coluna varchar(80)
+    parcial: l.produtividade.parcial, incompleto: l.produtividade.incompleto,
     rotaInicio: e0?.rotaInicio ?? l.linha.janela?.inicio ?? new Date(`${l.linha.data}T00:00:00-03:00`), rotaFim: e0?.rotaFim ?? null,
   };
 }

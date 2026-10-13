@@ -47,3 +47,14 @@ export async function diasDasRotas(revendaId: number, routeIds: string[]): Promi
   const rows = await db.select().from(rotasDia).where(and(eq(rotasDia.revendaId, revendaId), inArray(rotasDia.routeId, routeIds)));
   return rows.map(paraRotaDia);
 }
+
+/** Rotas gravadas como abertas que o CheckNow já fechou: copia o fim da rota (o dia do fechamento pode não ter entrega). */
+export async function fecharRotas(revendaId: number): Promise<void> {
+  const db = await exigirDb();
+  await db.$client.query(
+    `update rotas_dia r set "rotaFim" = c.fim
+       from (select "routeId", max("rotaFim") fim from checknow_entregas
+              where "revendaId" = $1 and "rotaFim" is not null group by "routeId") c
+      where r."revendaId" = $1 and r."routeId" = c."routeId" and r."rotaFim" is null`, [revendaId]);
+}
+

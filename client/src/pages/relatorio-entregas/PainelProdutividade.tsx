@@ -23,6 +23,8 @@ const hm = (min: number | null) => (min === null ? "—" : `${Math.floor(min / 6
 const n = (x: number | null | undefined, d = 1) => (x === null || x === undefined ? "—" : x.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }));
 const primeiroNome = (s: string) => s.trim().split(/\s+/)[0] || s;
 const nomeRota = (r: { placa: string; motorista: string }) => `${r.placa} · ${primeiroNome(r.motorista)}`;
+/** Nos gráficos o mesmo caminhão e motorista aparecem em várias rotas: a data de início diferencia. */
+const nomeGrafico = (r: { placa: string; motorista: string; inicio: Date }) => `${nomeRota(r)} (${ddmm(diaBRT(r.inicio))})`;
 const TEMPO = { rodando: "#2a78d6", emCliente: "#16a34a", parado: "#BA7517" };
 const SERIES = ["#2a78d6", "#E24B4A", "#7F77DD", "#0f766e"];
 const MAX_SEL = 4;
@@ -53,7 +55,7 @@ function etiquetas(r: Rota) {
 function TempoParaEntregar({ rotas }: { rotas: Rota[] }) {
   const g = useEstiloGrafico();
   const dados = rotas.filter(r => !r.semJornada).map(r => ({
-    nome: nomeRota(r), rodando: r.rodandoMin / 60, emCliente: r.emClienteMin / 60, parado: r.paradoSemClienteMin / 60,
+    nome: nomeGrafico(r), rodando: r.rodandoMin / 60, emCliente: r.emClienteMin / 60, parado: r.paradoSemClienteMin / 60,
     rotulo: `${hm(r.jornadaMin)} · ${r.dias} dia${r.dias > 1 ? "s" : ""}`,
   }));
   if (!dados.length) return <p className="px-4 pb-4 text-xs text-slate-400">Nenhuma rota com jornada no período.</p>;
@@ -62,7 +64,7 @@ function TempoParaEntregar({ rotas }: { rotas: Rota[] }) {
       <BarChart data={dados} layout="vertical" margin={{ top: 4, right: 110, left: 8, bottom: 4 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={g.grade} horizontal={false} />
         <XAxis type="number" tick={g.eixo} axisLine={false} tickLine={false} unit="h" />
-        <YAxis type="category" dataKey="nome" tick={g.eixo} axisLine={false} tickLine={false} width={130} />
+        <YAxis type="category" dataKey="nome" tick={g.eixo} axisLine={false} tickLine={false} width={170} />
         <Tooltip contentStyle={g.tooltip} formatter={(v: number, nome: string) => [hm(v * 60), nome]} />
         <Legend wrapperStyle={{ fontSize: 11 }} />
         <Bar dataKey="rodando" name="Rodando" stackId="t" fill={TEMPO.rodando} />
@@ -223,7 +225,7 @@ export function PainelProdutividade({ revendaId }: { revendaId: number }) {
   const hoje = diaBRT(new Date());
   const de = somaDias(hoje, -(dias - 1));
   const q = trpc.produtividade.ranking.useQuery({ revendaId, de, ate: hoje });
-  const nomes = useMemo(() => new Map([...(q.data?.rotas ?? []), ...(q.data?.emAndamento ?? [])].map(r => [r.routeId, nomeRota(r)])), [q.data]);
+  const nomes = useMemo(() => new Map([...(q.data?.rotas ?? []), ...(q.data?.emAndamento ?? [])].map(r => [r.routeId, nomeGrafico(r)])), [q.data]);
   const alternar = (id: string) => setSelecionadas(s => (s.includes(id) ? s.filter(x => x !== id) : s.length < MAX_SEL ? [...s, id] : s));
 
   if (q.isLoading) return <div className="flex items-center justify-center h-40 text-slate-400 text-sm"><Loader2 size={16} className="animate-spin mr-2" /> Calculando o ranking…</div>;

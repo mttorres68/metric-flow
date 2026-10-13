@@ -73,3 +73,15 @@ describe("entregasPorDia", () => {
     ]);
   });
 });
+
+describe("correções da revisão", () => {
+  it("I-3: motivo de 'sem GPS' longo é cortado em 80 caracteres (a coluna é varchar(80))", () => {
+    const l = {
+      linha: { routeId: "R1", data: "2026-10-05", placa: "SOL-6B13", motorista: "ANA" }, saida: null, retorno: null,
+      gpsClientes: { primeiraChegada: null, ultimaSaida: null }, tempo: null, ida: null, volta: null, entregasDia: 1, aEntregar: 1, totalRota: 1,
+      kmGps: null, semGps: "sem sinal GPS " + "x".repeat(200), produtividade: { hl: 0, hlPorHora: null, devPct: null, parcial: true, incompleto: false },
+    } as unknown as LinhaProcessada;
+    expect(rotaDiaDe(l, []).semGps).toHaveLength(80);
+  });
+});
+
