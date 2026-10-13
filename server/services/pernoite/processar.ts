@@ -8,6 +8,7 @@ import { analisarNoite, noiteSemLugar, type Noite } from "./analisar";
 import { gravarNoites } from "./repo";
 import { evidenciaDe, type EvidenciaNova } from "../desvio/evidencias";
 import { gravarEvidencias } from "../desvio/repo";
+import { registrarRotasDia } from "../produtividadeRota/registrar";
 
 const DIA_MS = 86_400_000;
 const somaDias = (d: string, n: number) => new Date(Date.parse(`${d}T12:00:00Z`) + n * DIA_MS).toISOString().slice(0, 10);
@@ -46,6 +47,9 @@ export async function processarNoites(revendaId: number, dia: string): Promise<n
   }
   await gravarNoites(revendaId, noites);
   await gravarEvidencias(revendaId, evidencias);
+  // Produtividade da rota (spec rota-produtividade §5): o mesmo cruzamento da tela "Por dia", com a cerca Sede.
+  // O erro sobe: pernoite e evidências já estão gravados; o reprocessamento conta o dia como erro.
+  await registrarRotasDia(revendaId, dia, sede.cercaId ?? undefined);
   return noites.length;
 }
 

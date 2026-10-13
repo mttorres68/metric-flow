@@ -8,6 +8,7 @@ import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { PlanilhaInvalidaError } from "../services/entregas/parseCheckNow";
 import { cruzarDia } from "../services/entregas/cruzarDia";
+import { gravarLinhas } from "../services/produtividadeRota/registrar";
 import { listarCercasInfleet, mapaVeiculos } from "../services/entregas/infleetEntregas";
 import * as repo from "../services/checknow/repo";
 import { coletarRevenda, importarPlanilha } from "../services/checknow/sincronizar";
@@ -63,6 +64,8 @@ export const entregasRouter = router({
   erp,
   processar: publicProcedure.input(periodo.and(z.object({ cercaId: z.string().optional() }))).mutation(async ({ input }) => {
     const r = await cruzarDia(input.revendaId, input.de, input.ate, input.cercaId);
+    // O dia visto entra no histórico da produtividade da rota; falha aqui não quebra a tela.
+    await gravarLinhas(input.revendaId, r).catch(e => console.warn(`[produtividade-rota] gravar: ${(e as Error).message}`));
     return { linhas: r.linhas, rotas: r.rotas };
   }),
   importar: publicProcedure.input(z.object({ revendaId: z.number().int(), xlsxBase64: z.string().min(1) }))
