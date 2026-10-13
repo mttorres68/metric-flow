@@ -582,6 +582,41 @@ export const desvioRevisoes = pgTable("desvio_revisoes", {
   revisadoEm: timestamp("revisadoEm", { withTimezone: true }).defaultNow().notNull(),
 }, t => [uniqueIndex("uq_desvio_revisoes").on(t.revendaId, t.pedido)]);
 
+/** Produtividade da rota por dia (spec rota-produtividade §3): gravada pela tela "Por dia" e pelo processamento diário. */
+export const rotasDia = pgTable("rotas_dia", {
+  id:                  serial("id").primaryKey(),
+  revendaId:           integer("revendaId").notNull().references(() => revendas.id),
+  routeId:             varchar("routeId", { length: 40 }).notNull(),
+  dia:                 date("dia", { mode: "string" }).notNull(),
+  placa:               varchar("placa", { length: 20 }).notNull(),
+  motorista:           varchar("motorista", { length: 120 }).notNull(),
+  saida:               timestamp("saida", { withTimezone: true }),
+  retorno:             timestamp("retorno", { withTimezone: true }),
+  jornadaMin:          integer("jornadaMin"),
+  rodandoMin:          integer("rodandoMin"),
+  emClienteMin:        integer("emClienteMin"),
+  paradoSemClienteMin: integer("paradoSemClienteMin"),
+  idaMin:              integer("idaMin"),
+  voltaMin:            integer("voltaMin"),
+  entregas:            integer("entregas").notNull().default(0),
+  aEntregar:           integer("aEntregar").notNull().default(0),
+  totalRota:           integer("totalRota").notNull().default(0),
+  hl:                  doublePrecision("hl").notNull().default(0),
+  hlPorHora:           doublePrecision("hlPorHora"),
+  devPct:              doublePrecision("devPct"),
+  kmGps:               doublePrecision("kmGps"),
+  semGps:              varchar("semGps", { length: 80 }),
+  parcial:             boolean("parcial").notNull().default(false),
+  incompleto:          boolean("incompleto").notNull().default(false),
+  rotaInicio:          timestamp("rotaInicio", { withTimezone: true }).notNull(),
+  rotaFim:             timestamp("rotaFim", { withTimezone: true }),
+  calculadoEm:         timestamp("calculadoEm", { withTimezone: true }).defaultNow().notNull(),
+}, t => [
+  uniqueIndex("uq_rotas_dia").on(t.revendaId, t.routeId, t.dia),
+  index("ix_rotas_dia_dia").on(t.revendaId, t.dia),
+  index("ix_rotas_dia_inicio").on(t.revendaId, t.rotaInicio),
+]);
+
 // ---------------------------------------------------------------------------
 // Análise Diária — flags de ocorrência por vendedor × dia
 // Persistidas ao marcar "Desl." (início tardio) ou "Prob." (pathtracker).
