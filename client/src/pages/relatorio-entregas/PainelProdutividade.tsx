@@ -70,7 +70,9 @@ function TempoParaEntregar({ rotas }: { rotas: Rota[] }) {
         <Bar dataKey="rodando" name="Rodando" stackId="t" fill={TEMPO.rodando} />
         <Bar dataKey="emCliente" name="Em cliente" stackId="t" fill={TEMPO.emCliente} />
         <Bar dataKey="parado" name="Parado fora de cliente" stackId="t" fill={TEMPO.parado} radius={[0, 4, 4, 0]}>
-          <LabelList dataKey="rotulo" position="right" style={{ fontSize: 10, fill: g.texto }} />
+          <LabelList dataKey="rotulo" content={(p: { x?: number | string; y?: number | string; width?: number | string; height?: number | string; value?: unknown }) => (
+            <text x={Number(p.x) + Number(p.width) + 6} y={Number(p.y) + Number(p.height) / 2} dominantBaseline="middle" fontSize={10} fill={g.texto}>{String(p.value ?? "")}</text>
+          )} />
         </Bar>
       </BarChart>
     </ResponsiveContainer>
@@ -90,17 +92,12 @@ function EntregasPorDia({ revendaId, de, ate, selecionadas, nomes }: { revendaId
         <XAxis dataKey="dia" tick={g.eixo} axisLine={false} tickLine={false} />
         <YAxis tick={g.eixo} axisLine={false} tickLine={false} allowDecimals={false} />
         <Tooltip contentStyle={g.tooltip} />
-        {selecionadas.length ? (
-          <>
-            <Legend wrapperStyle={{ fontSize: 11 }} />
-            {selecionadas.map((id, i) => <Bar key={id} dataKey={id} name={nomes.get(id) ?? id} fill={SERIES[i]} radius={[4, 4, 0, 0]} />)}
-          </>
-        ) : (
-          <>
-            <ReferenceLine y={media} stroke={g.texto} strokeDasharray="4 4" label={{ value: `média ${n(media, 0)}`, position: "insideTopRight", fontSize: 10, fill: g.texto }} />
-            <Bar dataKey="total" name="Entregas" fill={SERIES[0]} radius={[4, 4, 0, 0]} />
-          </>
-        )}
+        {/* recharts 2 + React 19 não enxerga filhos dentro de <>…</>: as séries vão como lista. */}
+        {selecionadas.length
+          ? [<Legend key="legenda" wrapperStyle={{ fontSize: 11 }} />,
+            ...selecionadas.map((id, i) => <Bar key={id} dataKey={id} name={nomes.get(id) ?? id} fill={SERIES[i]} radius={[4, 4, 0, 0]} />)]
+          : [<ReferenceLine key="media" y={media} stroke={g.texto} strokeDasharray="4 4" label={{ value: `média ${n(media, 0)}`, position: "insideTopRight", fontSize: 10, fill: g.texto }} />,
+            <Bar key="total" dataKey="total" name="Entregas" fill={SERIES[0]} radius={[4, 4, 0, 0]} />]}
       </BarChart>
     </ResponsiveContainer>
   );
