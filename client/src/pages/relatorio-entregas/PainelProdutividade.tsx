@@ -183,7 +183,7 @@ function TabelaRotas({ rotas, selecionadas, alternar, posicao }: { rotas: Rota[]
       <thead><tr>
         {alternar && <th className={th} />}{posicao && <th className={th}>#</th>}
         <th className={th}>Rota</th><th className={th}>Datas</th><th className={`${th} text-right`}>hL/h</th><th className={`${th} text-right`}>Entregas/h</th>
-        <th className={th}>Tempo para entregar tudo</th><th className={`${th} text-right`}>Clientes</th><th className={`${th} text-right`}>% entregue</th>
+        <th className={th}>Tempo para entregar tudo</th><th className={`${th} text-right`} title="Clientes que receberam a entrega / total da rota">Clientes</th><th className={`${th} text-right`}>% entregue</th>
         <th className={`${th} text-right`}>hL</th><th className={`${th} text-right`}>hL/km</th><th className={th}>Observações</th>
       </tr></thead>
       <tbody>
@@ -201,7 +201,7 @@ function TabelaRotas({ rotas, selecionadas, alternar, posicao }: { rotas: Rota[]
               <td className={`${td} text-right font-bold`}>{n(r.hlPorHora, 2)}</td>
               <td className={`${td} text-right`}>{n(r.entregasPorHora, 2)}</td>
               <td className={`${td} whitespace-nowrap`}>{r.semJornada ? "—" : `${hm(r.jornadaMin)} · ${r.dias} dia${r.dias > 1 ? "s" : ""}`}</td>
-              <td className={`${td} text-right`}>{r.clientes}</td>
+              <td className={`${td} text-right`}>{r.entregues}/{r.clientes}</td>
               <td className={`${td} text-right`}>{r.entreguePct === null ? "—" : `${n(r.entreguePct)}%`}</td>
               <td className={`${td} text-right`}>{n(r.hl)}</td>
               <td className={`${td} text-right`}>{n(r.hlPorKm, 3)}</td>
