@@ -240,7 +240,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
   }, [filtradas, sede]);
 
   const caixa = "bg-white dark:bg-[var(--card)] rounded-2xl border border-slate-100 dark:border-[var(--border)]";
-  const th = "px-3 py-2 text-left text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide";
+  const th = "px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide whitespace-nowrap";
   const td = "px-3 py-2.5 text-xs";
 
   if (noitesQ.isLoading) {
@@ -280,7 +280,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
 
           <div className={`${caixa} overflow-x-auto`}>
             <table className="w-full">
-              <thead><tr>
+              <thead><tr className="bg-slate-100/80 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
                 <th className={th}>Motorista</th><th className={th}>Noites fora</th><th className={th}>Na malícia</th>
                 <th className={th}>Evitável</th><th className={th} title="Noites com 2 ou mais sinais de cozinhando o galo">Galo (2+ sinais)</th>
                 <th className={th} title="Dias com rota no CheckNow e o rastreador sem nenhuma posição">Sem sinal GPS</th><th className={th}>Onde mais dorme</th>
@@ -344,7 +344,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
               <span className="ml-auto text-slate-400">{filtradas.length} noites · clique para o detalhe</span>
             </div>
             <table className="w-full">
-              <thead><tr>
+              <thead><tr className="bg-slate-100/80 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
                 <th className={th}>Data</th><th className={th}>Caminhão</th><th className={th}>Motorista</th><th className={th}>Onde dormiu</th>
                 <th className={th}>Da Sede</th><th className={th} title="Saída do último cliente → parou para dormir → saiu de manhã">Último cliente → parou → saiu</th>
                 <th className={th}>Pernoite</th><th className={th}>Sinais</th>
