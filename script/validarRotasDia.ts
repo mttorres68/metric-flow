@@ -12,7 +12,7 @@ const confere = (nome: string, ok: boolean, detalhe: unknown) => {
 };
 const linha = (routeId: string, entregas: number, rotaInicio: string) => ({
   routeId, dia: "2026-01-02", placa: "TST-0001", motorista: "TESTE", saida: null, retorno: null, jornadaMin: 600, rodandoMin: null,
-  emClienteMin: null, paradoSemClienteMin: null, idaMin: null, voltaMin: null, entregas, aEntregar: 10, totalRota: 10, hl: 5, hlPorHora: 0.5,
+  emClienteMin: null, paradoSemClienteMin: null, idaMin: null, voltaMin: null, entregas, entregasAlmoco: 0, aEntregar: 10, totalRota: 10, hl: 5, hlPorHora: 0.5,
   devPct: null, kmGps: null, semGps: null, parcial: false, incompleto: false, rotaInicio: new Date(rotaInicio), rotaFim: new Date("2026-01-02T18:00:00-03:00"),
 });
 try {

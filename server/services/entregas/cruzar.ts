@@ -92,6 +92,8 @@ export interface ResultadoLinha {
   totalRota: number;
   aEntregar: number; // clientes que ainda faltavam no início do dia (sem baixa em dia anterior); no 1º dia = totalRota
   apos14h: number;
+  /** Entregas com chegada ao cliente no intervalo de almoço do ⚙ (GPS; sem parada no raio, a hora do app). Informativo. */
+  almoco: number;
   baixasComCoord: number;
   noRaio: number;
   relampago: number;
@@ -259,6 +261,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
   const baixasDia = entregasRota.filter(e =>
     e.situacao !== "AGUARDANDO" && e.baixaEm !== null && diaBRT(e.baixaEm) === linha.data);
   const entregues = baixasDia.filter(e => e.situacao === "ENTREGUE");
+  const noAlmoco = (d: Date) => { const h = horaBRT(d); return h >= cfg.almocoDe && h <= cfg.almocoAte; };
 
   const r: ResultadoLinha = {
     linha,
@@ -271,6 +274,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
     totalRota: entregasRota.length,
     aEntregar: entregasRota.filter(e => !(e.situacao !== "AGUARDANDO" && e.baixaEm && diaBRT(e.baixaEm) < linha.data)).length,
     apos14h: entregues.filter(e => horaBRT(e.baixaEm!) >= LIMITES.apos14h).length,
+    almoco: entregues.filter(e => noAlmoco(e.baixaEm!)).length,
     baixasComCoord: 0,
     noRaio: 0,
     relampago: 0,
@@ -327,6 +331,8 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
       trecho: null,
     });
   }
+  // Com GPS, o almoço vale pela chegada ao cliente (1ª parada no raio); sem ela, pela hora do app.
+  r.almoco = r.baixas.filter(b => b.entrega.situacao === "ENTREGUE" && noAlmoco(b.paradasNoRaio[0]?.inicio ?? b.entrega.baixaEm!)).length;
   percursos(r, gps.trajeto, cfg);
 
   const clientes = entregasRota.filter(temCoord);

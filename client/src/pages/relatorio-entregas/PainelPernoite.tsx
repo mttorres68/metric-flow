@@ -15,7 +15,8 @@ import { distM } from "./MapaEntrega";
 
 type Noite = inferRouterOutputs<AppRouter>["pernoite"]["listar"][number];
 type Sinal = { ok: boolean; motivo?: string; [k: string]: unknown };
-type Sinais = Record<"foraDaSede" | "perto" | "davaParaChegar" | "voltou" | "finalLento" | "parouCedo" | "ociosidade" | "paraTras", Sinal>;
+// rotaConcluida é opcional: noites gravadas antes desse sinal não o têm até serem recalculadas.
+type Sinais = Record<"foraDaSede" | "perto" | "davaParaChegar" | "voltou" | "finalLento" | "parouCedo" | "ociosidade" | "paraTras", Sinal> & { rotaConcluida?: Sinal };
 
 const CLASSE: Record<string, { texto: string; cor: string; letra: string; chip: string }> = {
   na_malicia: { texto: "na malícia", cor: "#E24B4A", letra: "M", chip: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
@@ -50,6 +51,9 @@ function frases(n: Noite): { ok: boolean; texto: string; galo?: boolean }[] {
       ? `Saiu do último cliente às ${v(dc, "saiuDoUltimo")}; chegaria na Sede ~${v(dc, "estimada")} (${dc.ok ? "antes" : "depois"} das ${v(dc, "limite")})`
       : `Dava para chegar: ${dc.motivo ?? "sem dado"}` },
     { ok: s.voltou.ok, texto: s.voltou.ok ? `De manhã ${v(s.voltou, "como")} às ${v(s.voltou, "as")}` : "De manhã não voltou para a Sede (seguiu viagem)" },
+    ...(s.rotaConcluida && s.rotaConcluida.pendentes !== undefined ? [{ ok: s.rotaConcluida.ok, texto: s.rotaConcluida.ok
+      ? "Rota concluída: todas as entregas já estavam feitas quando parou — só faltava voltar"
+      : `Rota não concluída: ${v(s.rotaConcluida, "pendentes")} cliente(s) ainda pendente(s) ao parar` }] : []),
     { galo: true, ok: s.finalLento.ok, texto: s.finalLento.finalMin !== undefined
       ? `Ritmo das 3 últimas entregas: ${v(s.finalLento, "finalMin")} min contra ${v(s.finalLento, "diaMin")} típico no dia`
       : `Final lento: ${s.finalLento.motivo}` },
@@ -253,6 +257,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                         <td className={td}><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${c.chip}`}>{c.texto}</span></td>
                         <td className={td}>
                           <div className="flex flex-wrap gap-1">
+                            {s.rotaConcluida?.ok && <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 text-[10px] font-semibold">rota concluída</span>}
                             {s.voltou?.ok && n.classificacao !== "na_base" && <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700/50 text-[10px]">voltou de manhã</span>}
                             {GALO.filter(g => s[g.chave]?.ok).map(g => <span key={g.chave} className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-[10px]">{g.texto}</span>)}
                           </div>

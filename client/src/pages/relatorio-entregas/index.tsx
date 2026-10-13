@@ -1083,6 +1083,12 @@ export default function RelatorioEntregas() {
                             </Th>
                             <Th
                               center
+                              title={`Entregas com chegada ao cliente no intervalo de almoço (${cfg.almocoDe}–${cfg.almocoAte}, ⚙ › Limites) / entregas do dia`}
+                            >
+                              Almoço
+                            </Th>
+                            <Th
+                              center
                               title={`Entregas com o caminhão parado de ${LIMITES.relampagoMin} min ou mais a até ${raioM} m do cliente`}
                             >
                               No raio
@@ -1299,6 +1305,9 @@ export default function RelatorioEntregas() {
                                       vazio
                                     )}
                                   </Td>
+                                  <Td center mono className={neutro}>
+                                    {r.entregasDia > 0 ? `${r.almoco}/${r.entregasDia}` : vazio}
+                                  </Td>
                                   <Td center mono>
                                     {gps && r.baixasComCoord > 0 ? (
                                       <span
@@ -1418,7 +1427,7 @@ export default function RelatorioEntregas() {
                                 {aberta && (
                                   <tr>
                                     <td
-                                      colSpan={16}
+                                      colSpan={17}
                                       className="bg-slate-50/60 dark:bg-slate-800/30 px-6 py-3 border-b border-slate-100 dark:border-slate-700/40"
                                     >
                                       {gps ? (

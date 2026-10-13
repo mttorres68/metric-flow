@@ -41,6 +41,9 @@ const vezes = (x: number) => x.toFixed(1).replace(".", ",");
 const dist = (m: number) => (m >= 1000 ? `${vezes(m / 1000)} km` : `${Math.round(m)} m`);
 const ddmm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 const placaNorm = (p: string) => p.toUpperCase().replace(/[^A-Z0-9]/g, "");
+/** "às 10:00 e ficou 40 min parado": quanto tempo o caminhão ficou no ponto Y (parada longa = compatível com descarregar). */
+const quando = (ev: Evidencia) => !ev.paradaInicio ? ""
+  : `, às ${horaBRT(ev.paradaInicio)}${ev.paradaFim ? ` e ficou ${Math.round((ev.paradaFim.getTime() - ev.paradaInicio.getTime()) / 60000)} min parado` : ""}`;
 /** Pedido sem romaneio é um romaneio sozinho (não junta pedidos sem relação). */
 export const chaveRomaneio = (p: PedidoErp) => p.romaneio || `#${p.pedido}`;
 const JANELA_PERFIL = 100;
@@ -132,7 +135,7 @@ export function analisarPedidos(e: EntradaDesvio): Caso[] {
     const diaGps = ev?.dia ?? (rota ? diaBRT(rota.inicio) : null);
     const mudo = !!diaGps && mudos.has(`${placaNorm(rota?.placa ?? ev?.placa ?? p.placa)}|${diaGps}`);
     if (gps && gps.distParadaM !== null && gps.distParadaM > e.raioM && gps.distParadaM <= L.pertoM)
-      s("parouPerto", `A parada do caminhão mais perto do cliente ficou a ${dist(gps.distParadaM)} (raio ${e.raioM} m)${gps.paradaInicio ? `, às ${horaBRT(gps.paradaInicio)}` : ""}: parou perto, mas não no cliente`);
+      s("parouPerto", `A parada do caminhão mais perto do cliente ficou a ${dist(gps.distParadaM)} (raio ${e.raioM} m)${quando(gps)}: parou perto, mas não no cliente`);
     else if (mudo) s("semParada", "O rastreador do caminhão ficou sem sinal no dia da entrega");
     else if (gps && (gps.distParadaM === null || gps.distParadaM > L.pertoM)) s("semParada", `Nenhuma parada do caminhão a até ${dist(L.pertoM)} do cliente`);
     if (gps?.distAppM != null && gps.distAppM > e.raioM) s("appLonge", `O motorista registrou a entrega no app a ${dist(gps.distAppM)} do cliente`);

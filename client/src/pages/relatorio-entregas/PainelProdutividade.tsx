@@ -114,6 +114,7 @@ function LadoALado({ revendaId, rotas }: { revendaId: number; rotas: Rota[] }) {
     { rotulo: "Tempo para entregar tudo", valor: r => (r.semJornada ? null : r.jornadaMin), texto: r => (r.semJornada ? "—" : hm(r.jornadaMin)), menor: true },
     { rotulo: "Dias", valor: r => r.dias, texto: r => String(r.dias), menor: true },
     { rotulo: "% entregue", valor: r => r.entreguePct, texto: r => (r.entreguePct === null ? "—" : `${n(r.entreguePct)}%`) },
+    { rotulo: "Entregas no almoço", valor: () => null, texto: r => `${r.entregasAlmoco}/${r.entregues}` },
     { rotulo: "hL", valor: r => r.hl, texto: r => n(r.hl) },
     { rotulo: "km", valor: () => null, texto: r => (r.kmGps === null ? "—" : String(r.kmGps)) },
     { rotulo: "hL/km", valor: r => r.hlPorKm, texto: r => n(r.hlPorKm, 3) },
@@ -183,7 +184,8 @@ function TabelaRotas({ rotas, selecionadas, alternar, posicao }: { rotas: Rota[]
       <thead><tr>
         {alternar && <th className={th} />}{posicao && <th className={th}>#</th>}
         <th className={th}>Rota</th><th className={th}>Datas</th><th className={`${th} text-right`}>hL/h</th><th className={`${th} text-right`}>Entregas/h</th>
-        <th className={th}>Tempo para entregar tudo</th><th className={`${th} text-right`} title="Clientes que receberam a entrega / total da rota">Clientes</th><th className={`${th} text-right`}>% entregue</th>
+        <th className={th}>Tempo para entregar tudo</th><th className={`${th} text-right`} title="Clientes que receberam a entrega / total da rota">Clientes</th>
+        <th className={`${th} text-right`} title="Entregas com chegada ao cliente no intervalo de almoço (⚙ › Limites) / entregas da rota">Almoço</th><th className={`${th} text-right`}>% entregue</th>
         <th className={`${th} text-right`}>hL</th><th className={`${th} text-right`}>hL/km</th><th className={th}>Observações</th>
       </tr></thead>
       <tbody>
@@ -202,6 +204,7 @@ function TabelaRotas({ rotas, selecionadas, alternar, posicao }: { rotas: Rota[]
               <td className={`${td} text-right`}>{n(r.entregasPorHora, 2)}</td>
               <td className={`${td} whitespace-nowrap`}>{r.semJornada ? "—" : `${hm(r.jornadaMin)} · ${r.dias} dia${r.dias > 1 ? "s" : ""}`}</td>
               <td className={`${td} text-right`}>{r.entregues}/{r.clientes}</td>
+              <td className={`${td} text-right`}>{r.entregasAlmoco}/{r.entregues}</td>
               <td className={`${td} text-right`}>{r.entreguePct === null ? "—" : `${n(r.entreguePct)}%`}</td>
               <td className={`${td} text-right`}>{n(r.hl)}</td>
               <td className={`${td} text-right`}>{n(r.hlPorKm, 3)}</td>

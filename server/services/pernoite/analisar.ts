@@ -22,7 +22,7 @@ export interface EntradaNoite {
 }
 export type Classificacao = "na_malicia" | "evitavel" | "normal" | "na_base" | "sem_parada" | "sem_sinal";
 export interface Sinal { ok: boolean; [k: string]: unknown }
-type ChaveSinal = "foraDaSede" | "perto" | "davaParaChegar" | "voltou" | "finalLento" | "parouCedo" | "ociosidade" | "paraTras";
+type ChaveSinal = "foraDaSede" | "perto" | "davaParaChegar" | "voltou" | "finalLento" | "parouCedo" | "ociosidade" | "paraTras" | "rotaConcluida";
 export interface Noite {
   dia: string; placa: string; motorista: string;
   lat: number | null; lon: number | null; endereco: string | null; cidade: string | null; distSedeKm: number | null;
@@ -36,7 +36,7 @@ const proximoDia = (d: string) => new Date(Date.parse(`${d}T12:00:00Z`) + DIA_MS
 const as = (dia: string, hm: string) => new Date(`${dia}T${hm}:00-03:00`);
 const mediana = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : 0; };
 const NAO = (motivo: string): Sinal => ({ ok: false, motivo });
-const todos = (motivo: string) => Object.fromEntries((["foraDaSede", "perto", "davaParaChegar", "voltou", "finalLento", "parouCedo", "ociosidade", "paraTras"] as ChaveSinal[])
+const todos = (motivo: string) => Object.fromEntries((["foraDaSede", "perto", "davaParaChegar", "voltou", "finalLento", "parouCedo", "ociosidade", "paraTras", "rotaConcluida"] as ChaveSinal[])
   .map(k => [k, NAO(motivo)])) as Record<ChaveSinal, Sinal>;
 
 /** Noite sem onde dormiu: rodando às 02:00 (sem_parada) ou rastreador sem nenhuma posição (sem_sinal). */
@@ -127,5 +127,8 @@ export function analisarNoite(e: EntradaNoite): Noite {
     : NAO("sem entrega no dia");
 
   const galo = [finalLento, parouCedo, ociosidade, paraTras].filter(s => s.ok).length;
-  return { ...r, classificacao, galo, sinais: { foraDaSede, perto, davaParaChegar, voltou, finalLento, parouCedo, ociosidade, paraTras } };
+  // O caso mais claro de pernoite evitável: todas as entregas da rota já feitas — só faltava voltar.
+  const rotaConcluida: Sinal = classificacao === "na_malicia" || classificacao === "evitavel"
+    ? { ok: e.pendentes.length === 0, pendentes: e.pendentes.length } : NAO("pernoite não evitável");
+  return { ...r, classificacao, galo, sinais: { foraDaSede, perto, davaParaChegar, voltou, finalLento, parouCedo, ociosidade, paraTras, rotaConcluida } };
 }

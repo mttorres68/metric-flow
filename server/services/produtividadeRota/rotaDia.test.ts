@@ -7,7 +7,7 @@ const brt = (s: string) => new Date(`${s}:00-03:00`);
 const dia = (o: Partial<RotaDia>): RotaDia => ({
   routeId: "R1", dia: "2026-10-05", placa: "SOL-6B13", motorista: "ANA", saida: brt("2026-10-05T06:00"), retorno: brt("2026-10-05T16:00"),
   jornadaMin: 600, rodandoMin: 240, emClienteMin: 300, paradoSemClienteMin: 60, idaMin: 60, voltaMin: 50,
-  entregas: 20, aEntregar: 40, totalRota: 40, hl: 30, hlPorHora: 3, devPct: 2, kmGps: 150, semGps: null, parcial: false, incompleto: false,
+  entregas: 20, entregasAlmoco: 4, aEntregar: 40, totalRota: 40, hl: 30, hlPorHora: 3, devPct: 2, kmGps: 150, semGps: null, parcial: false, incompleto: false,
   rotaInicio: brt("2026-10-05T05:50"), rotaFim: brt("2026-10-06T15:00"), ...o,
 });
 
@@ -16,12 +16,12 @@ describe("rotaDiaDe", () => {
     const l = {
       linha: { routeId: "R1", data: "2026-10-05", placa: "SOL-6B13", motorista: "ANA" },
       saida: brt("2026-10-05T06:00"), retorno: null, gpsClientes: { primeiraChegada: null, ultimaSaida: brt("2026-10-05T15:30") },
-      tempo: null, ida: { min: 55, km: 30 }, volta: null, entregasDia: 18, aEntregar: 40, totalRota: 40, kmGps: 120, semGps: null,
+      tempo: null, ida: { min: 55, km: 30 }, volta: null, entregasDia: 18, almoco: 3, aEntregar: 40, totalRota: 40, kmGps: 120, semGps: null,
       produtividade: { hl: 27.5, hlPorHora: 2.895, devPct: 1.5, parcial: true, incompleto: false },
     } as unknown as LinhaProcessada;
     const e = { rotaInicio: brt("2026-10-05T05:50"), rotaFim: null } as Entrega;
     expect(rotaDiaDe(l, [e])).toMatchObject({
-      routeId: "R1", dia: "2026-10-05", jornadaMin: 570, rodandoMin: null, idaMin: 55, voltaMin: null, entregas: 18, hl: 27.5,
+      routeId: "R1", dia: "2026-10-05", jornadaMin: 570, rodandoMin: null, idaMin: 55, voltaMin: null, entregas: 18, entregasAlmoco: 3, hl: 27.5,
       hlPorHora: 2.895, parcial: true, rotaInicio: brt("2026-10-05T05:50"), rotaFim: null,
     });
   });
@@ -36,7 +36,7 @@ describe("agregarRotas", () => {
         hlPorHora: null, hl: 10, entregas: 10, semGps: "sem sinal GPS", kmGps: null }),
     ]).rotas[0];
     expect(r.hlPorHora).toBeCloseTo(32 / 12, 3);            // não (3 + 1) / 2
-    expect(r).toMatchObject({ dias: 3, hl: 42, entregues: 35, clientes: 40, entreguePct: 87.5, jornadaMin: 720, diasSemGps: 1, emAndamento: false });
+    expect(r).toMatchObject({ dias: 3, hl: 42, entregues: 35, entregasAlmoco: 12, clientes: 40, entreguePct: 87.5, jornadaMin: 720, diasSemGps: 1, emAndamento: false });
     expect(r.entregasPorHora).toBeCloseTo(25 / 12, 3);
     expect(r.hlPorKm).toBeCloseTo(32 / 300, 3);
   });

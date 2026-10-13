@@ -29,6 +29,7 @@ describe("analisarPedidos", () => {
     expect(c.sinais.map(s => s.chave)).toEqual(["avistaAtipico", "valorAlto", "motoristaAbertos", "romaneioAberto", "parouPerto"]);
     expect(c).toMatchObject({ nota: 100, faixa: "alta", saida: "2026-10-07", diasAberto: 5, motorista: "ISRAEL", semGps: false });
     expect(c.sinais[0].texto).toMatch(/0% dos 10 pedidos/);
+    expect(c.sinais.find(s => s.chave === "parouPerto")!.texto).toMatch(/às 10:00 e ficou 40 min parado/);
   });
   it("perfil só com pedidos anteriores: o primeiro pedido à vista do cliente é 'sem histórico'", () => {
     const casos = analisarPedidos(base({ pedidos: [ped({ pedido: "Z", dataPedido: "2026-06-01", tipoCobranca: "1" }), ...historico] }));

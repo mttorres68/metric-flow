@@ -9,7 +9,7 @@ import { trpc } from "@/lib/trpc";
 import { CONFIG_ENTREGAS_PADRAO, diaBRT, type ConfigEntregas } from "@shared/entregas";
 import { ContasEntregas } from "./ContasEntregas";
 
-type ChaveNum = Exclude<keyof ConfigEntregas, "saidaMinima" | "pernoiteChegarAte" | "pernoiteParouCedo">;
+type ChaveNum = Exclude<keyof ConfigEntregas, "saidaMinima" | "pernoiteChegarAte" | "pernoiteParouCedo" | "almocoDe" | "almocoAte">;
 interface Campo { chave: ChaveNum; rotulo: string; un: string; min: number; max: number; step: number; inteiro: boolean; ajuda: string }
 
 /** Limites iguais aos do zod em configRouter.saveEntregasConfig. */
@@ -42,7 +42,9 @@ const GRUPOS: { titulo: string; campos: Campo[] }[] = [
   ] },
 ];
 
-const HORAS: { chave: "pernoiteChegarAte" | "pernoiteParouCedo"; rotulo: string; ajuda: string }[] = [
+const HORAS: { chave: "almocoDe" | "almocoAte" | "pernoiteChegarAte" | "pernoiteParouCedo"; rotulo: string; ajuda: string }[] = [
+  { chave: "almocoDe", rotulo: "Almoço de", ajuda: "Entregas com chegada ao cliente no intervalo de almoço aparecem na coluna \"Almoço\" (informativo)…" },
+  { chave: "almocoAte", rotulo: "Almoço até", ajuda: "…até este horário (inclusive)." },
   { chave: "pernoiteChegarAte", rotulo: "Dava para chegar na Sede até", ajuda: "…quando, saindo do último cliente, chegaria na Sede até este horário." },
   { chave: "pernoiteParouCedo", rotulo: "Parou cedo: antes de", ajuda: "Cozinhando o galo: parou de vez (para dormir) antes deste horário." },
 ];
@@ -181,7 +183,7 @@ export function ConfigEntregasModal({ open, onClose, onSalvo, abaInicial = "limi
                 </label>
               </section>
               <section className="flex flex-col gap-3">
-                <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Pernoite · horários</h3>
+                <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Horários · almoço e pernoite</h3>
                 {HORAS.map(h => (
                   <label key={h.chave} className="flex flex-col gap-1">
                     <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{h.rotulo}</span>

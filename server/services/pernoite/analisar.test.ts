@@ -96,4 +96,13 @@ describe("analisarNoite", () => {
     expect(n.sinais.perto).toEqual({ ok: false, motivo: "dormiu na Sede" });
     expect(n.sinais.parouCedo).toEqual({ ok: false, motivo: "dormiu na Sede" });
   });
+  it("rota concluída: nada pendente ao parar para dormir — só faltava voltar", () => {
+    expect(analisarNoite(base()).sinais.rotaConcluida).toMatchObject({ ok: true });
+    const comPendente = analisarNoite(base({ pendentes: [{ lat: -7.5, lon: -43.02, codCliente: "9", cliente: "P" }] as never }));
+    expect(comPendente.sinais.rotaConcluida).toMatchObject({ ok: false, pendentes: 1 });
+    const longe = analisarNoite(base({ paradas: [parada(-6.77 - 0.7, "2026-10-05T15:40", "2026-10-06T05:30")] }));
+    expect(longe.classificacao).toBe("normal");
+    expect(longe.sinais.rotaConcluida.ok).toBe(false); // só vale para na malícia / evitável
+  });
 });
+

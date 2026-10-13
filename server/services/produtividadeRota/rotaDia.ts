@@ -8,13 +8,13 @@ import type { Entrega } from "../entregas/parseCheckNow";
 export interface RotaDia {
   routeId: string; dia: string; placa: string; motorista: string; saida: Date | null; retorno: Date | null;
   jornadaMin: number | null; rodandoMin: number | null; emClienteMin: number | null; paradoSemClienteMin: number | null;
-  idaMin: number | null; voltaMin: number | null; entregas: number; aEntregar: number; totalRota: number;
+  idaMin: number | null; voltaMin: number | null; entregas: number; entregasAlmoco: number; aEntregar: number; totalRota: number;
   hl: number; hlPorHora: number | null; devPct: number | null; kmGps: number | null; semGps: string | null;
   parcial: boolean; incompleto: boolean; rotaInicio: Date; rotaFim: Date | null;
 }
 export interface RotaRanking {
   routeId: string; placa: string; motorista: string; inicio: Date; fim: Date | null; dias: number; emAndamento: boolean;
-  clientes: number; entregues: number; entreguePct: number | null; hl: number; hlPorHora: number | null; entregasPorHora: number | null;
+  clientes: number; entregues: number; entregasAlmoco: number; entreguePct: number | null; hl: number; hlPorHora: number | null; entregasPorHora: number | null;
   jornadaMin: number; rodandoMin: number; emClienteMin: number; paradoSemClienteMin: number;
   kmGps: number | null; hlPorKm: number | null; kmPorEntrega: number | null; idaMedia: number | null; voltaMedia: number | null;
   diasSemGps: number; incompleto: boolean; semJornada: boolean;
@@ -36,7 +36,7 @@ export function rotaDiaDe(l: LinhaProcessada, entregasDaRota: Entrega[]): RotaDi
     jornadaMin: l.saida && fim ? Math.round((fim.getTime() - l.saida.getTime()) / 60000) : null,
     rodandoMin: l.tempo?.rodandoMin ?? null, emClienteMin: l.tempo?.emClienteMin ?? null, paradoSemClienteMin: l.tempo?.paradoSemClienteMin ?? null,
     idaMin: l.ida?.min ?? null, voltaMin: l.volta?.min ?? null,
-    entregas: l.entregasDia, aEntregar: l.aEntregar, totalRota: l.totalRota,
+    entregas: l.entregasDia, entregasAlmoco: l.almoco, aEntregar: l.aEntregar, totalRota: l.totalRota,
     hl: l.produtividade.hl, hlPorHora: l.produtividade.hlPorHora, devPct: l.produtividade.devPct, kmGps: l.kmGps,
     semGps: l.semGps?.slice(0, 80) ?? null, // coluna varchar(80)
     parcial: l.produtividade.parcial, incompleto: l.produtividade.incompleto,
@@ -54,7 +54,7 @@ function rota(ds: RotaDia[]): RotaRanking {
   const fim = ds.find(d => d.rotaFim)?.rotaFim ?? null;
   return {
     routeId: ds[0].routeId, placa: ds[0].placa, motorista: ds.at(-1)!.motorista, inicio: ds[0].rotaInicio, fim, dias: new Set(ds.map(d => d.dia)).size,
-    emAndamento: !fim, clientes, entregues, entreguePct: clientes ? Math.round((entregues / clientes) * 1000) / 10 : null,
+    emAndamento: !fim, clientes, entregues, entregasAlmoco: soma(ds.map(d => d.entregasAlmoco)), entreguePct: clientes ? Math.round((entregues / clientes) * 1000) / 10 : null,
     hl: r3(soma(ds.map(d => d.hl))),
     hlPorHora: horasHl > 0 ? r3(soma(comHl.map(d => d.hl)) / horasHl) : null,
     entregasPorHora: horas > 0 ? r3(soma(comJornada.map(d => d.entregas)) / horas) : null,

@@ -10,6 +10,8 @@ export const LIMITES = {
   paradaSemClienteMin: 10,
   saidaAte: "08:00",
   saidaMinima: "04:00", // movimento que termina antes disso não é saída (madrugada fora da base)
+  almocoDe: "12:00", // intervalo de almoço: entregas com chegada ao cliente neste horário (informativo)
+  almocoAte: "13:45",
   pernoiteMaxKm: 80, // pernoite "na malícia": dormiu até esta distância da Sede (estrada estimada)…
   pernoiteChegarAte: "21:00", // …quando dava para chegar na Sede até este horário…
   pernoiteFatorEstrada: 1.3, // linha reta × fator = distância pela estrada (estimada)
@@ -50,6 +52,8 @@ export interface ConfigEntregas {
   lentoMinMin: number;
   lentoMaxKmh: number;
   saidaMinima: string; // "hh:mm" BRT
+  almocoDe: string; // "hh:mm"
+  almocoAte: string; // "hh:mm"
   pernoiteMaxKm: number;
   pernoiteChegarAte: string; // "hh:mm"
   pernoiteFatorEstrada: number;
@@ -64,6 +68,8 @@ export const CONFIG_ENTREGAS_PADRAO: ConfigEntregas = {
   lentoMinMin: LIMITES.lentoMinMin,
   lentoMaxKmh: LIMITES.lentoMaxKmh,
   saidaMinima: LIMITES.saidaMinima,
+  almocoDe: LIMITES.almocoDe,
+  almocoAte: LIMITES.almocoAte,
   pernoiteMaxKm: LIMITES.pernoiteMaxKm,
   pernoiteChegarAte: LIMITES.pernoiteChegarAte,
   pernoiteFatorEstrada: LIMITES.pernoiteFatorEstrada,

@@ -354,6 +354,8 @@ export const entregasConfig = pgTable("entregas_config", {
   lentoMinMin: integer("lentoMinMin").notNull().default(20),         // trecho com mais que estes minutos…
   lentoMaxKmh: integer("lentoMaxKmh").notNull().default(15),         // …a menos que esta média = lento
   saidaMinima: varchar("saidaMinima", { length: 5 }).notNull().default("04:00"), // movimento antes disso não é saída
+  almocoDe: varchar("almocoDe", { length: 5 }).notNull().default("12:00"), // intervalo de almoço (informativo)
+  almocoAte: varchar("almocoAte", { length: 5 }).notNull().default("13:45"),
   pernoiteMaxKm:        doublePrecision("pernoiteMaxKm").notNull().default(80),
   pernoiteChegarAte:    varchar("pernoiteChegarAte", { length: 5 }).notNull().default("21:00"),
   pernoiteFatorEstrada: doublePrecision("pernoiteFatorEstrada").notNull().default(1.3),
@@ -599,6 +601,7 @@ export const rotasDia = pgTable("rotas_dia", {
   idaMin:              integer("idaMin"),
   voltaMin:            integer("voltaMin"),
   entregas:            integer("entregas").notNull().default(0),
+  entregasAlmoco:      integer("entregasAlmoco").notNull().default(0),
   aEntregar:           integer("aEntregar").notNull().default(0),
   totalRota:           integer("totalRota").notNull().default(0),
   hl:                  doublePrecision("hl").notNull().default(0),

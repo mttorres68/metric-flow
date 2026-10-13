@@ -339,6 +339,23 @@ describe("cruzar", () => {
     expect(r.apos14h).toBe(2);
   });
 
+  it("almoço: entregas com chegada ao cliente entre 12:00 e 13:45 (pelo GPS; borda inclusa)", () => {
+    // Cliente 1: chegou 11:50 (GPS), registrou 12:10 no app → fora. Cliente 2: chegou 13:45 → dentro. Cliente 3: 13:46 → fora.
+    const r = cruzar(linha(), [
+      entrega({ codCliente: "1", baixaEm: brt("2026-10-05T12:10") }),
+      entrega({ codCliente: "2", lat: -7.2, baixaEm: brt("2026-10-05T13:50") }),
+      entrega({ codCliente: "3", lat: -7.4, baixaEm: brt("2026-10-05T13:50") }),
+    ], gps([parada(-7, -43, "2026-10-05T11:50", 15), parada(-7.2, -43, "2026-10-05T13:45", 10), parada(-7.4, -43, "2026-10-05T13:46", 10)]));
+    expect(r.almoco).toBe(1);
+  });
+
+  it("almoço sem GPS: vale a hora do registro no app; limites do ⚙", () => {
+    const rota = [entrega({ codCliente: "1", baixaEm: brt("2026-10-05T12:30") }), entrega({ codCliente: "2", baixaEm: brt("2026-10-05T14:00") })];
+    expect(cruzar(linha(), rota, gps([], { erro: "sem rastreador" })).almoco).toBe(1);
+    expect(cruzar(linha(), rota, gps([], { erro: "sem rastreador" }), { almocoDe: "13:00", almocoAte: "14:00" }).almoco).toBe(1);
+    expect(cruzar(linha(), rota, gps([], { erro: "sem rastreador" }), { almocoDe: "12:00", almocoAte: "14:00" }).almoco).toBe(2);
+  });
+
   it("linha sem GPS: só KPIs do CheckNow, sem exceções", () => {
     const r = cruzar(linha(), [entrega()], gps([], { erro: "sem rastreador" }));
     expect(r).toMatchObject({ semGps: "sem rastreador", entregasDia: 1, noRaio: 0, saida: null, kmGps: null, baixas: [] });
