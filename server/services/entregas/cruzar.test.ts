@@ -327,6 +327,18 @@ describe("cruzar", () => {
     expect(cruzar(linha({ data: "2026-10-04" }), rota, gps([])).aEntregar).toBe(4);
   });
 
+  it("notas: entregues no dia e as que faltavam no início do dia (mesma regra dos clientes)", () => {
+    const rota = [
+      entrega({ codCliente: "1", notas: 3, baixaEm: brt("2026-10-04T10:00") }),                          // véspera
+      entrega({ codCliente: "2", notas: 2 }),                                                            // hoje
+      entrega({ codCliente: "3", notas: 4, baixaEm: brt("2026-10-05T11:00") }),                          // hoje
+      entrega({ codCliente: "4", notas: 1, situacao: "PROBLEMA", baixaEm: brt("2026-10-05T12:00") }),    // devolvida hoje
+      entrega({ codCliente: "5", notas: 5, situacao: "AGUARDANDO", baixaEm: null }),                     // ainda falta
+    ];
+    expect(cruzar(linha(), rota, gps([]))).toMatchObject({ notasDia: 6, notasAEntregar: 12 });
+    expect(cruzar(linha({ data: "2026-10-04" }), rota, gps([])).notasAEntregar).toBe(15);
+  });
+
   // Review Focus 5
   it("após 14h conta só ENTREGUE e inclui 14:00 exato", () => {
     const r = cruzar(linha(), [

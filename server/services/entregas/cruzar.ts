@@ -91,6 +91,8 @@ export interface ResultadoLinha {
   entregasDia: number;
   totalRota: number;
   aEntregar: number; // clientes que ainda faltavam no início do dia (sem baixa em dia anterior); no 1º dia = totalRota
+  notasDia: number; // notas (documentos) dos clientes entregues no dia
+  notasAEntregar: number; // notas dos clientes que ainda faltavam no início do dia
   apos14h: number;
   /** Entregas com chegada ao cliente no intervalo de almoço do ⚙ (GPS; sem parada no raio, a hora do app). Informativo. */
   almoco: number;
@@ -261,6 +263,7 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
   const baixasDia = entregasRota.filter(e =>
     e.situacao !== "AGUARDANDO" && e.baixaEm !== null && diaBRT(e.baixaEm) === linha.data);
   const entregues = baixasDia.filter(e => e.situacao === "ENTREGUE");
+  const faltavam = entregasRota.filter(e => !(e.situacao !== "AGUARDANDO" && e.baixaEm && diaBRT(e.baixaEm) < linha.data));
   const noAlmoco = (d: Date) => { const h = horaBRT(d); return h >= cfg.almocoDe && h <= cfg.almocoAte; };
 
   const r: ResultadoLinha = {
@@ -272,7 +275,9 @@ export function cruzar(linha: LinhaDia, entregasRota: Entrega[], gps: GpsLinha, 
     retorno: null,
     entregasDia: entregues.length,
     totalRota: entregasRota.length,
-    aEntregar: entregasRota.filter(e => !(e.situacao !== "AGUARDANDO" && e.baixaEm && diaBRT(e.baixaEm) < linha.data)).length,
+    aEntregar: faltavam.length,
+    notasDia: entregues.reduce((s, e) => s + e.notas, 0),
+    notasAEntregar: faltavam.reduce((s, e) => s + e.notas, 0),
     apos14h: entregues.filter(e => horaBRT(e.baixaEm!) >= LIMITES.apos14h).length,
     almoco: entregues.filter(e => noAlmoco(e.baixaEm!)).length,
     baixasComCoord: 0,

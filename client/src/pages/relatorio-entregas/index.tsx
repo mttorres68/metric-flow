@@ -1071,7 +1071,7 @@ export default function RelatorioEntregas() {
                             </Th>
                             <Th
                               center
-                              title="Entregues no dia / clientes que ainda faltavam no início do dia (no 1º dia da rota, o total)"
+                              title="Clientes e notas entregues no dia / que ainda faltavam no início do dia (no 1º dia da rota, o total)"
                             >
                               Entregas
                             </Th>
@@ -1285,7 +1285,14 @@ export default function RelatorioEntregas() {
                                     )}
                                   </Td>
                                   <Td center mono className={neutro}>
-                                    {r.entregasDia}/{r.aEntregar}
+                                    <div className="whitespace-nowrap">
+                                      {r.entregasDia}/{r.aEntregar}{" "}
+                                      <span className="text-slate-400 font-normal">clientes</span>
+                                    </div>
+                                    <div className="whitespace-nowrap text-slate-500 dark:text-slate-400">
+                                      {r.notasDia}/{r.notasAEntregar}{" "}
+                                      <span className="text-slate-400 font-normal">notas</span>
+                                    </div>
                                   </Td>
                                   <Td center mono>
                                     {r.entregasDia > 0 ? (
