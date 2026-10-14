@@ -11,6 +11,7 @@ import type { AppRouter } from "../../../../server/routers";
 import { trpc } from "@/lib/trpc";
 import { useTheme } from "@/contexts/ThemeContext";
 import { diaBRT } from "@shared/entregas";
+import { SeletorIntervalo } from "@/components/SeletorDatas";
 
 type Ranking = inferRouterOutputs<AppRouter>["produtividade"]["ranking"];
 type Rota = Ranking["rotas"][number];
@@ -220,11 +221,11 @@ function TabelaRotas({ rotas, selecionadas, alternar, posicao }: { rotas: Rota[]
 }
 
 export function PainelProdutividade({ revendaId }: { revendaId: number }) {
-  const [dias, setDias] = useState(14);
-  const [selecionadas, setSelecionadas] = useState<string[]>([]);
   const hoje = diaBRT(new Date());
-  const de = somaDias(hoje, -(dias - 1));
-  const q = trpc.produtividade.ranking.useQuery({ revendaId, de, ate: hoje });
+  const [de, setDe] = useState(() => somaDias(hoje, -13));
+  const [ate, setAte] = useState(hoje);
+  const [selecionadas, setSelecionadas] = useState<string[]>([]);
+  const q = trpc.produtividade.ranking.useQuery({ revendaId, de, ate });
   const nomes = useMemo(() => new Map([...(q.data?.rotas ?? []), ...(q.data?.emAndamento ?? [])].map(r => [r.routeId, nomeGrafico(r)])), [q.data]);
   const alternar = (id: string) => setSelecionadas(s => (s.includes(id) ? s.filter(x => x !== id) : s.length < MAX_SEL ? [...s, id] : s));
 
@@ -243,13 +244,8 @@ export function PainelProdutividade({ revendaId }: { revendaId: number }) {
   return (
     <div className="px-6 py-4 flex flex-col gap-4">
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-600 p-0.5 bg-white dark:bg-[var(--card)]">
-          {[7, 14, 30].map(d => (
-            <button key={d} onClick={() => { setDias(d); setSelecionadas([]); }}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold ${dias === d ? "bg-indigo-500 text-white" : "text-slate-500 dark:text-slate-400"}`}>{d} dias</button>
-          ))}
-        </div>
-        <span className="text-xs text-slate-500 dark:text-slate-400">Rotas que começaram de {ddmm(de)} a {ddmm(hoje)} · hL/h = hL entregue ÷ horas da saída ao retorno</span>
+        <SeletorIntervalo rotulo="Rotas que começaram no período" de={de} ate={ate} maxDias={366} onChange={(d, a) => { setDe(d); setAte(a); setSelecionadas([]); }} />
+        <span className="text-xs text-slate-500 dark:text-slate-400">Rotas que começaram no período · hL/h = hL entregue ÷ horas da saída ao retorno</span>
       </div>
 
       {!todas.length ? (
@@ -292,7 +288,7 @@ export function PainelProdutividade({ revendaId }: { revendaId: number }) {
               <div className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300">
                 Entregas realizadas por dia{selecionadas.length ? " · rotas marcadas" : " · todas as rotas"}
               </div>
-              <EntregasPorDia revendaId={revendaId} de={de} ate={hoje} selecionadas={selecionadas} nomes={nomes} />
+              <EntregasPorDia revendaId={revendaId} de={de} ate={ate} selecionadas={selecionadas} nomes={nomes} />
             </div>
           </div>
         </>

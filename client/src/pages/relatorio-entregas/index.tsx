@@ -17,6 +17,7 @@ import { PainelDiaNew } from "./PainelDiaNew";
 import { PainelPernoite } from "./PainelPernoite";
 import { PainelDesvio } from "./PainelDesvio";
 import { PainelProdutividade } from "./PainelProdutividade";
+import { SeletorDia, SeletorIntervalo } from "@/components/SeletorDatas";
 import {
   Popover,
   PopoverContent,
@@ -664,31 +665,15 @@ export default function RelatorioEntregas() {
                     </option>
                   ))}
                 </select>
-                <input
-                  type="date"
-                  value={periodo.de}
-                  max={periodo.ate}
-                  aria-label="Buscar do CheckNow de"
-                  title="Período para buscar do CheckNow (não muda o dia visto)"
-                  onChange={e => {
-                    const v = e.target.value;
-                    if (v) setPeriodo(p => ({ ...p, de: v }));
-                  }}
-                  className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-transparent text-slate-700 dark:text-slate-200"
-                />
-                <input
-                  type="date"
-                  value={periodo.ate}
-                  min={periodo.de}
-                  max={hoje}
-                  aria-label="Buscar do CheckNow até"
-                  title="Período para buscar do CheckNow (não muda o dia visto)"
-                  onChange={e => {
-                    const v = e.target.value;
-                    if (v) setPeriodo(p => ({ ...p, ate: v }));
-                  }}
-                  className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-transparent text-slate-700 dark:text-slate-200"
-                />
+                <span title="Período para buscar do CheckNow (não muda o dia visto)">
+                  <SeletorIntervalo
+                    rotulo="Período para buscar do CheckNow"
+                    de={periodo.de}
+                    ate={periodo.ate}
+                    maxDias={31}
+                    onChange={(de, ate) => setPeriodo({ de, ate })}
+                  />
+                </span>
                 <button
                   onClick={() =>
                     coletar.mutate({ revendaId: revenda.revendaId, ...periodo })
@@ -824,16 +809,12 @@ export default function RelatorioEntregas() {
                 >
                   <ChevronLeft size={16} />
                 </button>
-                <input
-                  type="date"
-                  value={dia}
+                <SeletorDia
+                  rotulo="Dia visto"
+                  valor={dia}
                   max={hoje}
-                  aria-label="Dia visto"
                   disabled={processar.isPending}
-                  onChange={e => {
-                    if (e.target.value) setDia(e.target.value);
-                  }}
-                  className="text-xs font-semibold bg-transparent border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-200"
+                  onChange={setDia}
                 />
                 <button
                   aria-label="Próximo dia"

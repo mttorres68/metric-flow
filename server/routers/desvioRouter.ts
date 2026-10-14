@@ -1,12 +1,12 @@
 /* MetricFlow — API do detector de desvio de carga (aba "Desvio" do Relatório de Entregas). Spec desvio §8. */
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
+import { periodoAte } from "./periodo";
 import * as servico from "../services/desvio/servico";
 
-const dia = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const revenda = z.object({ revendaId: z.number().int() });
-const periodo = z.object({ revendaId: z.number().int(), de: dia, ate: dia })
-  .refine(p => p.de <= p.ate && Date.parse(p.ate) - Date.parse(p.de) <= 30 * 86_400_000, "Período de no máximo 31 dias.");
+// Ver é só leitura do banco: até 1 ano por consulta.
+const periodo = periodoAte(366);
 const pedido = z.string().min(1).max(20);
 
 export const desvioRouter = router({

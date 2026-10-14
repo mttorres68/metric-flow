@@ -11,6 +11,7 @@ import type { AppRouter } from "../../../../server/routers";
 import { trpc } from "@/lib/trpc";
 import { diaBRT } from "@shared/entregas";
 import { MapaEntrega } from "./MapaEntrega";
+import { SeletorIntervalo } from "@/components/SeletorDatas";
 
 type CasoTela = inferRouterOutputs<AppRouter>["desvio"]["fila"][number];
 type Situacao = "ok" | "suspeito" | "investigando";
@@ -175,10 +176,11 @@ function TabelaCasos({ casos, revendaId, raioM, motivos }: { casos: CasoTela[]; 
 }
 
 export function PainelDesvio({ revendaId, raioM }: { revendaId: number; raioM: number }) {
-  const [dias, setDias] = useState(14);
-  const [incluirRevisados, setIncluirRevisados] = useState(false);
   const hoje = diaBRT(new Date());
-  const periodo = { revendaId, de: somaDias(hoje, -(dias - 1)), ate: hoje };
+  const [de, setDe] = useState(() => somaDias(hoje, -13));
+  const [ate, setAte] = useState(hoje);
+  const [incluirRevisados, setIncluirRevisados] = useState(false);
+  const periodo = { revendaId, de, ate };
   const filaQ = trpc.desvio.fila.useQuery({ ...periodo, incluirRevisados });
   const abertosQ = trpc.desvio.abertos.useQuery({ revendaId });
   const motoristasQ = trpc.desvio.motoristas.useQuery(periodo);
@@ -201,12 +203,7 @@ export function PainelDesvio({ revendaId, raioM }: { revendaId: number; raioM: n
   return (
     <div className="px-6 py-4 flex flex-col gap-4">
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-600 p-0.5 bg-white dark:bg-[var(--card)]">
-          {[7, 14, 30].map(d => (
-            <button key={d} onClick={() => setDias(d)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold ${dias === d ? "bg-indigo-500 text-white" : "text-slate-500 dark:text-slate-400"}`}>{d} dias</button>
-          ))}
-        </div>
+        <SeletorIntervalo rotulo="Período dos pedidos" de={de} ate={ate} maxDias={366} onChange={(d, a) => { setDe(d); setAte(a); }} />
         <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"><AlertTriangle size={12} /> Sinais para conferir — a nota não é prova.</span>
       </div>
 
