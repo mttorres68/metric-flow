@@ -203,6 +203,27 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
   const resumoQ = trpc.pernoite.resumo.useQuery(periodo, { enabled: intervaloOk });
   const sedeQ = trpc.pernoite.sede.useQuery({ revendaId }, { staleTime: Infinity });
   const cfg = trpc.config.getEntregasConfig.useQuery().data ?? CONFIG_ENTREGAS_PADRAO;
+  // "Analisar este intervalo": processa as noites das datas escolhidas (em segundo plano no servidor), com o andamento.
+  const statusQ = trpc.pernoite.status.useQuery({ revendaId }, { refetchInterval: q => (q.state.data?.rodando ? 3000 : false) });
+  const analisando = !!statusQ.data?.rodando;
+  const analisar = trpc.pernoite.reprocessar.useMutation({ onSuccess: () => statusQ.refetch(), onError: e => toast.error(e.message) });
+  const [acompanhando, setAcompanhando] = useState(false);
+  React.useEffect(() => {
+    if (!acompanhando || analisando || !statusQ.data?.total) return;
+    setAcompanhando(false);
+    utils.pernoite.listar.invalidate(); utils.pernoite.resumo.invalidate();
+    const s = statusQ.data;
+    if (s.erros) toast.error(`${s.erros} dia(s) com erro: ${s.ultimoErro}`); else toast.success(`${s.total} dia(s) analisados.`);
+  }, [acompanhando, analisando, statusQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const botaoAnalisar = (
+    <button type="button" disabled={!intervaloOk || analisando || analisar.isPending}
+      onClick={() => { setAcompanhando(true); analisar.mutate({ revendaId, de, ate }); }}
+      title="Analisa no GPS as noites de cada dia do intervalo escolhido e grava o resultado (leva alguns segundos por dia)"
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-500 hover:bg-indigo-600 text-white disabled:opacity-50">
+      {analisando || analisar.isPending ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+      {analisando ? `Analisando ${statusQ.data!.feitos} de ${statusQ.data!.total} dias…` : "Analisar este intervalo"}
+    </button>
+  );
   const recalcular = trpc.pernoite.recalcular.useMutation({
     onSuccess: () => { utils.pernoite.listar.invalidate(); utils.pernoite.resumo.invalidate(); toast.success("Noite recalculada."); },
     onError: e => toast.error(e.message),
@@ -281,11 +302,15 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
           ? <span className="text-xs text-slate-500 dark:text-slate-400">{diasNoIntervalo} noite(s) · <b className="text-slate-700 dark:text-slate-200">"na malícia"</b> = fora da Sede, até {cfg.pernoiteMaxKm} km, dava para chegar até {cfg.pernoiteChegarAte} e voltou de manhã</span>
           : <span className="text-xs font-semibold text-red-600">{de > ate ? "A data inicial é depois da final." : `Escolha um intervalo de até ${MAX_DIAS} dias (agora são ${diasNoIntervalo}).`}</span>}
         {!sedeQ.isLoading && !sedeQ.data && <span className="text-xs font-semibold text-red-600">Cerca "Sede" não encontrada no Infleet desta revenda.</span>}
+        <div className="ml-auto">{botaoAnalisar}</div>
       </div>
 
       {!noites.length ? (
         <div className="flex items-center justify-center p-12 rounded-xl border-2 border-dashed border-slate-200 dark:border-[var(--border)] text-sm text-slate-500 dark:text-slate-400">
-          Nenhuma noite analisada no período. Reprocesse no ⚙ › Limites › Pernoite.
+          <span className="flex flex-col items-center gap-3">
+            Nenhuma noite analisada no período.
+            {intervaloOk && botaoAnalisar}
+          </span>
         </div>
       ) : (
         <>
