@@ -347,6 +347,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
               <thead><tr className="bg-slate-100/80 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
                 <th className={th}>Data</th><th className={th}>Caminhão</th><th className={th}>Motorista</th><th className={th}>Onde dormiu</th>
                 <th className={th}>Da Sede</th><th className={th} title="Saída do último cliente → parou para dormir → saiu de manhã">Último cliente → parou → saiu</th>
+                <th className={th} title="Clientes da rota ainda pendentes a até 20 km do último atendido quando parou para dormir">Para trás</th>
                 <th className={th}>Pernoite</th><th className={th}>Sinais</th>
               </tr></thead>
               <tbody>
@@ -379,6 +380,11 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                             ? <span className="inline-flex items-center gap-1 text-slate-400" title="Ainda parado às 12:00 do dia seguinte (fim da análise): não saiu de manhã"><Truck size={11} />12:00+</span>
                             : <span className="inline-flex items-center gap-1" title="Saiu de manhã"><Truck size={11} className="text-slate-400" />{hora(n.saidaManha)}</span>}
                         </td>
+                        <td className={`${td} text-center`}>
+                          {typeof s.paraTras?.clientes === "number"
+                            ? <Contagem valor={s.paraTras.clientes} tom="orange" />
+                            : <span className={`text-xs ${APAGADO}`}>—</span>}
+                        </td>
                         <td className={td}><span className={`px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${c.chip}`}>{c.texto}</span></td>
                         <td className={td}>
                           <div className="flex flex-wrap gap-1">
@@ -389,7 +395,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                         </td>
                       </tr>
                       {aberta === n.id && (
-                        <tr><td colSpan={8} className={`border-l-4 ${c.faixa}`}>
+                        <tr><td colSpan={9} className={`border-l-4 ${c.faixa}`}>
                           <Detalhe n={n} sede={sede} recalculando={recalcular.isPending}
                             onRecalcular={() => recalcular.mutate({ revendaId, dia: n.dia })} />
                         </td></tr>
