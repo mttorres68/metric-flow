@@ -46,6 +46,7 @@ const APAGADO = "text-slate-300 dark:text-slate-600";
 
 const DIA_MS = 86_400_000;
 const SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const MAX_DIAS = 31; // limite da API por consulta
 const somaDias = (d: string, n: number) => new Date(Date.parse(`${d}T12:00:00Z`) + n * DIA_MS).toISOString().slice(0, 10);
 const fmtDia = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 const diaSemana = (d: string) => SEMANA[new Date(`${d}T12:00:00Z`).getUTCDay()];
@@ -189,12 +190,17 @@ function Filtro({ ativo, onClick, tom, children }: { ativo: boolean; onClick: ()
 }
 
 export function PainelPernoite({ revendaId }: { revendaId: number }) {
-  const [dias, setDias] = useState(30);
+  // Intervalo escolhido no calendário (de/até); 7, 14 e 30 dias são atalhos que terminam ontem.
   const ontem = somaDias(diaBRT(new Date()), -1);
-  const periodo = { revendaId, de: somaDias(ontem, -(dias - 1)), ate: ontem };
+  const [de, setDe] = useState(() => somaDias(ontem, -29));
+  const [ate, setAte] = useState(ontem);
+  const diasNoIntervalo = Math.round((Date.parse(ate) - Date.parse(de)) / DIA_MS) + 1;
+  const intervaloOk = !!de && !!ate && de <= ate && diasNoIntervalo <= MAX_DIAS;
+  const periodo = { revendaId, de, ate };
+  const atalho = (d: number) => { setDe(somaDias(ontem, -(d - 1))); setAte(ontem); };
   const utils = trpc.useUtils();
-  const noitesQ = trpc.pernoite.listar.useQuery(periodo);
-  const resumoQ = trpc.pernoite.resumo.useQuery(periodo);
+  const noitesQ = trpc.pernoite.listar.useQuery(periodo, { enabled: intervaloOk });
+  const resumoQ = trpc.pernoite.resumo.useQuery(periodo, { enabled: intervaloOk });
   const sedeQ = trpc.pernoite.sede.useQuery({ revendaId }, { staleTime: Infinity });
   const cfg = trpc.config.getEntregasConfig.useQuery().data ?? CONFIG_ENTREGAS_PADRAO;
   const recalcular = trpc.pernoite.recalcular.useMutation({
@@ -243,7 +249,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
   const th = "px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide whitespace-nowrap";
   const td = "px-3 py-2.5 text-xs";
 
-  if (noitesQ.isLoading) {
+  if (intervaloOk && noitesQ.isLoading) {
     return <div className="flex items-center justify-center h-40 text-slate-400 text-sm"><Loader2 size={16} className="animate-spin mr-2" /> Carregando as noites…</div>;
   }
 
@@ -251,16 +257,29 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
     <div className="px-6 py-4 flex flex-col gap-4">
       <div className="flex items-center gap-3 flex-wrap">
         <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-600 p-0.5 bg-white dark:bg-[var(--card)]">
-          {[7, 14, 30].map(d => (
-            <button key={d} type="button" aria-pressed={dias === d} onClick={() => setDias(d)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold ${dias === d ? "bg-indigo-500 text-white" : "text-slate-500 dark:text-slate-400"}`}>
-              {d} dias
-            </button>
-          ))}
+          {[7, 14, 30].map(d => {
+            const ativo = ate === ontem && diasNoIntervalo === d;
+            return (
+              <button key={d} type="button" aria-pressed={ativo} onClick={() => atalho(d)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold ${ativo ? "bg-indigo-500 text-white" : "text-slate-500 dark:text-slate-400"}`}>
+                {d} dias
+              </button>
+            );
+          })}
         </div>
-        <span className="text-xs text-slate-500 dark:text-slate-400">
-          {fmtDia(periodo.de)} a {fmtDia(periodo.ate)} · <b className="text-slate-700 dark:text-slate-200">"na malícia"</b> = fora da Sede, até {cfg.pernoiteMaxKm} km, dava para chegar até {cfg.pernoiteChegarAte} e voltou de manhã
-        </span>
+        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+          <label className="flex items-center gap-1.5">De
+            <input type="date" value={de} max={ate || ontem} onChange={e => e.target.value && setDe(e.target.value)} aria-label="Início do intervalo"
+              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-[var(--card)] text-xs font-semibold text-slate-700 dark:text-slate-200" />
+          </label>
+          <label className="flex items-center gap-1.5">até
+            <input type="date" value={ate} min={de} max={ontem} onChange={e => e.target.value && setAte(e.target.value)} aria-label="Fim do intervalo"
+              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-[var(--card)] text-xs font-semibold text-slate-700 dark:text-slate-200" />
+          </label>
+        </div>
+        {intervaloOk
+          ? <span className="text-xs text-slate-500 dark:text-slate-400">{diasNoIntervalo} noite(s) · <b className="text-slate-700 dark:text-slate-200">"na malícia"</b> = fora da Sede, até {cfg.pernoiteMaxKm} km, dava para chegar até {cfg.pernoiteChegarAte} e voltou de manhã</span>
+          : <span className="text-xs font-semibold text-red-600">{de > ate ? "A data inicial é depois da final." : `Escolha um intervalo de até ${MAX_DIAS} dias (agora são ${diasNoIntervalo}).`}</span>}
         {!sedeQ.isLoading && !sedeQ.data && <span className="text-xs font-semibold text-red-600">Cerca "Sede" não encontrada no Infleet desta revenda.</span>}
       </div>
 
