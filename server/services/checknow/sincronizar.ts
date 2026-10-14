@@ -4,7 +4,7 @@
  */
 import { parseCheckNow, type Entrega } from "../entregas/parseCheckNow";
 import { diaBRT } from "@shared/entregas";
-import { baixarCheckNow } from "./coletor";
+import { baixarCheckNow, LIMITE_EXCEDIDO } from "./coletor";
 import * as repo from "./repo";
 
 export type ResultadoColeta = { status: "ok" | "sem_dados"; rotas: number; linhas: number };
@@ -17,7 +17,8 @@ export async function comTentativas<T>(fn: () => Promise<T>, esperasMs: number[]
     try {
       return await fn();
     } catch (e) {
-      if (i >= esperasMs.length || (e as Error).message === "login recusado") throw e;
+      // Login recusado e limite de relatórios não melhoram repetindo — e cada tentativa gastaria mais cota.
+      if (i >= esperasMs.length || ["login recusado", LIMITE_EXCEDIDO].includes((e as Error).message)) throw e;
       await new Promise(r => setTimeout(r, esperasMs[i]));
     }
   }

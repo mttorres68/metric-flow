@@ -55,7 +55,11 @@ const naTelaDeLogin = (html: string) => /name="j_username"/.test(html);
 const dataBR = (iso: string, fim: boolean) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)} ${fim ? "23:59:59" : "00:00:00"}`;
 const somaDias = (iso: string, n: number) => new Date(Date.parse(`${iso}T12:00:00Z`) + n * DIA_MS).toISOString().slice(0, 10);
 
-export function blocosDeDias(de: string, ate: string, n = 7): { de: string; ate: string }[] {
+/** O portal limita a quantidade de relatórios por conta; estourada, redireciona para limite_excedido_rel.jsf. */
+export const LIMITE_EXCEDIDO = "o CheckNow limitou os relatórios desta conta (limite de requisições excedido); tente de novo mais tarde";
+
+/** Blocos de até 31 dias — o limite do próprio portal; menos exportações gastam menos da cota de relatórios. */
+export function blocosDeDias(de: string, ate: string, n = 31): { de: string; ate: string }[] {
   const out: { de: string; ate: string }[] = [];
   for (let d = de; d <= ate; d = somaDias(d, n)) {
     const fim = somaDias(d, n - 1);
@@ -90,7 +94,7 @@ export async function testarLogin(conta: { usuario: string; senha: string }, f: 
   return { filial: html.match(/\d+-[^<>]*?\([^()<>]+\)/)?.[0].trim() ?? "login ok" };
 }
 
-/** Um arquivo por bloco de até 7 dias (filtro do portal: data de início da rota). */
+/** Um arquivo por bloco de até 31 dias (filtro do portal: data de início da rota). */
 export async function baixarCheckNow(conta: { usuario: string; senha: string }, de: string, ate: string, f: typeof fetch = fetch): Promise<Buffer[]> {
   const s = new Sessao(f);
   let html = await entrar(s, conta);
@@ -108,7 +112,10 @@ export async function baixarCheckNow(conta: { usuario: string; senha: string }, 
     await ajax("tipoRelatorioId", "valueChange", { tipoRelatorioId: "11" });
     const { res } = await s.post(TELA, { ...datas, tipoRelatorioId: "11", commandLinkExporta: "commandLinkExporta", "javax.faces.ViewState": vs }, false);
     const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.subarray(0, 2).toString("latin1") !== "PK") throw new ColetaError("resposta não é Excel");
+    if (buf.subarray(0, 2).toString("latin1") !== "PK") {
+      if (/limite de requisi|limite_excedido/i.test(buf.toString("latin1"))) throw new ColetaError(LIMITE_EXCEDIDO);
+      throw new ColetaError("resposta não é Excel");
+    }
     arquivos.push(buf);
   }
   return arquivos;

@@ -8,7 +8,7 @@ vi.mock("./repo", async importOriginal => ({
   fecharColeta: vi.fn(),
   gravarEntregas: vi.fn(),
 }));
-vi.mock("./coletor", () => ({ baixarCheckNow: vi.fn() }));
+vi.mock("./coletor", async o => ({ ...(await o<typeof import("./coletor")>()), baixarCheckNow: vi.fn() }));
 vi.mock("../entregas/parseCheckNow", async importOriginal => ({
   ...(await importOriginal<typeof import("../entregas/parseCheckNow")>()),
   parseCheckNow: vi.fn(),
@@ -17,6 +17,7 @@ import * as repo from "./repo";
 import { baixarCheckNow } from "./coletor";
 import { parseCheckNow } from "../entregas/parseCheckNow";
 import { coletarRevenda, comTentativas, importarPlanilha } from "./sincronizar";
+import { LIMITE_EXCEDIDO } from "./coletor";
 
 const conta = { revendaId: 5, ativo: true, usuario: "u", senha: "s", infleetToken: null };
 beforeEach(() => {
@@ -30,6 +31,11 @@ describe("comTentativas", () => {
     const fn = vi.fn().mockRejectedValueOnce(new Error("502")).mockResolvedValue("ok");
     expect(await comTentativas(fn, [0, 0])).toBe("ok");
     expect(fn).toHaveBeenCalledTimes(2);
+  });
+  it("não repete limite de relatórios excedido (cada tentativa gastaria mais cota)", async () => {
+    const fn = vi.fn().mockRejectedValue(new repo.ColetaError(LIMITE_EXCEDIDO));
+    await expect(comTentativas(fn, [0, 0, 0])).rejects.toThrow(LIMITE_EXCEDIDO);
+    expect(fn).toHaveBeenCalledTimes(1);
   });
   it("não repete login recusado", async () => {
     const fn = vi.fn().mockRejectedValue(new repo.ColetaError("login recusado"));

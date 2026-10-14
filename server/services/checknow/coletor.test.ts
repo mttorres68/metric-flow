@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { baixarCheckNow, blocosDeDias, testarLogin } from "./coletor";
+import { LIMITE_EXCEDIDO, baixarCheckNow, blocosDeDias, testarLogin } from "./coletor";
 import { ColetaError } from "./repo";
 
 const conta = { usuario: "usuario-teste", senha: "senha-teste" };
@@ -26,8 +26,9 @@ function portal({ loginOk = true, tela = TELA_OK, arquivo = EXCEL as Buffer | st
 }
 
 describe("blocosDeDias", () => {
-  it("10 dias viram 2 blocos de até 7", () => {
-    expect(blocosDeDias("2026-10-01", "2026-10-10")).toEqual([{ de: "2026-10-01", ate: "2026-10-07" }, { de: "2026-10-08", ate: "2026-10-10" }]);
+  it("até 31 dias (o limite do portal) num bloco só: o mês inteiro é 1 exportação", () => {
+    expect(blocosDeDias("2026-09-01", "2026-09-30")).toEqual([{ de: "2026-09-01", ate: "2026-09-30" }]);
+    expect(blocosDeDias("2026-09-01", "2026-10-10")).toEqual([{ de: "2026-09-01", ate: "2026-10-01" }, { de: "2026-10-02", ate: "2026-10-10" }]);
   });
 });
 
@@ -61,8 +62,15 @@ describe("baixarCheckNow", () => {
     expect(e.message).toBe("resposta não é Excel");
   });
 
-  it("período de 10 dias baixa 2 arquivos", async () => {
-    expect(await baixarCheckNow(conta, "2026-10-01", "2026-10-10", portal().f)).toHaveLength(2);
+  it("período de 40 dias baixa 2 arquivos", async () => {
+    expect(await baixarCheckNow(conta, "2026-09-01", "2026-10-10", portal().f)).toHaveLength(2);
+  });
+
+  it("limite de relatórios do portal estourado → erro claro (não 'resposta não é Excel')", async () => {
+    const limite = `<html><form id="formTemplate"><label>Limite de requisicoes excedido para os relatórios. Tente novamente mais tarde.</label></form></html>`;
+    const e = await baixarCheckNow(conta, "2026-10-01", "2026-10-01", portal({ arquivo: limite }).f).catch(x => x);
+    expect(e).toBeInstanceOf(ColetaError);
+    expect(e.message).toBe(LIMITE_EXCEDIDO);
   });
 
   it("a senha não aparece em mensagem de erro", async () => {
