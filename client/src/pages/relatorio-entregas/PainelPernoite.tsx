@@ -412,7 +412,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                           {typeof s.paraTras?.entregues !== "number" ? <span className={`text-xs ${APAGADO}`}>—</span>
                             : <span className="whitespace-nowrap"><b className="text-slate-800 dark:text-slate-100">{s.paraTras.entregues}</b>
                                 {typeof s.paraTras.aEntregar === "number" && <span className="text-slate-400">/{s.paraTras.aEntregar}</span>}
-                                {Number(s.paraTras.problemas) > 0 && <span className="block text-[11px] text-rose-500">+{Number(s.paraTras.problemas)} com problema</span>}</span>}
+                                {Number(s.paraTras.problemas) > 0 && <span className="ml-1.5 text-xs font-semibold text-rose-500 cursor-help" title={`${s.paraTras.problemas} com problema`}>−{Number(s.paraTras.problemas)}</span>}</span>}
                         </td>
                         <td className={`${td} text-center`}>
                           {typeof s.paraTras?.pendentes !== "number"
