@@ -85,9 +85,10 @@ function frases(n: Noite): { ok: boolean; texto: string; galo?: boolean }[] {
       : `Final lento: ${s.finalLento.motivo}` },
     { galo: true, ok: s.parouCedo.ok, texto: `Parou de vez às ${v(s.parouCedo, "chegada")} (${s.parouCedo.ok ? "antes" : "depois"} das ${v(s.parouCedo, "limite")})` },
     { galo: true, ok: s.ociosidade.ok, texto: `${v(s.ociosidade, "min")} min parado fora de cliente nas 2 h antes de parar (sinal a partir de 30)` },
-    { galo: true, ok: pt.ok, texto: pt.pendentes === undefined ? `Faltavam: ${pt.motivo ?? "—"}`
-      : pt.ok ? `Só faltavam ${pt.pendentes} cliente(s), todos a até 20 km, com ${duracao(Math.max(0, Number(pt.folgaMin)))} de folga até ${dc.limite ?? "o limite"}`
-      : `${pt.entregues !== undefined ? `Entregou ${pt.entregues} e f` : "F"}altavam ${pt.pendentes} cliente(s)${Number(pt.clientes) ? `, ${pt.clientes} a até 20 km` : ""}` },
+    { galo: true, ok: pt.ok, texto: pt.pendentes === undefined ? `Restaram: ${pt.motivo ?? "—"}`
+      : `${pt.entregues !== undefined ? `Realizou ${pt.entregues} entrega(s) e r` : "R"}estaram ${pt.pendentes}`
+        + (pt.ok ? `, todos a até 20 km, com ${duracao(Math.max(0, Number(pt.folgaMin)))} de folga até ${dc.limite ?? "o limite"} — dava para terminar`
+          : Number(pt.clientes) ? ` (${pt.clientes} a até 20 km)` : "") },
   ];
 }
 
@@ -371,7 +372,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
               <thead><tr className="bg-slate-100/80 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
                 <th className={th}>Data</th><th className={th}>Caminhão</th><th className={th}>Motorista</th><th className={th}>Onde dormiu</th>
                 <th className={th}>Da Sede</th><th className={th} title="Saída do último cliente → parou para dormir → saiu de manhã">Último cliente → parou → saiu</th>
-                <th className={th}>Entregou</th><th className={th}>Faltavam</th>
+                <th className={th}>Entregas</th><th className={th}>Restaram</th>
                 <th className={th}>Pernoite</th><th className={th}>Sinais</th>
               </tr></thead>
               <tbody>
