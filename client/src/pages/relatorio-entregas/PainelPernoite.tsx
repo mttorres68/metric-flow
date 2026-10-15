@@ -5,7 +5,7 @@
  * classificação) e o detalhe com os sinais em dois blocos. A cor carrega o significado; zero e "não aconteceu" recuam.
  */
 import React, { useMemo, useState } from "react";
-import { BedDouble, Check, Flag, Loader2, RefreshCw, Truck, X } from "lucide-react";
+import { BedDouble, Check, Flag, House, Loader2, RefreshCw, Truck, X } from "lucide-react";
 import { toast } from "sonner";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../server/routers";
@@ -399,7 +399,9 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                         <td className={`${td} whitespace-nowrap font-mono text-slate-600 dark:text-slate-300`}>
                           <span className="inline-flex items-center gap-1" title="Saída do último cliente"><Flag size={11} className="text-slate-400" />{hora(n.ultimoClienteSaida)}</span>
                           <span className="mx-1.5 text-slate-300">→</span>
-                          <span className="inline-flex items-center gap-1 font-bold text-slate-800 dark:text-slate-100" title="Parou para dormir"><BedDouble size={12} className="text-indigo-500" />{hora(n.chegada)}</span>
+                          {n.classificacao === "na_base"
+                            ? <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-900/30 font-bold text-emerald-700 dark:text-emerald-300"><House size={12} />{hora(n.chegada)}<span className="font-sans text-[11px] font-semibold">Sede</span></span>
+                            : <span className="inline-flex items-center gap-1 font-bold text-slate-800 dark:text-slate-100" title="Parou para dormir"><BedDouble size={12} className="text-indigo-500" />{hora(n.chegada)}</span>}
                           <span className="mx-1.5 text-slate-300">→</span>
                           {aindaParado(n)
                             ? <span className="inline-flex items-center gap-1 text-slate-400" title="Ainda parado às 12:00 do dia seguinte (fim da análise): não saiu de manhã"><Truck size={11} />12:00+</span>
