@@ -53,7 +53,15 @@ import {
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 
-const ABAS = ["dia", "rota", "dianew", "pernoite", "desvio", "produtividade", "analise"] as const;
+const ABAS = [
+  "dia",
+  "rota",
+  "dianew",
+  "pernoite",
+  "desvio",
+  "produtividade",
+  "analise",
+] as const;
 type Aba = (typeof ABAS)[number];
 import { toast } from "sonner";
 
@@ -492,11 +500,20 @@ export default function RelatorioEntregas() {
   // A aba fica na URL (?aba=pernoite): o reload e o link compartilhado abrem nela.
   const search = useSearch();
   const [, setLocation] = useLocation();
-  const aba = ((ABAS as readonly string[]).includes(new URLSearchParams(search).get("aba") ?? "") ? new URLSearchParams(search).get("aba") : "dia") as Aba;
+  const aba = (
+    (ABAS as readonly string[]).includes(
+      new URLSearchParams(search).get("aba") ?? ""
+    )
+      ? new URLSearchParams(search).get("aba")
+      : "dia"
+  ) as Aba;
   const setAba = (v: Aba) => {
     const p = new URLSearchParams(search);
-    if (v === "dia") p.delete("aba"); else p.set("aba", v);
-    setLocation(`/relatorio-entregas${p.size ? `?${p}` : ""}`, { replace: true });
+    if (v === "dia") p.delete("aba");
+    else p.set("aba", v);
+    setLocation(`/relatorio-entregas${p.size ? `?${p}` : ""}`, {
+      replace: true,
+    });
   };
 
   const utils = trpc.useUtils();
@@ -841,12 +858,17 @@ export default function RelatorioEntregas() {
             </div>
           )}
 
-          {revenda && aba !== "pernoite" && aba !== "desvio" && aba !== "produtividade" && aba !== "analise" && processar.isPending && (
-            <div className="flex items-center justify-center h-40 text-slate-400 dark:text-slate-500 text-sm">
-              <Loader2 size={16} className="animate-spin mr-2" /> Cruzando as
-              entregas de {revenda.revenda} em {fmtDia(dia)} com o GPS...
-            </div>
-          )}
+          {revenda &&
+            aba !== "pernoite" &&
+            aba !== "desvio" &&
+            aba !== "produtividade" &&
+            aba !== "analise" &&
+            processar.isPending && (
+              <div className="flex items-center justify-center h-40 text-slate-400 dark:text-slate-500 text-sm">
+                <Loader2 size={16} className="animate-spin mr-2" /> Cruzando as
+                entregas de {revenda.revenda} em {fmtDia(dia)} com o GPS...
+              </div>
+            )}
 
           {revenda &&
             aba !== "pernoite" &&
@@ -914,12 +936,20 @@ export default function RelatorioEntregas() {
             !!resultados.length &&
             aba === "dianew" && <PainelDiaNew linhas={linhas} raioM={raioM} />}
 
-          {revenda && aba === "pernoite" && <PainelPernoite revendaId={revenda.revendaId} />}
+          {revenda && aba === "pernoite" && (
+            <PainelPernoite revendaId={revenda.revendaId} />
+          )}
 
-          {revenda && aba === "desvio" && <PainelDesvio revendaId={revenda.revendaId} raioM={raioM} />}
+          {revenda && aba === "desvio" && (
+            <PainelDesvio revendaId={revenda.revendaId} raioM={raioM} />
+          )}
 
-          {revenda && aba === "produtividade" && <PainelProdutividade revendaId={revenda.revendaId} />}
-          {revenda && aba === "analise" && <PainelAnalise revendaId={revenda.revendaId} />}
+          {revenda && aba === "produtividade" && (
+            <PainelProdutividade revendaId={revenda.revendaId} />
+          )}
+          {revenda && aba === "analise" && (
+            <PainelAnalise revendaId={revenda.revendaId} />
+          )}
 
           {revenda &&
             !processar.isPending &&
@@ -1048,17 +1078,18 @@ export default function RelatorioEntregas() {
                             >
                               1º → último cliente
                             </Th>
-                            <Th
-                              center
-                              title="Tempo em cliente: soma de (saída − chegada) no app × paradas no raio pelo GPS"
-                            >
-                              Em cliente (tempo)
-                            </Th>
+
                             <Th
                               center
                               title="Da saída (revenda 📍 quando pela cerca, ou pernoite) até chegar ao 1º cliente: tempo · km pela estrada"
                             >
                               Saída → 1º PDV (tempo · km)
+                            </Th>
+                            <Th
+                              center
+                              title="Tempo em cliente: soma de (saída − chegada) no app × paradas no raio pelo GPS"
+                            >
+                              Em cliente (tempo)
                             </Th>
                             <Th
                               center
@@ -1224,20 +1255,7 @@ export default function RelatorioEntregas() {
                                         : "—"}
                                     </div>
                                   </Td>
-                                  <Td center mono className={neutro}>
-                                    <div title="Soma de (saída − chegada) no app">
-                                      app {dur(r.app.emClienteMin)}
-                                    </div>
-                                    <div
-                                      className="text-slate-400"
-                                      title="Paradas a até o raio de algum cliente, pelo GPS"
-                                    >
-                                      GPS{" "}
-                                      {r.tempo
-                                        ? dur(r.tempo.emClienteMin)
-                                        : "—"}
-                                    </div>
-                                  </Td>
+
                                   <Td center mono className={neutro}>
                                     {r.ida ? (
                                       <span
@@ -1259,6 +1277,21 @@ export default function RelatorioEntregas() {
                                       vazio
                                     )}
                                   </Td>
+                                  <Td center mono className={neutro}>
+                                    <div title="Soma de (saída − chegada) no app">
+                                      app {dur(r.app.emClienteMin)}
+                                    </div>
+                                    <div
+                                      className="text-slate-400"
+                                      title="Paradas a até o raio de algum cliente, pelo GPS"
+                                    >
+                                      GPS{" "}
+                                      {r.tempo
+                                        ? dur(r.tempo.emClienteMin)
+                                        : "—"}
+                                    </div>
+                                  </Td>
+
                                   <Td center mono className={neutro}>
                                     {r.volta ? (
                                       <span
@@ -1303,7 +1336,9 @@ export default function RelatorioEntregas() {
                                     )}
                                   </Td>
                                   <Td center mono className={neutro}>
-                                    {r.entregasDia > 0 ? `${r.almoco}/${r.entregasDia}` : vazio}
+                                    {r.entregasDia > 0
+                                      ? `${r.almoco}/${r.entregasDia}`
+                                      : vazio}
                                   </Td>
                                   <Td center mono>
                                     {gps && r.baixasComCoord > 0 ? (
