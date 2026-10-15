@@ -11,7 +11,9 @@ import { cruzarDia } from "../services/entregas/cruzarDia";
 import { deveGravarTela, gravarLinhas } from "../services/produtividadeRota/registrar";
 import { fecharRotas } from "../services/produtividadeRota/repo";
 import { diaBRT } from "@shared/entregas";
-import { listarCercasInfleet, mapaVeiculos, sedeDaConta } from "../services/entregas/infleetEntregas";
+import { listarCercasInfleet, mapaVeiculos, placasInfleet, sedeDaConta } from "../services/entregas/infleetEntregas";
+import { alinharPlacas, placasDoPeriodo } from "../services/entregas/placas";
+import { periodoAte } from "./periodo";
 import * as repo from "../services/checknow/repo";
 import { coletarRevenda, importarPlanilha } from "../services/checknow/sincronizar";
 import { testarLogin } from "../services/checknow/coletor";
@@ -82,4 +84,11 @@ export const entregasRouter = router({
   coletar: publicProcedure.input(periodo).mutation(({ input }) => amigavel(() => coletarRevenda(input.revendaId, input.de, input.ate, "botao"))),
   coletas: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(({ input }) => repo.ultimasColetas(input.revendaId)),
   cercas: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(async ({ input }) => listarCercasInfleet(await repo.tokenInfleet(input.revendaId))),
+  // Aba Análise: placas únicas de pedidos e CheckNow no período e do cadastro do Infleet, alinhadas.
+  placas: publicProcedure.input(periodoAte(366)).query(async ({ input }) => {
+    const [doPeriodo, infleet] = await Promise.all([
+      placasDoPeriodo(input.revendaId, input.de, input.ate), placasInfleet(await repo.tokenInfleet(input.revendaId)),
+    ]);
+    return alinharPlacas({ ...doPeriodo, infleet });
+  }),
 });

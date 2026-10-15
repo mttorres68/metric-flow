@@ -25,6 +25,12 @@ async function consultar<T>(query: string, variables: Record<string, unknown>, t
 
 export const normalizarPlaca =(p: string) => p.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
+/** Placas cadastradas no Infleet da revenda, como estão lá. */
+export async function placasInfleet(token?: string): Promise<string[]> {
+  const { listVehicles } = await consultar<{ listVehicles: { plate: string }[] }>(`query { listVehicles { plate } }`, {}, token);
+  return listVehicles.map(v => v.plate);
+}
+
 /** token: conta Infleet da revenda (sem = INFLEET_TOKEN do .env). */
 export async function mapaVeiculos(token?: string): Promise<Map<string, string>> {
   const { listVehicles } = await consultar<{ listVehicles: { id: string; plate: string }[] }>(

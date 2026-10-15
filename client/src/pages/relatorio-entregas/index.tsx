@@ -17,6 +17,7 @@ import { PainelDiaNew } from "./PainelDiaNew";
 import { PainelPernoite } from "./PainelPernoite";
 import { PainelDesvio } from "./PainelDesvio";
 import { PainelProdutividade } from "./PainelProdutividade";
+import { PainelAnalise } from "./PainelAnalise";
 import { SeletorDia, SeletorIntervalo } from "@/components/SeletorDatas";
 import {
   Popover,
@@ -52,7 +53,7 @@ import {
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 
-const ABAS = ["dia", "rota", "dianew", "pernoite", "desvio", "produtividade"] as const;
+const ABAS = ["dia", "rota", "dianew", "pernoite", "desvio", "produtividade", "analise"] as const;
 type Aba = (typeof ABAS)[number];
 import { toast } from "sonner";
 
@@ -840,7 +841,7 @@ export default function RelatorioEntregas() {
             </div>
           )}
 
-          {revenda && aba !== "pernoite" && aba !== "desvio" && aba !== "produtividade" && processar.isPending && (
+          {revenda && aba !== "pernoite" && aba !== "desvio" && aba !== "produtividade" && aba !== "analise" && processar.isPending && (
             <div className="flex items-center justify-center h-40 text-slate-400 dark:text-slate-500 text-sm">
               <Loader2 size={16} className="animate-spin mr-2" /> Cruzando as
               entregas de {revenda.revenda} em {fmtDia(dia)} com o GPS...
@@ -851,6 +852,7 @@ export default function RelatorioEntregas() {
             aba !== "pernoite" &&
             aba !== "desvio" &&
             aba !== "produtividade" &&
+            aba !== "analise" &&
             !processar.isPending &&
             processar.data &&
             !resultados.length && (
@@ -888,6 +890,7 @@ export default function RelatorioEntregas() {
                   ["pernoite", "Pernoite"],
                   ["desvio", "Desvio"],
                   ["produtividade", "Produtividade"],
+                  ["analise", "Análise"],
                 ] as const
               ).map(([v, rotulo]) => (
                 <button
@@ -916,6 +919,7 @@ export default function RelatorioEntregas() {
           {revenda && aba === "desvio" && <PainelDesvio revendaId={revenda.revendaId} raioM={raioM} />}
 
           {revenda && aba === "produtividade" && <PainelProdutividade revendaId={revenda.revendaId} />}
+          {revenda && aba === "analise" && <PainelAnalise revendaId={revenda.revendaId} />}
 
           {revenda &&
             !processar.isPending &&
