@@ -117,6 +117,12 @@ describe("analisarNoite", () => {
     expect(n.sinais.perto).toEqual({ ok: false, motivo: "dormiu na Sede" });
     expect(n.sinais.parouCedo).toEqual({ ok: false, motivo: "dormiu na Sede" });
   });
+  it("na Sede também leva as entregas do dia e o que restou", () => {
+    const b = baixa("2026-10-05T15:00", "2026-10-05T15:20");
+    const n = analisarNoite(base({ aEntregar: 63, baixas: [{ ...b, entrega: { ...b.entrega, situacao: "ENTREGUE" } }] as never,
+      paradas: [parada(-6.77, "2026-10-05T18:00", "2026-10-06T06:00")] }));
+    expect(n.sinais.paraTras).toMatchObject({ ok: false, entregues: 1, problemas: 0, aEntregar: 63, pendentes: 0 });
+  });
   it("rota concluída: nada pendente ao parar para dormir — só faltava voltar", () => {
     expect(analisarNoite(base()).sinais.rotaConcluida).toMatchObject({ ok: true });
     const comPendente = analisarNoite(base({ pendentes: [{ lat: -7.5, lon: -43.02, codCliente: "9", cliente: "P" }] as never }));

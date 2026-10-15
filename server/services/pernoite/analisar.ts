@@ -97,7 +97,15 @@ export function analisarNoite(e: EntradaNoite): Noite {
     chegada: noite.inicio, saidaManha: noite.fim, descansoMin: Math.round(noite.min), ultimoClienteSaida,
     chaveLigadaMin: desligou ? Math.round((desligou.em.getTime() - noite.inicio.getTime()) / 60000) : null, madrugadaEventos: madrugada,
   };
-  if (naBase) return { ...r, classificacao: "na_base", sinais: todos("dormiu na Sede") };
+  // Entregas do dia e o que restou: valem para qualquer noite, inclusive na Sede (sem rota no dia, nada).
+  const contagem = !e.baixas.length && !e.pendentes.length && !e.aEntregar ? {} : {
+    entregues: e.baixas.filter(b => b.entrega.situacao === "ENTREGUE").length,
+    problemas: e.baixas.filter(b => b.entrega.situacao !== "ENTREGUE").length, aEntregar: e.aEntregar, pendentes: e.pendentes.length,
+  };
+  if (naBase) {
+    const sinais = todos("dormiu na Sede");
+    return { ...r, classificacao: "na_base", sinais: { ...sinais, paraTras: { ...sinais.paraTras, ...contagem } } };
+  }
 
   // Sinais de "na malícia".
   const foraDaSede: Sinal = { ok: true };
@@ -145,10 +153,8 @@ export function analisarNoite(e: EntradaNoite): Noite {
   // dava para fechar a rota. Com clientes longe, dormir perto dos próximos é logística normal.
   const cabiam = pertoDoUltimo * (diaMin || 10) <= folgaMin;
   const paraTras: Sinal = ultimoClienteSaida
-    ? { ok: folgaMin >= 60 && pertoDoUltimo > 0 && pertoDoUltimo === e.pendentes.length && cabiam, clientes: pertoDoUltimo, pendentes: e.pendentes.length,
-        entregues: e.baixas.filter(b => b.entrega.situacao === "ENTREGUE").length,
-        problemas: e.baixas.filter(b => b.entrega.situacao !== "ENTREGUE").length, aEntregar: e.aEntregar, folgaMin: Math.round(folgaMin) }
-    : NAO("sem entrega no dia");
+    ? { ok: folgaMin >= 60 && pertoDoUltimo > 0 && pertoDoUltimo === e.pendentes.length && cabiam, clientes: pertoDoUltimo, ...contagem, folgaMin: Math.round(folgaMin) }
+    : { ...NAO("sem entrega no dia"), ...contagem };
 
   const galo = [finalLento, parouCedo, ociosidade, paraTras].filter(s => s.ok).length;
   // O caso mais claro de pernoite evitável: todas as entregas da rota já feitas — só faltava voltar.
