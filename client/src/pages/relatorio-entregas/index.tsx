@@ -50,6 +50,10 @@ import {
   Zap,
 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useSearch } from "wouter";
+
+const ABAS = ["dia", "rota", "dianew", "pernoite", "desvio", "produtividade"] as const;
+type Aba = (typeof ABAS)[number];
 import { toast } from "sonner";
 
 type Saida = inferRouterOutputs<AppRouter>["entregas"]["processar"];
@@ -484,7 +488,15 @@ export default function RelatorioEntregas() {
   });
   const resultados = processar.data?.linhas ?? [];
   const rotas = processar.data?.rotas ?? [];
-  const [aba, setAba] = useState<"dia" | "rota" | "dianew" | "pernoite" | "desvio" | "produtividade">("dia");
+  // A aba fica na URL (?aba=pernoite): o reload e o link compartilhado abrem nela.
+  const search = useSearch();
+  const [, setLocation] = useLocation();
+  const aba = ((ABAS as readonly string[]).includes(new URLSearchParams(search).get("aba") ?? "") ? new URLSearchParams(search).get("aba") : "dia") as Aba;
+  const setAba = (v: Aba) => {
+    const p = new URLSearchParams(search);
+    if (v === "dia") p.delete("aba"); else p.set("aba", v);
+    setLocation(`/relatorio-entregas${p.size ? `?${p}` : ""}`, { replace: true });
+  };
 
   const utils = trpc.useUtils();
   const recalcular = (cerca = cercaId) => {
