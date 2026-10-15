@@ -91,8 +91,8 @@ describe("analisarNoite", () => {
     const n = analisarNoite(base({ baixas: [b("2026-10-05T14:00", "2026-10-05T14:10", "ENTREGUE"), b("2026-10-05T15:00", "2026-10-05T15:20", "PROBLEMA")] as never }));
     expect(n.sinais.paraTras).toMatchObject({ entregues: 1 });
   });
-  it("leva o total de clientes da rota (entregou X de Z)", () => {
-    expect(analisarNoite(base({ totalRota: 77 })).sinais.paraTras).toMatchObject({ total: 77 });
+  it("leva o que faltava entregar no início do dia (entregou X de Z)", () => {
+    expect(analisarNoite(base({ aEntregar: 47 })).sinais.paraTras).toMatchObject({ aEntregar: 47 });
   });
   it("para trás não acende quando os de perto não cabiam na folga (no ritmo de descarga do dia)", () => {
     const muitos = Array.from({ length: 40 }, (_, i) => ({ lat: LAT_CLI - 0.05, lon: -43.02, codCliente: `p${i}`, cliente: "P" }));

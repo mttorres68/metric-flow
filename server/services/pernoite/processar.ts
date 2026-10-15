@@ -41,12 +41,14 @@ export async function processarNoites(revendaId: number, dia: string): Promise<n
     if (gps.erro) { console.warn(`[pernoite] ${revendaId} ${dia} ${placa}: ${gps.erro}`); continue; }
     const rotas = new Set(ls.map(l => l.routeId));
     const daPlaca = entregas.filter(e => rotas.has(e.routeId));
-    const baixas = ls.flatMap(l => cruzar(l, daPlaca.filter(e => e.routeId === l.routeId), gps, cfg).baixas);
+    const cruzadas = ls.map(l => cruzar(l, daPlaca.filter(e => e.routeId === l.routeId), gps, cfg));
+    const baixas = cruzadas.flatMap(r => r.baixas);
+    const aEntregar = cruzadas.reduce((s, r) => s + r.aEntregar, 0);
     evidencias.push(...baixas.map(b => evidenciaDe(dia, b, gps.paradas, cfg.saidaMinima)));
     const pendentes = daPlaca.filter(e => e.situacao === "AGUARDANDO" || !e.baixaEm || diaBRT(e.baixaEm) > dia);
     // Rota de vários dias volta inteira no dia seguinte: cliente já entregue em D não é cliente da manhã.
     const clientesSeguinte = doSeguinte.filter(e => e.placa === placa && e.lat !== null && e.lon !== null && (!e.baixaEm || diaBRT(e.baixaEm) > dia)).map(e => ({ lat: e.lat!, lon: e.lon! }));
-    noites.push(analisarNoite({ dia, placa, motorista, paradas: gps.paradas, eventos: gps.eventos, baixas: trocou ? [] : baixas, pendentes: trocou ? [] : pendentes, totalRota: trocou ? 0 : daPlaca.length, clientesSeguinte, sede, cfg }));
+    noites.push(analisarNoite({ dia, placa, motorista, paradas: gps.paradas, eventos: gps.eventos, baixas: trocou ? [] : baixas, pendentes: trocou ? [] : pendentes, aEntregar: trocou ? 0 : aEntregar, clientesSeguinte, sede, cfg }));
   }
   await gravarNoites(revendaId, noites);
   await gravarEvidencias(revendaId, evidencias);
