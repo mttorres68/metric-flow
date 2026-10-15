@@ -32,7 +32,7 @@ const CLASSE: Record<string, { texto: string; cor: string; letra: string; chip: 
 const PESO: Record<string, number> = { na_malicia: 3, evitavel: 2, normal: 1 };
 const GALO: { chave: keyof Sinais; texto: string }[] = [
   { chave: "finalLento", texto: "final lento" }, { chave: "parouCedo", texto: "parou cedo" },
-  { chave: "ociosidade", texto: "ocioso no fim" }, { chave: "paraTras", texto: "cliente para trás" },
+  { chave: "ociosidade", texto: "ocioso no fim" }, { chave: "paraTras", texto: "dava para terminar" },
 ];
 /** Tons dos números que pedem atenção (texto e selo); zero fica apagado. */
 const TOM = {
@@ -40,9 +40,7 @@ const TOM = {
   amber: { num: "text-amber-600 dark:text-amber-400", selo: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300", barra: "bg-amber-500" },
   violet: { num: "text-violet-600 dark:text-violet-400", selo: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300", barra: "bg-violet-500" },
   orange: { num: "text-orange-600 dark:text-orange-400", selo: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300", barra: "bg-orange-500" },
-  indigo: { num: "text-indigo-600 dark:text-indigo-400", selo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300", barra: "bg-indigo-500" },
-  slate: { num: "text-slate-600 dark:text-slate-300", selo: "bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300", barra: "bg-slate-400" },
-} as const;
+  indigo: { num: "text-indigo-600 dark:text-indigo-400", selo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300", barra: "bg-indigo-500" },} as const;
 type Tom = keyof typeof TOM;
 const APAGADO = "text-slate-300 dark:text-slate-600";
 
@@ -87,10 +85,9 @@ function frases(n: Noite): { ok: boolean; texto: string; galo?: boolean }[] {
       : `Final lento: ${s.finalLento.motivo}` },
     { galo: true, ok: s.parouCedo.ok, texto: `Parou de vez às ${v(s.parouCedo, "chegada")} (${s.parouCedo.ok ? "antes" : "depois"} das ${v(s.parouCedo, "limite")})` },
     { galo: true, ok: s.ociosidade.ok, texto: `${v(s.ociosidade, "min")} min parado fora de cliente nas 2 h antes de parar (sinal a partir de 30)` },
-    { galo: true, ok: pt.ok, texto: pt.clientes !== undefined
-      ? `${pt.clientes}${pt.pendentes !== undefined ? ` de ${pt.pendentes}` : ""} cliente(s) pendente(s) a até 20 km do último, com ${duracao(Math.max(0, Number(pt.folgaMin)))} de folga até ${dc.limite ?? "o limite"}`
-        + (pt.pendentes !== undefined && !pt.ok && Number(pt.clientes) > 0 ? " — ainda havia clientes longe, dormir perto dos próximos é normal" : "")
-      : `Cliente para trás: ${pt.motivo}` },
+    { galo: true, ok: pt.ok, texto: pt.pendentes === undefined ? `Faltavam: ${pt.motivo ?? "—"}`
+      : pt.ok ? `Só faltavam ${pt.pendentes} cliente(s), todos a até 20 km, com ${duracao(Math.max(0, Number(pt.folgaMin)))} de folga até ${dc.limite ?? "o limite"}`
+      : `Faltavam ${pt.pendentes} cliente(s)${Number(pt.clientes) ? `, ${pt.clientes} a até 20 km` : ""}` },
   ];
 }
 
@@ -374,7 +371,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
               <thead><tr className="bg-slate-100/80 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
                 <th className={th}>Data</th><th className={th}>Caminhão</th><th className={th}>Motorista</th><th className={th}>Onde dormiu</th>
                 <th className={th}>Da Sede</th><th className={th} title="Saída do último cliente → parou para dormir → saiu de manhã">Último cliente → parou → saiu</th>
-                <th className={th} title="Clientes da rota ainda pendentes a até 20 km do último atendido quando parou para dormir">Para trás</th>
+                <th className={th}>Faltavam</th>
                 <th className={th}>Pernoite</th><th className={th}>Sinais</th>
               </tr></thead>
               <tbody>
@@ -409,13 +406,11 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                           {n.saidaManha && <span className="ml-1 font-sans text-[11px] text-slate-400">{diaBRT(n.saidaManha).slice(8, 10)}/{diaBRT(n.saidaManha).slice(5, 7)}</span>}
                         </td>
                         <td className={`${td} text-center`}>
-                          {typeof s.paraTras?.clientes === "number"
-                            ? <span className="inline-flex items-center gap-1 whitespace-nowrap"
-                                title="Pendentes a até 20 km do último cliente, de todos os pendentes da rota (laranja: eram tudo o que faltava)">
-                                <Contagem valor={s.paraTras.clientes} tom={s.paraTras.ok ? "orange" : "slate"} />
-                                {typeof s.paraTras.pendentes === "number" && <span className="text-xs text-slate-400">de {s.paraTras.pendentes}</span>}
-                              </span>
-                            : <span className={`text-xs ${APAGADO}`}>—</span>}
+                          {typeof s.paraTras?.pendentes !== "number"
+                            ? <span className={`text-xs ${APAGADO}`}>—</span>
+                            : s.paraTras.ok
+                              ? <span className={`whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-bold ${TOM.orange.selo}`}>{s.paraTras.pendentes}, todos perto</span>
+                              : <span className={`text-sm tabular-nums ${s.paraTras.pendentes ? "text-slate-600 dark:text-slate-300" : APAGADO}`}>{s.paraTras.pendentes}</span>}
                         </td>
                         <td className={td}><span className={`px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${c.chip}`}>{c.texto}</span></td>
                         <td className={td}>
