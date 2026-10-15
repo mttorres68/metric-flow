@@ -498,6 +498,8 @@ export default function RelatorioEntregas() {
     if (v === "dia") p.delete("aba"); else p.set("aba", v);
     setLocation(`/relatorio-entregas${p.size ? `?${p}` : ""}`, { replace: true });
   };
+  // Só as abas do dia visto usam o seletor "Dia"; as outras têm o próprio período.
+  const usaDia = aba === "dia" || aba === "rota" || aba === "dianew";
 
   const utils = trpc.useUtils();
   const recalcular = (cerca = cercaId) => {
@@ -810,7 +812,7 @@ export default function RelatorioEntregas() {
                   ))}
                 </select>
               </label>
-              <div className="flex items-center gap-1 ml-auto">
+              {usaDia && <div className="flex items-center gap-1 ml-auto">
                 <span className="text-xs text-slate-500 dark:text-slate-400 mr-1">
                   Dia
                 </span>
@@ -837,11 +839,11 @@ export default function RelatorioEntregas() {
                 >
                   <ChevronRight size={16} />
                 </button>
-              </div>
+              </div>}
             </div>
           )}
 
-          {revenda && aba !== "pernoite" && aba !== "desvio" && aba !== "produtividade" && aba !== "analise" && processar.isPending && (
+          {revenda && usaDia && processar.isPending && (
             <div className="flex items-center justify-center h-40 text-slate-400 dark:text-slate-500 text-sm">
               <Loader2 size={16} className="animate-spin mr-2" /> Cruzando as
               entregas de {revenda.revenda} em {fmtDia(dia)} com o GPS...
@@ -849,10 +851,7 @@ export default function RelatorioEntregas() {
           )}
 
           {revenda &&
-            aba !== "pernoite" &&
-            aba !== "desvio" &&
-            aba !== "produtividade" &&
-            aba !== "analise" &&
+            usaDia &&
             !processar.isPending &&
             processar.data &&
             !resultados.length && (

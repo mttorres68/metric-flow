@@ -1,11 +1,11 @@
 /*
- * MetricFlow — coleta automática do CheckNow (só com CHECKNOW_COLETA_AUTO=1).
+ * MetricFlow — coleta automática do CheckNow (só com CHECKNOW_COLETA_AUTO=1) e análise diária do pernoite (sempre).
  * :05 de 06h a 22h e 23:30 → últimos 7 dias (o portal filtra pelo início da rota: rota de vários dias
  * só continua sendo atualizada se o início dela estiver no período); ao subir → desde o último ok (máx. 7 dias).
  * ponytail: setTimeout em processo único (produção = 1 réplica); com várias réplicas a trava por revenda evita coleta dupla.
  */
 import { diaBRT } from "@shared/entregas";
-import { contasParaColeta, ultimoPeriodoOk } from "./repo";
+import { contasAtivas, contasParaColeta, ultimoPeriodoOk } from "./repo";
 import { coletarRevenda } from "./sincronizar";
 import { processarNoites } from "../pernoite/processar";
 
@@ -55,7 +55,25 @@ async function rodar(periodo: (revendaId: number) => Promise<{ de: string; ate: 
   }
 }
 
+/** Analisa a noite de ontem de todas as revendas ativas (upsert: rodar de novo só atualiza). */
+async function analisarOntem() {
+  const ontem = menosDias(diaBRT(new Date()), 1);
+  for (const revendaId of await contasAtivas().catch(() => [] as number[])) {
+    await processarNoites(revendaId, ontem)
+      .then(n => console.log(`[Pernoite] revenda ${revendaId} ${ontem}: ${n} noites`))
+      .catch(e => console.warn(`[Pernoite] revenda ${revendaId} ${ontem}: ${(e as Error).message}`));
+  }
+}
+
 export function iniciarAgendador(): void {
+  // Pernoite sempre ligado (banco + Infleet, só leitura): ao subir e às 07:30/12:30 — independe da coleta do CheckNow.
+  setTimeout(analisarOntem, 60_000);
+  const agendarPernoite = () => setTimeout(async () => {
+    await analisarOntem();
+    agendarPernoite();
+  }, proximaExecucaoPernoite(new Date()).getTime() - Date.now());
+  agendarPernoite();
+
   if (process.env.CHECKNOW_COLETA_AUTO !== "1") return;
   console.log("[CheckNow] coleta automática ligada");
   setTimeout(() => rodar(async id => periodoRecuperacao(await ultimoPeriodoOk(id), diaBRT(new Date()))), 60_000);
@@ -67,14 +85,4 @@ export function iniciarAgendador(): void {
     }, p.em.getTime() - Date.now());
   };
   agendar();
-  const agendarPernoite = () => setTimeout(async () => {
-    const ontem = menosDias(diaBRT(new Date()), 1);
-    for (const revendaId of await contasParaColeta().catch(() => [] as number[])) {
-      await processarNoites(revendaId, ontem)
-        .then(n => console.log(`[Pernoite] revenda ${revendaId} ${ontem}: ${n} noites`))
-        .catch(e => console.warn(`[Pernoite] revenda ${revendaId} ${ontem}: ${(e as Error).message}`));
-    }
-    agendarPernoite();
-  }, proximaExecucaoPernoite(new Date()).getTime() - Date.now());
-  agendarPernoite();
 }

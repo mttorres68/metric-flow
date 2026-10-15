@@ -185,6 +185,13 @@ export async function revendasSemConta() {
   return todas.filter(r => !comConta.includes(r.id));
 }
 
+/** Revendas ativas (o pernoite usa banco + Infleet: não depende do login do CheckNow). */
+export async function contasAtivas(): Promise<number[]> {
+  const db = await exigirDb();
+  const rows = await db.select({ id: entregasContas.revendaId }).from(entregasContas).where(eq(entregasContas.ativo, true));
+  return rows.map(r => r.id);
+}
+
 /** Revendas que a coleta automática deve buscar: ativas e sem login recusado pendente. */
 export async function contasParaColeta(): Promise<number[]> {
   const db = await exigirDb();
