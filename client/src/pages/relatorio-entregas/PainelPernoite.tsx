@@ -41,6 +41,7 @@ const TOM = {
   violet: { num: "text-violet-600 dark:text-violet-400", selo: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300", barra: "bg-violet-500" },
   orange: { num: "text-orange-600 dark:text-orange-400", selo: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300", barra: "bg-orange-500" },
   indigo: { num: "text-indigo-600 dark:text-indigo-400", selo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300", barra: "bg-indigo-500" },
+  slate: { num: "text-slate-600 dark:text-slate-300", selo: "bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300", barra: "bg-slate-400" },
 } as const;
 type Tom = keyof typeof TOM;
 const APAGADO = "text-slate-300 dark:text-slate-600";
@@ -87,7 +88,8 @@ function frases(n: Noite): { ok: boolean; texto: string; galo?: boolean }[] {
     { galo: true, ok: s.parouCedo.ok, texto: `Parou de vez às ${v(s.parouCedo, "chegada")} (${s.parouCedo.ok ? "antes" : "depois"} das ${v(s.parouCedo, "limite")})` },
     { galo: true, ok: s.ociosidade.ok, texto: `${v(s.ociosidade, "min")} min parado fora de cliente nas 2 h antes de parar (sinal a partir de 30)` },
     { galo: true, ok: pt.ok, texto: pt.clientes !== undefined
-      ? `${pt.clientes} cliente(s) pendente(s) a até 20 km do último, com ${duracao(Math.max(0, Number(pt.folgaMin)))} de folga até ${dc.limite ?? "o limite"}`
+      ? `${pt.clientes}${pt.pendentes !== undefined ? ` de ${pt.pendentes}` : ""} cliente(s) pendente(s) a até 20 km do último, com ${duracao(Math.max(0, Number(pt.folgaMin)))} de folga até ${dc.limite ?? "o limite"}`
+        + (pt.pendentes !== undefined && !pt.ok && Number(pt.clientes) > 0 ? " — ainda havia clientes longe, dormir perto dos próximos é normal" : "")
       : `Cliente para trás: ${pt.motivo}` },
   ];
 }
@@ -408,7 +410,11 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                         </td>
                         <td className={`${td} text-center`}>
                           {typeof s.paraTras?.clientes === "number"
-                            ? <Contagem valor={s.paraTras.clientes} tom="orange" />
+                            ? <span className="inline-flex items-center gap-1 whitespace-nowrap"
+                                title="Pendentes a até 20 km do último cliente, de todos os pendentes da rota (laranja: eram tudo o que faltava)">
+                                <Contagem valor={s.paraTras.clientes} tom={s.paraTras.ok ? "orange" : "slate"} />
+                                {typeof s.paraTras.pendentes === "number" && <span className="text-xs text-slate-400">de {s.paraTras.pendentes}</span>}
+                              </span>
                             : <span className={`text-xs ${APAGADO}`}>—</span>}
                         </td>
                         <td className={td}><span className={`px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${c.chip}`}>{c.texto}</span></td>

@@ -140,8 +140,10 @@ export function analisarNoite(e: EntradaNoite): Noite {
   const folgaMin = ultimoClienteSaida ? (limite.getTime() - ultimoClienteSaida.getTime()) / 60000 : 0;
   const pertoDoUltimo = ultimoLocal?.lat != null && ultimoLocal?.lon != null
     ? e.pendentes.filter(p => p.lat !== null && p.lon !== null && distM(ultimoLocal.lat!, ultimoLocal.lon!, p.lat, p.lon) / 1000 <= PARA_TRAS_KM).length : 0;
+  // Só pesa quando os de perto eram tudo o que faltava: dava para fechar a rota e voltar.
+  // Com mais clientes longe, dormir perto dos próximos é logística normal.
   const paraTras: Sinal = ultimoClienteSaida
-    ? { ok: folgaMin >= 60 && pertoDoUltimo > 0, clientes: pertoDoUltimo, folgaMin: Math.round(folgaMin) }
+    ? { ok: folgaMin >= 60 && pertoDoUltimo > 0 && pertoDoUltimo === e.pendentes.length, clientes: pertoDoUltimo, pendentes: e.pendentes.length, folgaMin: Math.round(folgaMin) }
     : NAO("sem entrega no dia");
 
   const galo = [finalLento, parouCedo, ociosidade, paraTras].filter(s => s.ok).length;

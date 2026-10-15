@@ -77,6 +77,12 @@ describe("analisarNoite", () => {
     expect(n.sinais.paraTras).toMatchObject({ ok: true, clientes: 1 });
     expect(n.galo).toBeGreaterThanOrEqual(3);
   });
+  it("para trás só acende quando os pendentes perto eram tudo o que faltava", () => {
+    const comLonge = analisarNoite(base({
+      pendentes: [{ lat: LAT_CLI - 0.05, lon: -43.02, codCliente: "9", cliente: "PERTO" }, { lat: LAT_CLI - 0.6, lon: -43.02, codCliente: "8", cliente: "LONGE" }] as never,
+    }));
+    expect(comLonge.sinais.paraTras).toMatchObject({ ok: false, clientes: 1, pendentes: 2 });
+  });
   it("parou depois da meia-noite não é 'parou cedo'", () => {
     const n = analisarNoite(base({ paradas: [parada(LAT_CLI, "2026-10-05T15:00", "2026-10-05T15:20"), parada(LAT_CLI - 0.01, "2026-10-06T00:40", "2026-10-06T05:30")] }));
     expect(n.sinais.parouCedo.ok).toBe(false);
