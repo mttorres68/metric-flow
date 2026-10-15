@@ -86,7 +86,7 @@ function frases(n: Noite): { ok: boolean; texto: string; galo?: boolean }[] {
     { galo: true, ok: s.parouCedo.ok, texto: `Parou de vez às ${v(s.parouCedo, "chegada")} (${s.parouCedo.ok ? "antes" : "depois"} das ${v(s.parouCedo, "limite")})` },
     { galo: true, ok: s.ociosidade.ok, texto: `${v(s.ociosidade, "min")} min parado fora de cliente nas 2 h antes de parar (sinal a partir de 30)` },
     { galo: true, ok: pt.ok, texto: pt.pendentes === undefined ? `Restaram: ${pt.motivo ?? "—"}`
-      : `${pt.entregues !== undefined ? `Realizou ${pt.entregues} entrega(s) e r` : "R"}estaram ${pt.pendentes}`
+      : `${pt.entregues !== undefined ? `Realizou ${pt.entregues}${pt.total !== undefined ? ` de ${pt.total}` : ""} entrega(s) e r` : "R"}estaram ${pt.pendentes}`
         + (pt.ok ? `, todos a até 20 km, com ${duracao(Math.max(0, Number(pt.folgaMin)))} de folga até ${dc.limite ?? "o limite"} — dava para terminar`
           : Number(pt.clientes) ? ` (${pt.clientes} a até 20 km)` : "") },
   ];
@@ -407,7 +407,9 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                           {n.saidaManha && <span className="ml-1 font-sans text-[11px] text-slate-400">{diaBRT(n.saidaManha).slice(8, 10)}/{diaBRT(n.saidaManha).slice(5, 7)}</span>}
                         </td>
                         <td className={`${td} text-center text-sm tabular-nums text-slate-600 dark:text-slate-300`}>
-                          {typeof s.paraTras?.entregues === "number" ? s.paraTras.entregues : <span className={`text-xs ${APAGADO}`}>—</span>}
+                          {typeof s.paraTras?.entregues !== "number" ? <span className={`text-xs ${APAGADO}`}>—</span>
+                            : <span className="whitespace-nowrap"><b className="text-slate-800 dark:text-slate-100">{s.paraTras.entregues}</b>
+                                {typeof s.paraTras.total === "number" && <span className="text-slate-400">/{s.paraTras.total}</span>}</span>}
                         </td>
                         <td className={`${td} text-center`}>
                           {typeof s.paraTras?.pendentes !== "number"
