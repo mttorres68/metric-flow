@@ -46,6 +46,21 @@ export const noiteSemLugar = (e: Pick<EntradaNoite, "dia" | "placa" | "motorista
   classificacao, galo: 0, sinais: todos(classificacao === "sem_sinal" ? "sem sinal GPS" : "sem parada às 02:00"),
 });
 
+/** Noite de um caminhão que o motorista já tinha trocado por outro no dia. */
+export const SEM_ROTA = "SEM ROTA";
+
+/**
+ * Motorista que trocou de caminhão no dia: a noite fica com o caminhão da última atividade dele
+ * (início de rota ou baixa até o fim do dia); o outro caminhão dormiu sem rota dele.
+ */
+export function trocouDeCaminhao(dia: string, placa: string, motorista: string, entregas: Pick<Entrega, "placa" | "motorista" | "rotaInicio" | "baixaEm">[]): boolean {
+  const fimDia = new Date(`${proximoDia(dia)}T00:00:00-03:00`);
+  const ultima = (p: string) => Math.max(-Infinity, ...entregas.filter(x => x.motorista === motorista && x.placa === p)
+    .flatMap(x => [x.rotaInicio, x.baixaEm]).filter((d): d is Date => !!d && d < fimDia).map(d => d.getTime()));
+  const aqui = ultima(placa);
+  return [...new Set(entregas.map(x => x.placa))].some(p => p !== placa && ultima(p) > aqui);
+}
+
 export function analisarNoite(e: EntradaNoite): Noite {
   const { cfg, sede } = e;
   const seguinte = proximoDia(e.dia);

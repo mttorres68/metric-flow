@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { analisarNoite, type EntradaNoite } from "./analisar";
+import { analisarNoite, trocouDeCaminhao, type EntradaNoite } from "./analisar";
 import { CONFIG_ENTREGAS_PADRAO } from "@shared/entregas";
 
 const brt = (s: string) => new Date(`${s}:00-03:00`);
@@ -108,6 +108,21 @@ describe("analisarNoite", () => {
     const ev = (endereco: string) => [{ tipo: "deviceStopped", em: brt("2026-10-05T15:40"), endereco, lat: 0, lon: 0, cercaId: null, cerca: null, duracaoMin: null }];
     expect(analisarNoite(base({ eventos: ev("Avenida Dom Edilberto, Tanque do Piauí, Piauí, Brasil") as never })).cidade).toBe("TANQUE DO PIAUÍ");
     expect(analisarNoite(base({ eventos: ev("Rua X") as never })).cidade).toBe("AMARANTE");
+  });
+});
+
+describe("trocouDeCaminhao", () => {
+  const e = (placa: string, ini: string, baixa: string | null) => ({ placa, motorista: "ANTONIO WELTON", rotaInicio: brt(ini), baixaEm: baixa ? brt(baixa) : null }) as never;
+  // 12/10: fechou a rota do UHQ às 07:26 (na Sede) e saiu às 07:54 com o SOL, entregando até 18:46.
+  const entregas = [e("UHQ-5H38", "2026-10-08T07:40", "2026-10-12T07:26"), e("SOL-6B13", "2026-10-12T07:54", "2026-10-12T18:46"), e("SOL-6B13", "2026-10-12T07:54", "2026-10-13T07:10")];
+  it("a noite fica com o caminhão da última atividade do motorista no dia", () => {
+    expect(trocouDeCaminhao("2026-10-12", "UHQ-5H38", "ANTONIO WELTON", entregas)).toBe(true);
+    expect(trocouDeCaminhao("2026-10-12", "SOL-6B13", "ANTONIO WELTON", entregas)).toBe(false);
+  });
+  it("rota recém-iniciada sem baixa conta pelo início", () => {
+    const tarde = [e("UHQ-5H38", "2026-10-12T06:00", "2026-10-12T10:00"), e("SOL-6B13", "2026-10-12T14:00", null)];
+    expect(trocouDeCaminhao("2026-10-12", "UHQ-5H38", "ANTONIO WELTON", tarde)).toBe(true);
+    expect(trocouDeCaminhao("2026-10-12", "SOL-6B13", "ANTONIO WELTON", tarde)).toBe(false);
   });
 });
 

@@ -4,7 +4,7 @@ import * as cn from "../checknow/repo";
 import { cruzar, montarLinhas } from "../entregas/cruzar";
 import { buscarGpsLinha, mapaVeiculos, normalizarPlaca, sedeDaConta } from "../entregas/infleetEntregas";
 import { getConfigEntregas } from "../configService";
-import { analisarNoite, noiteSemLugar, type Noite } from "./analisar";
+import { analisarNoite, noiteSemLugar, SEM_ROTA, trocouDeCaminhao, type Noite } from "./analisar";
 import { gravarNoites } from "./repo";
 import { evidenciaDe, type EvidenciaNova } from "../desvio/evidencias";
 import { gravarEvidencias } from "../desvio/repo";
@@ -32,7 +32,10 @@ export async function processarNoites(revendaId: number, dia: string): Promise<n
     if (!vId) continue;
     const janela = { inicio: new Date(`${dia}T00:00:00-03:00`), fim: new Date(`${seguinte}T12:00:00-03:00`) };
     const gps = await buscarGpsLinha(vId, janela, { token, saidaMinima: cfg.saidaMinima });
-    const motorista = [...ls].sort((a, b) => a.janela.inicio.getTime() - b.janela.inicio.getTime()).at(-1)!.motorista;
+    const doDia = [...ls].sort((a, b) => a.janela.inicio.getTime() - b.janela.inicio.getTime()).at(-1)!.motorista;
+    // Trocou de caminhão no dia: esta noite não é dele (nem as entregas e pendências dele contam aqui).
+    const trocou = trocouDeCaminhao(dia, placa, doDia, entregas);
+    const motorista = trocou ? SEM_ROTA : doDia;
     // Rastreador mudo com rota no dia vira noite "sem sinal"; falha da API do Infleet não acusa o motorista.
     if (gps.erro === "sem sinal GPS") { noites.push(noiteSemLugar({ dia, placa, motorista }, "sem_sinal")); continue; }
     if (gps.erro) { console.warn(`[pernoite] ${revendaId} ${dia} ${placa}: ${gps.erro}`); continue; }
@@ -43,7 +46,7 @@ export async function processarNoites(revendaId: number, dia: string): Promise<n
     const pendentes = daPlaca.filter(e => e.situacao === "AGUARDANDO" || !e.baixaEm || diaBRT(e.baixaEm) > dia);
     // Rota de vários dias volta inteira no dia seguinte: cliente já entregue em D não é cliente da manhã.
     const clientesSeguinte = doSeguinte.filter(e => e.placa === placa && e.lat !== null && e.lon !== null && (!e.baixaEm || diaBRT(e.baixaEm) > dia)).map(e => ({ lat: e.lat!, lon: e.lon! }));
-    noites.push(analisarNoite({ dia, placa, motorista, paradas: gps.paradas, eventos: gps.eventos, baixas, pendentes, clientesSeguinte, sede, cfg }));
+    noites.push(analisarNoite({ dia, placa, motorista, paradas: gps.paradas, eventos: gps.eventos, baixas: trocou ? [] : baixas, pendentes: trocou ? [] : pendentes, clientesSeguinte, sede, cfg }));
   }
   await gravarNoites(revendaId, noites);
   await gravarEvidencias(revendaId, evidencias);

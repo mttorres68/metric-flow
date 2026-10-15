@@ -404,6 +404,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                           {aindaParado(n)
                             ? <span className="inline-flex items-center gap-1 text-slate-400" title="Ainda parado às 12:00 do dia seguinte (fim da análise): não saiu de manhã"><Truck size={11} />12:00+</span>
                             : <span className="inline-flex items-center gap-1" title="Saiu de manhã"><Truck size={11} className="text-slate-400" />{hora(n.saidaManha)}</span>}
+                          {n.saidaManha && <span className="ml-1 font-sans text-[11px] text-slate-400">{diaBRT(n.saidaManha).slice(8, 10)}/{diaBRT(n.saidaManha).slice(5, 7)}</span>}
                         </td>
                         <td className={`${td} text-center`}>
                           {typeof s.paraTras?.clientes === "number"
