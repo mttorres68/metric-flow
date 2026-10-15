@@ -146,7 +146,8 @@ export function analisarNoite(e: EntradaNoite): Noite {
   const cabiam = pertoDoUltimo * (diaMin || 10) <= folgaMin;
   const paraTras: Sinal = ultimoClienteSaida
     ? { ok: folgaMin >= 60 && pertoDoUltimo > 0 && pertoDoUltimo === e.pendentes.length && cabiam, clientes: pertoDoUltimo, pendentes: e.pendentes.length,
-        entregues: e.baixas.filter(b => b.entrega.situacao === "ENTREGUE").length, aEntregar: e.aEntregar, folgaMin: Math.round(folgaMin) }
+        entregues: e.baixas.filter(b => b.entrega.situacao === "ENTREGUE").length,
+        problemas: e.baixas.filter(b => b.entrega.situacao !== "ENTREGUE").length, aEntregar: e.aEntregar, folgaMin: Math.round(folgaMin) }
     : NAO("sem entrega no dia");
 
   const galo = [finalLento, parouCedo, ociosidade, paraTras].filter(s => s.ok).length;

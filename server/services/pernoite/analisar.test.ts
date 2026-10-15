@@ -89,7 +89,7 @@ describe("analisarNoite", () => {
       return { ...x, entrega: { ...x.entrega, situacao } };
     };
     const n = analisarNoite(base({ baixas: [b("2026-10-05T14:00", "2026-10-05T14:10", "ENTREGUE"), b("2026-10-05T15:00", "2026-10-05T15:20", "PROBLEMA")] as never }));
-    expect(n.sinais.paraTras).toMatchObject({ entregues: 1 });
+    expect(n.sinais.paraTras).toMatchObject({ entregues: 1, problemas: 1 });
   });
   it("leva o que faltava entregar no início do dia (entregou X de Z)", () => {
     expect(analisarNoite(base({ aEntregar: 47 })).sinais.paraTras).toMatchObject({ aEntregar: 47 });

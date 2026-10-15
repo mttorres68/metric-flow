@@ -86,7 +86,7 @@ function frases(n: Noite): { ok: boolean; texto: string; galo?: boolean }[] {
     { galo: true, ok: s.parouCedo.ok, texto: `Parou de vez às ${v(s.parouCedo, "chegada")} (${s.parouCedo.ok ? "antes" : "depois"} das ${v(s.parouCedo, "limite")})` },
     { galo: true, ok: s.ociosidade.ok, texto: `${v(s.ociosidade, "min")} min parado fora de cliente nas 2 h antes de parar (sinal a partir de 30)` },
     { galo: true, ok: pt.ok, texto: pt.pendentes === undefined ? `Restaram: ${pt.motivo ?? "—"}`
-      : `${pt.entregues !== undefined ? `Realizou ${pt.entregues}${pt.aEntregar !== undefined ? ` de ${pt.aEntregar}` : ""} entrega(s) e r` : "R"}estaram ${pt.pendentes}`
+      : `${pt.entregues !== undefined ? `Realizou ${pt.entregues}${pt.aEntregar !== undefined ? ` de ${pt.aEntregar}` : ""} entrega(s)${Number(pt.problemas) ? ` (+${pt.problemas} com problema)` : ""} e r` : "R"}estaram ${pt.pendentes}`
         + (pt.ok ? `, todos a até 20 km, com ${duracao(Math.max(0, Number(pt.folgaMin)))} de folga até ${dc.limite ?? "o limite"} — dava para terminar`
           : Number(pt.clientes) ? ` (${pt.clientes} a até 20 km)` : "") },
   ];
@@ -409,7 +409,8 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                         <td className={`${td} text-center text-sm tabular-nums text-slate-600 dark:text-slate-300`}>
                           {typeof s.paraTras?.entregues !== "number" ? <span className={`text-xs ${APAGADO}`}>—</span>
                             : <span className="whitespace-nowrap"><b className="text-slate-800 dark:text-slate-100">{s.paraTras.entregues}</b>
-                                {typeof s.paraTras.aEntregar === "number" && <span className="text-slate-400">/{s.paraTras.aEntregar}</span>}</span>}
+                                {typeof s.paraTras.aEntregar === "number" && <span className="text-slate-400">/{s.paraTras.aEntregar}</span>}
+                                {Number(s.paraTras.problemas) > 0 && <span className="block text-[11px] text-rose-500">+{Number(s.paraTras.problemas)} com problema</span>}</span>}
                         </td>
                         <td className={`${td} text-center`}>
                           {typeof s.paraTras?.pendentes !== "number"
