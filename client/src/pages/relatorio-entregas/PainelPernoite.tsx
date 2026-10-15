@@ -87,7 +87,7 @@ function frases(n: Noite): { ok: boolean; texto: string; galo?: boolean }[] {
     { galo: true, ok: s.ociosidade.ok, texto: `${v(s.ociosidade, "min")} min parado fora de cliente nas 2 h antes de parar (sinal a partir de 30)` },
     { galo: true, ok: pt.ok, texto: pt.pendentes === undefined ? `Faltavam: ${pt.motivo ?? "—"}`
       : pt.ok ? `Só faltavam ${pt.pendentes} cliente(s), todos a até 20 km, com ${duracao(Math.max(0, Number(pt.folgaMin)))} de folga até ${dc.limite ?? "o limite"}`
-      : `Faltavam ${pt.pendentes} cliente(s)${Number(pt.clientes) ? `, ${pt.clientes} a até 20 km` : ""}` },
+      : `${pt.entregues !== undefined ? `Entregou ${pt.entregues} e f` : "F"}altavam ${pt.pendentes} cliente(s)${Number(pt.clientes) ? `, ${pt.clientes} a até 20 km` : ""}` },
   ];
 }
 
@@ -371,7 +371,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
               <thead><tr className="bg-slate-100/80 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
                 <th className={th}>Data</th><th className={th}>Caminhão</th><th className={th}>Motorista</th><th className={th}>Onde dormiu</th>
                 <th className={th}>Da Sede</th><th className={th} title="Saída do último cliente → parou para dormir → saiu de manhã">Último cliente → parou → saiu</th>
-                <th className={th}>Faltavam</th>
+                <th className={th}>Entregou</th><th className={th}>Faltavam</th>
                 <th className={th}>Pernoite</th><th className={th}>Sinais</th>
               </tr></thead>
               <tbody>
@@ -405,6 +405,9 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                             : <span className="inline-flex items-center gap-1" title="Saiu de manhã"><Truck size={11} className="text-slate-400" />{hora(n.saidaManha)}</span>}
                           {n.saidaManha && <span className="ml-1 font-sans text-[11px] text-slate-400">{diaBRT(n.saidaManha).slice(8, 10)}/{diaBRT(n.saidaManha).slice(5, 7)}</span>}
                         </td>
+                        <td className={`${td} text-center text-sm tabular-nums text-slate-600 dark:text-slate-300`}>
+                          {typeof s.paraTras?.entregues === "number" ? s.paraTras.entregues : <span className={`text-xs ${APAGADO}`}>—</span>}
+                        </td>
                         <td className={`${td} text-center`}>
                           {typeof s.paraTras?.pendentes !== "number"
                             ? <span className={`text-xs ${APAGADO}`}>—</span>
@@ -422,7 +425,7 @@ export function PainelPernoite({ revendaId }: { revendaId: number }) {
                         </td>
                       </tr>
                       {aberta === n.id && (
-                        <tr><td colSpan={9} className={`border-l-4 ${c.faixa}`}>
+                        <tr><td colSpan={10} className={`border-l-4 ${c.faixa}`}>
                           <Detalhe n={n} sede={sede} recalculando={recalcular.isPending}
                             onRecalcular={() => recalcular.mutate({ revendaId, dia: n.dia })} />
                         </td></tr>

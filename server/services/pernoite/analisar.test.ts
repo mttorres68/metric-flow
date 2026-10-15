@@ -83,6 +83,14 @@ describe("analisarNoite", () => {
     }));
     expect(comLonge.sinais.paraTras).toMatchObject({ ok: false, clientes: 1, pendentes: 2 });
   });
+  it("conta o que entregou no dia (só ENTREGUE)", () => {
+    const b = (ini: string, fim: string, situacao: string) => {
+      const x = baixa(ini, fim);
+      return { ...x, entrega: { ...x.entrega, situacao } };
+    };
+    const n = analisarNoite(base({ baixas: [b("2026-10-05T14:00", "2026-10-05T14:10", "ENTREGUE"), b("2026-10-05T15:00", "2026-10-05T15:20", "PROBLEMA")] as never }));
+    expect(n.sinais.paraTras).toMatchObject({ entregues: 1 });
+  });
   it("para trás não acende quando os de perto não cabiam na folga (no ritmo de descarga do dia)", () => {
     const muitos = Array.from({ length: 40 }, (_, i) => ({ lat: LAT_CLI - 0.05, lon: -43.02, codCliente: `p${i}`, cliente: "P" }));
     expect(analisarNoite(base({ pendentes: muitos as never })).sinais.paraTras).toMatchObject({ ok: false, clientes: 40, pendentes: 40 });
