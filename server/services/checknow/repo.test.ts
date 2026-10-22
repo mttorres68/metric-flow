@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { randomBytes } from "crypto";
-import { paraLinha, deLinha, abrirSegredos, lerToken, deveColetarAuto } from "./repo";
+import { paraLinha, deLinha, abrirSegredos, lerToken, deveColetarAuto, deveColetarPathfind } from "./repo";
 import { cifrar } from "./cofre";
 import type { Entrega } from "../entregas/parseCheckNow";
 
@@ -40,5 +40,15 @@ describe("repo — coleta automática", () => {
     expect(deveColetarAuto({ ultimaColetaOk: false, ultimaColetaErro: "login recusado" })).toBe(false);
     expect(deveColetarAuto({ ultimaColetaOk: false, ultimaColetaErro: "resposta não é Excel" })).toBe(true);
     expect(deveColetarAuto({ ultimaColetaOk: null, ultimaColetaErro: null })).toBe(true);
+  });
+});
+
+describe("repo — coleta do Pathfind", () => {
+  const base = "https://routing.pathfindsistema.com.br/pathfind_inter_floriano";
+  it("só com endereço e sem login recusado pendente", () => {
+    expect(deveColetarPathfind({ pathfindBase: null, pathfindUltimaColetaOk: null, pathfindUltimaColetaErro: null })).toBe(false);
+    expect(deveColetarPathfind({ pathfindBase: base, pathfindUltimaColetaOk: false, pathfindUltimaColetaErro: "login recusado" })).toBe(false);
+    expect(deveColetarPathfind({ pathfindBase: base, pathfindUltimaColetaOk: false, pathfindUltimaColetaErro: "sem simulação" })).toBe(true);
+    expect(deveColetarPathfind({ pathfindBase: base, pathfindUltimaColetaOk: null, pathfindUltimaColetaErro: null })).toBe(true);
   });
 });

@@ -43,6 +43,9 @@ const contas = router({
     .input(z.object({
       revendaId: z.number().int(), checknowUsuario: z.string().trim().min(1).max(120),
       checknowSenha: z.string().max(200).optional(), infleetToken: z.string().max(4000).nullable().optional(),
+      pathfindBase: z.union([z.string().trim().url().max(200), z.literal("")]).nullable().optional(),
+      pathfindUsuario: z.string().trim().max(120).nullable().optional(),
+      pathfindSenha: z.string().max(200).optional(),
     }))
     .mutation(({ input }) => amigavel(() => repo.salvarConta(input))),
   ativar: publicProcedure.input(z.object({ revendaId: z.number().int(), ativo: z.boolean() }))

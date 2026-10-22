@@ -147,6 +147,8 @@ export async function listarContas() {
     revendaId: c.revendaId, revenda, ativo: c.ativo, checknowUsuario: c.checknowUsuario,
     senhaDefinida: !!c.checknowSenha, infleetDefinido: !!c.infleetToken,
     ultimaColetaEm: c.ultimaColetaEm, ultimaColetaOk: c.ultimaColetaOk, ultimaColetaErro: c.ultimaColetaErro,
+    pathfindBase: c.pathfindBase, pathfindUsuario: c.pathfindUsuario, pathfindSenhaDefinida: !!c.pathfindSenha,
+    pathfindUltimaColetaEm: c.pathfindUltimaColetaEm, pathfindUltimaColetaOk: c.pathfindUltimaColetaOk, pathfindUltimaColetaErro: c.pathfindUltimaColetaErro,
   }));
 }
 
@@ -154,22 +156,52 @@ export interface SalvarConta {
   revendaId: number; checknowUsuario: string;
   checknowSenha?: string;          // vazio/ausente = mantém (obrigatória ao criar)
   infleetToken?: string | null;    // ausente = mantém; null = remove (usa o .env)
+  pathfindBase?: string | null;    // ausente = mantém; null/vazio = remove
+  pathfindUsuario?: string | null;
+  pathfindSenha?: string;          // vazio/ausente = mantém
+}
+
+/** Pathfind: só com endereço cadastrado e sem login recusado pendente (mesma regra do CheckNow). */
+export const deveColetarPathfind = (c: { pathfindBase: string | null; pathfindUltimaColetaOk: boolean | null; pathfindUltimaColetaErro: string | null }) =>
+  !!c.pathfindBase && !(c.pathfindUltimaColetaOk === false && c.pathfindUltimaColetaErro === "login recusado");
+
+/** Conta do Pathfind com a senha aberta (só para o coletor); null sem endereço, usuário ou senha. */
+export async function contaPathfind(revendaId: number): Promise<{ base: string; usuario: string; senha: string } | null> {
+  const db = await exigirDb();
+  const [c] = await db.select({ base: entregasContas.pathfindBase, usuario: entregasContas.pathfindUsuario, senha: entregasContas.pathfindSenha })
+    .from(entregasContas).where(eq(entregasContas.revendaId, revendaId));
+  if (!c?.base || !c.usuario || !c.senha) return null;
+  try {
+    return { base: c.base.replace(/\/+$/, ""), usuario: c.usuario, senha: decifrar(c.senha) };
+  } catch {
+    throw new ColetaError("senha do Pathfind cifrada com outra CHECKNOW_CHAVE — recadastre a conta");
+  }
 }
 
 export async function salvarConta(c: SalvarConta) {
   const db = await exigirDb();
-  const [atual] = await db.select({ id: entregasContas.id }).from(entregasContas).where(eq(entregasContas.revendaId, c.revendaId));
+  const [atual] = await db.select({ id: entregasContas.id, pathfindBase: entregasContas.pathfindBase, pathfindUsuario: entregasContas.pathfindUsuario })
+    .from(entregasContas).where(eq(entregasContas.revendaId, c.revendaId));
   const segredos: { checknowSenha?: string; infleetToken?: string | null } = {
     ...(c.checknowSenha ? { checknowSenha: cifrar(c.checknowSenha) } : {}),
     ...(c.infleetToken === null ? { infleetToken: null } : c.infleetToken ? { infleetToken: cifrar(c.infleetToken) } : {}),
   };
+  // Pathfind: ausente = mantém; senha vazia = mantém. Mudar qualquer campo libera de novo a coleta parada.
+  const pathfind = {
+    ...(c.pathfindBase !== undefined ? { pathfindBase: c.pathfindBase?.trim().replace(/\/+$/, "") || null } : {}),
+    ...(c.pathfindUsuario !== undefined ? { pathfindUsuario: c.pathfindUsuario?.trim() || null } : {}),
+    ...(c.pathfindSenha ? { pathfindSenha: cifrar(c.pathfindSenha) } : {}),
+  };
+  const mudouPathfind = Object.keys(pathfind).length > 0;
   if (atual) {
     // Editar a conta libera de novo a coleta automática parada por login recusado.
-    await db.update(entregasContas).set({ checknowUsuario: c.checknowUsuario, ...segredos, ultimaColetaOk: null, ultimaColetaErro: null, updatedAt: new Date() })
-      .where(eq(entregasContas.id, atual.id));
+    await db.update(entregasContas).set({
+      checknowUsuario: c.checknowUsuario, ...segredos, ...pathfind, ultimaColetaOk: null, ultimaColetaErro: null,
+      ...(mudouPathfind ? { pathfindUltimaColetaOk: null, pathfindUltimaColetaErro: null } : {}), updatedAt: new Date(),
+    }).where(eq(entregasContas.id, atual.id));
   } else {
     if (!c.checknowSenha) throw new ColetaError("informe a senha do CheckNow");
-    await db.insert(entregasContas).values({ revendaId: c.revendaId, checknowUsuario: c.checknowUsuario, checknowSenha: cifrar(c.checknowSenha), infleetToken: segredos.infleetToken ?? null });
+    await db.insert(entregasContas).values({ revendaId: c.revendaId, checknowUsuario: c.checknowUsuario, checknowSenha: cifrar(c.checknowSenha), infleetToken: segredos.infleetToken ?? null, ...pathfind });
   }
 }
 

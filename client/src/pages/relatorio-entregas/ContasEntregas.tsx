@@ -8,7 +8,11 @@ import { FileUp, Loader2, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { blobToBase64 } from "@/pages/analise/lib/pdf";
 
-type Form = { revendaId: number; nova: boolean; checknowUsuario: string; checknowSenha: string; infleetToken: string; limparInfleet: boolean };
+type Form = {
+  revendaId: number; nova: boolean; checknowUsuario: string; checknowSenha: string; infleetToken: string; limparInfleet: boolean;
+  pathfindBase: string; pathfindUsuario: string; pathfindSenha: string;
+};
+const vazio = { checknowSenha: "", infleetToken: "", limparInfleet: false, pathfindSenha: "" };
 const campo = "w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-[var(--background)] text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600";
 const botaoSec = "text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 disabled:opacity-50";
 
@@ -73,6 +77,8 @@ export function ContasEntregas({ onMudou }: { onMudou: () => void }) {
         revendaId: form.revendaId, checknowUsuario: form.checknowUsuario,
         checknowSenha: form.checknowSenha || undefined,
         infleetToken: form.limparInfleet ? null : form.infleetToken || undefined,
+        pathfindBase: form.pathfindBase.trim() || null, pathfindUsuario: form.pathfindUsuario.trim() || null,
+        pathfindSenha: form.pathfindSenha || undefined,
       });
       toast.success("Conta salva.");
       setForm(null);
@@ -117,8 +123,14 @@ export function ContasEntregas({ onMudou }: { onMudou: () => void }) {
               ? `Última coleta: ${new Date(c.ultimaColetaEm).toLocaleString("pt-BR")} ${c.ultimaColetaOk ? "✓" : `— erro: ${c.ultimaColetaErro}`}`
               : "Sem coleta ainda"}
           </div>
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            Pathfind: {c.pathfindBase && c.pathfindUsuario
+              ? <><b className="text-slate-700 dark:text-slate-200">{c.pathfindUsuario}</b> · {c.pathfindSenhaDefinida ? "senha definida" : "sem senha"}
+                  {c.pathfindUltimaColetaEm && <span className="text-[11px] text-slate-400"> · última busca {new Date(c.pathfindUltimaColetaEm).toLocaleString("pt-BR")} {c.pathfindUltimaColetaOk ? "✓" : `— ${c.pathfindUltimaColetaErro}`}</span>}</>
+              : "não cadastrado"}
+          </div>
           <div className="flex gap-2">
-            <button className={botaoSec} onClick={() => setForm({ revendaId: c.revendaId, nova: false, checknowUsuario: c.checknowUsuario, checknowSenha: "", infleetToken: "", limparInfleet: false })}>Editar</button>
+            <button className={botaoSec} onClick={() => setForm({ ...vazio, revendaId: c.revendaId, nova: false, checknowUsuario: c.checknowUsuario, pathfindBase: c.pathfindBase ?? "", pathfindUsuario: c.pathfindUsuario ?? "" })}>Editar</button>
             <button className={botaoSec} disabled={testarCN.isPending} onClick={() => testar("cn", c.revendaId)}>Testar CheckNow</button>
             <button className={botaoSec} disabled={testarIF.isPending} onClick={() => testar("if", c.revendaId)}>Testar Infleet</button>
           </div>
@@ -127,7 +139,7 @@ export function ContasEntregas({ onMudou }: { onMudou: () => void }) {
 
       {!form && !!livres.data?.length && (
         <button className="self-start flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white font-semibold"
-          onClick={() => setForm({ revendaId: livres.data![0].id, nova: true, checknowUsuario: "", checknowSenha: "", infleetToken: "", limparInfleet: false })}>
+          onClick={() => setForm({ ...vazio, revendaId: livres.data![0].id, nova: true, checknowUsuario: "", pathfindBase: "", pathfindUsuario: "" })}>
           <Plus size={12} /> Adicionar conta
         </button>
       )}
@@ -152,6 +164,14 @@ export function ContasEntregas({ onMudou }: { onMudou: () => void }) {
               <input type="checkbox" checked={form.limparInfleet} onChange={e => setForm({ ...form, limparInfleet: e.target.checked })} /> Remover o token (usar o padrão do servidor)
             </label>
           )}
+          <span className="mt-1 text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Pathfind (hora prevista)</span>
+          <input className={campo} aria-label="Endereço do Pathfind" placeholder="Endereço (ex.: https://routing.pathfindsistema.com.br/pathfind_inter_floriano)"
+            value={form.pathfindBase} onChange={e => setForm({ ...form, pathfindBase: e.target.value })} autoComplete="off" />
+          <input className={campo} aria-label="Usuário do Pathfind" placeholder="Usuário do Pathfind" value={form.pathfindUsuario}
+            onChange={e => setForm({ ...form, pathfindUsuario: e.target.value })} autoComplete="off" />
+          <input className={campo} type="password" aria-label="Senha do Pathfind"
+            placeholder={contas.data?.find(c => c.revendaId === form.revendaId)?.pathfindSenhaDefinida ? "Nova senha (vazio = mantém a atual)" : "Senha do Pathfind"}
+            value={form.pathfindSenha} onChange={e => setForm({ ...form, pathfindSenha: e.target.value })} autoComplete="new-password" />
           <div className="flex justify-end gap-2">
             <button className={botaoSec} onClick={() => setForm(null)}>Cancelar</button>
             <button className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white font-semibold disabled:opacity-50"
