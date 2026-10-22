@@ -18,6 +18,7 @@ import * as repo from "../services/checknow/repo";
 import { coletarRevenda, importarPlanilha } from "../services/checknow/sincronizar";
 import { testarLogin } from "../services/checknow/coletor";
 import { testarLogin as testarPathfind } from "../services/pathfind/coletor";
+import { coletarPathfind } from "../services/pathfind/sincronizar";
 import { cofreDisponivel } from "../services/checknow/cofre";
 import { importarPedidos, importarProdutos } from "../services/erp/importar";
 import { ArquivoErpInvalidoError } from "../services/erp/parseProdutos";
@@ -92,6 +93,9 @@ export const entregasRouter = router({
     .mutation(({ input }) => amigavel(() => importarPlanilha(input.revendaId, Buffer.from(input.xlsxBase64, "base64")))),
   coletar: publicProcedure.input(periodo).mutation(({ input }) => amigavel(() => coletarRevenda(input.revendaId, input.de, input.ate, "botao"))),
   coletas: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(({ input }) => repo.ultimasColetas(input.revendaId)),
+  // Botão "Buscar do Pathfind": a simulação mais recente do dia visto (só leitura no Pathfind).
+  pathfindColetar: publicProcedure.input(z.object({ revendaId: z.number().int(), dia }))
+    .mutation(({ input }) => amigavel(() => coletarPathfind(input.revendaId, input.dia))),
   cercas: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(async ({ input }) => listarCercasInfleet(await repo.tokenInfleet(input.revendaId))),
   // Aba Análise: placas únicas de pedidos e CheckNow no período e do cadastro do Infleet, alinhadas.
   placas: publicProcedure.input(periodoAte(366)).query(async ({ input }) => {

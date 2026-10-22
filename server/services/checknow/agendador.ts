@@ -5,7 +5,8 @@
  * ponytail: setTimeout em processo único (produção = 1 réplica); com várias réplicas a trava por revenda evita coleta dupla.
  */
 import { diaBRT } from "@shared/entregas";
-import { contasAtivas, contasParaColeta, ultimoPeriodoOk } from "./repo";
+import { contasAtivas, contasParaColeta, contasParaPathfind, ultimoPeriodoOk } from "./repo";
+import { coletarPathfind } from "../pathfind/sincronizar";
 import { coletarRevenda } from "./sincronizar";
 import { processarNoites } from "../pernoite/processar";
 
@@ -34,6 +35,27 @@ export function proximaExecucao(agora: Date): { em: Date; tipo: Tipo } {
 export function proximaExecucaoPernoite(agora: Date): Date {
   const hoje = diaBRT(agora);
   return [em(hoje, "07:30"), em(hoje, "12:30")].find(t => t > agora) ?? em(menosDias(hoje, -1), "07:30");
+}
+
+/** Pathfind: 06:30, 12:00 e 18:00 (BRT) — simulações de hoje e de ontem. */
+export function proximaExecucaoPathfind(agora: Date): Date {
+  const hoje = diaBRT(agora);
+  return [em(hoje, "06:30"), em(hoje, "12:00"), em(hoje, "18:00")].find(t => t > agora) ?? em(menosDias(hoje, -1), "06:30");
+}
+
+async function buscarPathfind() {
+  const hoje = diaBRT(new Date());
+  for (const revendaId of await contasParaPathfind().catch(() => [] as number[])) {
+    for (const dia of [menosDias(hoje, 1), hoje]) {
+      try {
+        const r = await coletarPathfind(revendaId, dia);
+        console.log(`[Pathfind] revenda ${revendaId} ${dia}: ${r.status} (${r.rotas} rotas)`);
+      } catch (e) {
+        console.warn(`[Pathfind] revenda ${revendaId} ${dia}: ${(e as Error).message}`);
+        break; // login recusado / Pathfind fora: não insiste no outro dia
+      }
+    }
+  }
 }
 
 export const periodoAuto =(hoje: string) => ({ de: menosDias(hoje, 6), ate: hoje });
@@ -73,6 +95,13 @@ export function iniciarAgendador(): void {
     agendarPernoite();
   }, proximaExecucaoPernoite(new Date()).getTime() - Date.now());
   agendarPernoite();
+
+  // Pathfind: sempre ligado para quem tem conta (independe da coleta do CheckNow).
+  const agendarPathfind = () => setTimeout(async () => {
+    await buscarPathfind();
+    agendarPathfind();
+  }, proximaExecucaoPathfind(new Date()).getTime() - Date.now());
+  agendarPathfind();
 
   if (process.env.CHECKNOW_COLETA_AUTO !== "1") return;
   console.log("[CheckNow] coleta automática ligada");

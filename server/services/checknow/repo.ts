@@ -217,6 +217,15 @@ export async function revendasSemConta() {
   return todas.filter(r => !comConta.includes(r.id));
 }
 
+/** Revendas ativas com conta do Pathfind e sem login recusado pendente. */
+export async function contasParaPathfind(): Promise<number[]> {
+  const db = await exigirDb();
+  const rows = await db.select({ id: entregasContas.revendaId, pathfindBase: entregasContas.pathfindBase,
+    pathfindUltimaColetaOk: entregasContas.pathfindUltimaColetaOk, pathfindUltimaColetaErro: entregasContas.pathfindUltimaColetaErro })
+    .from(entregasContas).where(eq(entregasContas.ativo, true));
+  return rows.filter(deveColetarPathfind).map(r => r.id);
+}
+
 /** Revendas ativas (o pernoite usa banco + Infleet: não depende do login do CheckNow). */
 export async function contasAtivas(): Promise<number[]> {
   const db = await exigirDb();

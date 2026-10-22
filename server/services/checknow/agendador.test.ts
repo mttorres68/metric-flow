@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 vi.mock("./repo", () => ({}));
 vi.mock("./sincronizar", () => ({}));
 vi.mock("../pernoite/processar", () => ({}));
-import { periodoAuto, periodoRecuperacao, proximaExecucao, proximaExecucaoPernoite } from "./agendador";
+vi.mock("../pathfind/sincronizar", () => ({}));
+import { periodoAuto, periodoRecuperacao, proximaExecucao, proximaExecucaoPathfind, proximaExecucaoPernoite } from "./agendador";
 
 const brt = (s: string) => new Date(`${s}-03:00`);
 
@@ -28,4 +29,10 @@ describe("proximaExecucaoPernoite", () => {
   it("antes das 07:30 → 07:30 do dia", () => expect(proximaExecucaoPernoite(brt("2026-10-07T06:00:00"))).toEqual(brt("2026-10-07T07:30:00")));
   it("depois das 07:30 → 12:30 do dia (2º passe, com a manhã completa)", () => expect(proximaExecucaoPernoite(brt("2026-10-07T08:00:00"))).toEqual(brt("2026-10-07T12:30:00")));
   it("depois das 12:30 → 07:30 do dia seguinte", () => expect(proximaExecucaoPernoite(brt("2026-10-07T13:00:00"))).toEqual(brt("2026-10-08T07:30:00")));
+});
+
+describe("proximaExecucaoPathfind", () => {
+  it("antes das 06:30 → 06:30 do dia", () => expect(proximaExecucaoPathfind(brt("2026-10-07T05:00:00"))).toEqual(brt("2026-10-07T06:30:00")));
+  it("depois das 06:30 → 12:00", () => expect(proximaExecucaoPathfind(brt("2026-10-07T06:31:00"))).toEqual(brt("2026-10-07T12:00:00")));
+  it("depois das 18:00 → 06:30 do dia seguinte", () => expect(proximaExecucaoPathfind(brt("2026-10-07T18:01:00"))).toEqual(brt("2026-10-08T06:30:00")));
 });

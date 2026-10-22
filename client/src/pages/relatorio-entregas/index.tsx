@@ -39,6 +39,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CloudDownload,
+  Route,
   FileUp,
   Loader2,
   MapPin,
@@ -546,6 +547,13 @@ export default function RelatorioEntregas() {
     onError: e => toast.error(e.message),
     onSettled: () => utils.entregas.coletas.invalidate(),
   });
+  const pathfind = trpc.entregas.pathfindColetar.useMutation({
+    onSuccess: r => {
+      toast.success(r.status === "ok" ? `Pathfind: ${r.rotas} rotas · simulação ${r.simulacao}` : `Pathfind sem simulação em ${fmtDia(dia)}`);
+      recalcular();
+    },
+    onError: e => toast.error(e.message),
+  });
   const importar = trpc.entregas.importar.useMutation({
     onSuccess: r => {
       toast.success(`Planilha importada: ${r.linhas} entregas`);
@@ -718,6 +726,15 @@ export default function RelatorioEntregas() {
                     className={coletar.isPending ? "animate-pulse" : ""}
                   />{" "}
                   {coletar.isPending ? "Buscando…" : "Buscar do CheckNow"}
+                </button>
+                <button
+                  onClick={() => pathfind.mutate({ revendaId: revenda.revendaId, dia })}
+                  disabled={pathfind.isPending}
+                  title={`Hora prevista da roteirização de ${fmtDia(dia)} (dia visto)`}
+                  className={`${botao} border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30`}
+                >
+                  <Route size={12} className={pathfind.isPending ? "animate-pulse" : ""} />{" "}
+                  {pathfind.isPending ? "Buscando…" : "Buscar do Pathfind"}
                 </button>
                 <label
                   className={`${botao} border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer`}
