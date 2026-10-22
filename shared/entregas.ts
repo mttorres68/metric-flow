@@ -30,6 +30,7 @@ export const LIMITES = {
   lentoMinMin: 20, // trecho com mais de 20 min…
   lentoMaxKmh: 15, // …a menos de 15 km/h de média = parou no caminho
   cercaManobraMin: 15, // saiu e entrou na cerca em menos disso = manobra na borda, não saída/retorno
+  previstoToleranciaMin: 15, // realizado até isto depois do previsto do Pathfind ainda é "no prazo"
 } as const;
 
 const H3 = 3 * 3600000;
@@ -60,6 +61,7 @@ export interface ConfigEntregas {
   pernoiteVelKmh: number;
   pernoiteParouCedo: string; // "hh:mm"
   pernoiteFinalLentoX: number;
+  previstoToleranciaMin: number;
 }
 export const CONFIG_ENTREGAS_PADRAO: ConfigEntregas = {
   raioM: LIMITES.raioM,
@@ -76,4 +78,5 @@ export const CONFIG_ENTREGAS_PADRAO: ConfigEntregas = {
   pernoiteVelKmh: LIMITES.pernoiteVelKmh,
   pernoiteParouCedo: LIMITES.pernoiteParouCedo,
   pernoiteFinalLentoX: LIMITES.pernoiteFinalLentoX,
+  previstoToleranciaMin: LIMITES.previstoToleranciaMin,
 };

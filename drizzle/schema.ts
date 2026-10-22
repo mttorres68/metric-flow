@@ -362,6 +362,7 @@ export const entregasConfig = pgTable("entregas_config", {
   pernoiteVelKmh:       doublePrecision("pernoiteVelKmh").notNull().default(60),
   pernoiteParouCedo:    varchar("pernoiteParouCedo", { length: 5 }).notNull().default("17:00"),
   pernoiteFinalLentoX:  doublePrecision("pernoiteFinalLentoX").notNull().default(2),
+  previstoToleranciaMin: integer("previstoToleranciaMin").notNull().default(15), // previsto do Pathfind: "no prazo" até
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
@@ -379,9 +380,47 @@ export const entregasContas = pgTable("entregas_contas", {
   ultimaColetaEm:   timestamp("ultimaColetaEm", { withTimezone: true }),
   ultimaColetaOk:   boolean("ultimaColetaOk"),
   ultimaColetaErro: text("ultimaColetaErro"),
+  // Pathfind (roteirizador): hora prevista por cliente (spec pathfind-previsto §4). Senha cifrada no cofre.
+  pathfindBase:             varchar("pathfindBase", { length: 200 }),
+  pathfindUsuario:          varchar("pathfindUsuario", { length: 120 }),
+  pathfindSenha:            text("pathfindSenha"),
+  pathfindUltimaColetaEm:   timestamp("pathfindUltimaColetaEm", { withTimezone: true }),
+  pathfindUltimaColetaOk:   boolean("pathfindUltimaColetaOk"),
+  pathfindUltimaColetaErro: text("pathfindUltimaColetaErro"),
   createdAt:        timestamp("createdAt").defaultNow().notNull(),
   updatedAt:        timestamp("updatedAt").defaultNow().notNull(),
 });
+
+/** Rota planejada no Pathfind: uma linha por rota de uma simulação. */
+export const pathfindRotas = pgTable("pathfind_rotas", {
+  id:            serial("id").primaryKey(),
+  revendaId:     integer("revendaId").notNull().references(() => revendas.id),
+  dataSimulacao: date("dataSimulacao", { mode: "string" }).notNull(),
+  simulacao:     varchar("simulacao", { length: 20 }).notNull(),
+  rota:          varchar("rota", { length: 20 }).notNull(),
+  placa:         varchar("placa", { length: 20 }).notNull(),
+  motorista:     varchar("motorista", { length: 120 }).notNull(),
+  tempoMin:      integer("tempoMin"),
+  km:            doublePrecision("km"),
+  coletadoEm:    timestamp("coletadoEm", { withTimezone: true }).defaultNow().notNull(),
+}, t => [
+  uniqueIndex("uq_pathfind_rotas").on(t.revendaId, t.simulacao, t.rota),
+  index("ix_pathfind_rotas_data").on(t.revendaId, t.dataSimulacao),
+]);
+
+/** Pedido de uma rota do Pathfind com chegada/saída previstas ("HH:MM"; a data sai do cruzamento). */
+export const pathfindParadas = pgTable("pathfind_paradas", {
+  id:              serial("id").primaryKey(),
+  rotaId:          integer("rotaId").notNull().references(() => pathfindRotas.id, { onDelete: "cascade" }),
+  sequencia:       integer("sequencia").notNull(),
+  pedido:          varchar("pedido", { length: 20 }).notNull(),
+  codCliente:      varchar("codCliente", { length: 40 }).notNull(),
+  cliente:         varchar("cliente", { length: 200 }).notNull(),
+  cidade:          varchar("cidade", { length: 120 }).notNull(),
+  chegadaPrevista: varchar("chegadaPrevista", { length: 5 }).notNull(),
+  saidaPrevista:   varchar("saidaPrevista", { length: 5 }).notNull(),
+  km:              doublePrecision("km"),
+}, t => [uniqueIndex("uq_pathfind_paradas").on(t.rotaId, t.sequencia, t.pedido)]);
 
 export const checknowEntregas = pgTable("checknow_entregas", {
   id:              serial("id").primaryKey(),

@@ -81,6 +81,7 @@ export const configRouter = router({
             pernoiteVelKmh: z.number().min(10).max(120),
             pernoiteParouCedo: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
             pernoiteFinalLentoX: z.number().min(1).max(10),
+            previstoToleranciaMin: z.number().int().min(0).max(240),
         }))
         .mutation(async ({ input }) => {
             const db = await getDb();

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { atalhos, diasEntre, somaDiasIso } from "@shared/intervalos";
 import { periodoAte } from "./periodo";
+import { CONFIG_ENTREGAS_PADRAO } from "@shared/entregas";
 
 describe("intervalos de datas", () => {
   it("dias entre duas datas, contando as duas pontas", () => {
@@ -27,4 +28,8 @@ describe("periodoAte (validação das rotas)", () => {
     expect(p.safeParse({ revendaId: 5, de: "2026-10-14", ate: "2026-10-13" }).success).toBe(false);
     expect(periodoAte(31).safeParse({ revendaId: 5, de: "2026-09-01", ate: "2026-10-01" }).success).toBe(true);
   });
+});
+
+describe("config do previsto (Pathfind)", () => {
+  it("tolerância do previsto: padrão 15 min", () => expect(CONFIG_ENTREGAS_PADRAO.previstoToleranciaMin).toBe(15));
 });

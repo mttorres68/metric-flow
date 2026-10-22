@@ -65,7 +65,8 @@ export async function getConfigEntregas(): Promise<ConfigEntregas> {
         if (!r) return CONFIG_ENTREGAS_PADRAO;
         return { raioM: r.raioM, desvioFator: r.desvioFator, desvioMinKm: r.desvioMinKm, lentoMinMin: r.lentoMinMin, lentoMaxKmh: r.lentoMaxKmh, saidaMinima: r.saidaMinima, almocoDe: r.almocoDe, almocoAte: r.almocoAte,
             pernoiteMaxKm: r.pernoiteMaxKm, pernoiteChegarAte: r.pernoiteChegarAte, pernoiteFatorEstrada: r.pernoiteFatorEstrada,
-            pernoiteVelKmh: r.pernoiteVelKmh, pernoiteParouCedo: r.pernoiteParouCedo, pernoiteFinalLentoX: r.pernoiteFinalLentoX };
+            pernoiteVelKmh: r.pernoiteVelKmh, pernoiteParouCedo: r.pernoiteParouCedo, pernoiteFinalLentoX: r.pernoiteFinalLentoX,
+            previstoToleranciaMin: r.previstoToleranciaMin };
     } catch {
         return CONFIG_ENTREGAS_PADRAO;
     }

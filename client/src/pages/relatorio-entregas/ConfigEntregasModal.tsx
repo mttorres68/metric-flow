@@ -40,6 +40,10 @@ const GRUPOS: { titulo: string; campos: Campo[] }[] = [
     { chave: "pernoiteFinalLentoX", rotulo: "Final lento acima de", un: "× o ritmo do dia", min: 1, max: 10, step: 0.5, inteiro: false,
       ajuda: "Cozinhando o galo: as 3 últimas entregas mais lentas que este múltiplo do tempo típico do dia." },
   ] },
+  { titulo: "Previsto (Pathfind)", campos: [
+    { chave: "previstoToleranciaMin", rotulo: "No prazo até", un: "min", min: 0, max: 240, step: 5, inteiro: true,
+      ajuda: "Diferença entre o realizado e o previsto do Pathfind que ainda conta como no prazo." },
+  ] },
 ];
 
 const HORAS: { chave: "almocoDe" | "almocoAte" | "pernoiteChegarAte" | "pernoiteParouCedo"; rotulo: string; ajuda: string }[] = [
