@@ -18,7 +18,7 @@ import * as repo from "../services/checknow/repo";
 import { coletarRevenda, importarPlanilha } from "../services/checknow/sincronizar";
 import { testarLogin } from "../services/checknow/coletor";
 import { testarLogin as testarPathfind } from "../services/pathfind/coletor";
-import { coletarPathfind } from "../services/pathfind/sincronizar";
+import { coletarParaODia } from "../services/pathfind/sincronizar";
 import { cofreDisponivel } from "../services/checknow/cofre";
 import { importarPedidos, importarProdutos } from "../services/erp/importar";
 import { ArquivoErpInvalidoError } from "../services/erp/parseProdutos";
@@ -45,7 +45,7 @@ const contas = router({
     .input(z.object({
       revendaId: z.number().int(), checknowUsuario: z.string().trim().min(1).max(120),
       checknowSenha: z.string().max(200).optional(), infleetToken: z.string().max(4000).nullable().optional(),
-      pathfindBase: z.union([z.string().trim().url().max(200), z.literal("")]).nullable().optional(),
+      pathfindBase: z.union([z.string().trim().max(200).refine(repo.enderecoPathfindValido, "endereço do Pathfind deve ser https://routing.pathfindsistema.com.br/…"), z.literal("")]).nullable().optional(),
       pathfindUsuario: z.string().trim().max(120).nullable().optional(),
       pathfindSenha: z.string().max(200).optional(),
     }))
@@ -93,9 +93,9 @@ export const entregasRouter = router({
     .mutation(({ input }) => amigavel(() => importarPlanilha(input.revendaId, Buffer.from(input.xlsxBase64, "base64")))),
   coletar: publicProcedure.input(periodo).mutation(({ input }) => amigavel(() => coletarRevenda(input.revendaId, input.de, input.ate, "botao"))),
   coletas: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(({ input }) => repo.ultimasColetas(input.revendaId)),
-  // Botão "Buscar do Pathfind": a simulação mais recente do dia visto (só leitura no Pathfind).
+  // Botão "Buscar do Pathfind": simulações da véspera e do dia visto (só leitura no Pathfind).
   pathfindColetar: publicProcedure.input(z.object({ revendaId: z.number().int(), dia }))
-    .mutation(({ input }) => amigavel(() => coletarPathfind(input.revendaId, input.dia))),
+    .mutation(({ input }) => amigavel(() => coletarParaODia(input.revendaId, input.dia))),
   cercas: publicProcedure.input(z.object({ revendaId: z.number().int() })).query(async ({ input }) => listarCercasInfleet(await repo.tokenInfleet(input.revendaId))),
   // Aba Análise: placas únicas de pedidos e CheckNow no período e do cadastro do Infleet, alinhadas.
   placas: publicProcedure.input(periodoAte(366)).query(async ({ input }) => {

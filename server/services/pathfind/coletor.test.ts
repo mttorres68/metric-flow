@@ -68,6 +68,15 @@ describe("baixarSimulacao (só leitura)", () => {
     await expect(baixarSimulacao(conta, "2026-10-21", portal({ expiraNaRota: true }).f, 0)).rejects.toThrow("sessão expirada");
   });
 
+  it("sessão que cai por redirect HTTP (volta o HTML do login) → 'sessão expirada', não 'sem simulação'", async () => {
+    await expect(baixarSimulacao(conta, "2026-10-21", portal({ simulacoes: LOGIN }).f, 0)).rejects.toThrow("sessão expirada");
+  });
+
+  it("erro do servidor JSF (<error>) → falha clara, não 'sem simulação'", async () => {
+    const erro = "<partial-response><error><error-name>javax.faces.application.ViewExpiredException</error-name><error-message><![CDATA[expirou]]></error-message></error></partial-response>";
+    await expect(baixarSimulacao(conta, "2026-10-21", portal({ simulacoes: erro }).f, 0)).rejects.toThrow(/Pathfind recusou a requisição/);
+  });
+
   it("resposta em latin1 mantém os acentos", async () => {
     const r = await baixarSimulacao(conta, "2026-10-21", portal({ rotasLatin1: true }).f, 0);
     expect(r.rotas[0].motorista).toBe("JOSÉ");

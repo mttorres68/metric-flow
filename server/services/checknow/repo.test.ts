@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { randomBytes } from "crypto";
-import { paraLinha, deLinha, abrirSegredos, lerToken, deveColetarAuto, deveColetarPathfind } from "./repo";
+import { paraLinha, deLinha, abrirSegredos, lerToken, deveColetarAuto, deveColetarPathfind, camposPathfind, enderecoPathfindValido } from "./repo";
 import { cifrar } from "./cofre";
 import type { Entrega } from "../entregas/parseCheckNow";
 
@@ -40,6 +40,23 @@ describe("repo — coleta automática", () => {
     expect(deveColetarAuto({ ultimaColetaOk: false, ultimaColetaErro: "login recusado" })).toBe(false);
     expect(deveColetarAuto({ ultimaColetaOk: false, ultimaColetaErro: "resposta não é Excel" })).toBe(true);
     expect(deveColetarAuto({ ultimaColetaOk: null, ultimaColetaErro: null })).toBe(true);
+  });
+});
+
+describe("repo — conta do Pathfind (a senha não segue para outro endereço)", () => {
+  const atual = { pathfindBase: "https://routing.pathfindsistema.com.br/pathfind_inter_floriano" };
+  it("trocar o endereço sem senha nova apaga a senha guardada", () => {
+    expect(camposPathfind(atual, { revendaId: 5, checknowUsuario: "u", pathfindBase: "https://routing.pathfindsistema.com.br/outra_empresa" }))
+      .toMatchObject({ pathfindBase: "https://routing.pathfindsistema.com.br/outra_empresa", pathfindSenha: null });
+  });
+  it("mesmo endereço (com barra no fim) mantém a senha; senha nova é cifrada", () => {
+    expect(camposPathfind(atual, { revendaId: 5, checknowUsuario: "u", pathfindBase: `${atual.pathfindBase}/` })).not.toHaveProperty("pathfindSenha");
+    expect(typeof camposPathfind(atual, { revendaId: 5, checknowUsuario: "u", pathfindBase: "https://routing.pathfindsistema.com.br/x", pathfindSenha: "nova" }).pathfindSenha).toBe("string");
+  });
+  it("só aceita o endereço do Pathfind (https, routing.pathfindsistema.com.br)", () => {
+    expect(enderecoPathfindValido("https://routing.pathfindsistema.com.br/pathfind_inter_floriano")).toBe(true);
+    expect(enderecoPathfindValido("https://atacante.example/pathfind")).toBe(false);
+    expect(enderecoPathfindValido("http://routing.pathfindsistema.com.br/x")).toBe(false);
   });
 });
 

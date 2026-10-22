@@ -1,5 +1,5 @@
 /* MetricFlow — banco do Pathfind: rotas planejadas e paradas com hora prevista (spec pathfind-previsto §4). */
-import { and, asc, between, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, between, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { getDb } from "../../db";
 import { entregasContas, pathfindParadas, pathfindRotas } from "../../../drizzle/schema";
 import type { SimulacaoBaixada } from "./coletor";
@@ -17,6 +17,9 @@ async function exigirDb() {
 export async function gravarSimulacao(revendaId: number, dia: string, s: SimulacaoBaixada): Promise<void> {
   const db = await exigirDb();
   await db.transaction(async tx => {
+    // Rota que sumiu da simulação (ou trocou de código) na recoleta sai junto com as paradas (cascade).
+    await tx.delete(pathfindRotas).where(and(eq(pathfindRotas.revendaId, revendaId), eq(pathfindRotas.simulacao, s.simulacao),
+      s.rotas.length ? notInArray(pathfindRotas.rota, s.rotas.map(r => r.rota)) : undefined));
     for (const r of s.rotas) {
       const dados = { dataSimulacao: dia, placa: r.placa, motorista: r.motorista, tempoMin: r.tempoMin, km: r.km, coletadoEm: new Date() };
       const [{ id }] = await tx.insert(pathfindRotas).values({ revendaId, simulacao: s.simulacao, rota: r.rota, ...dados })

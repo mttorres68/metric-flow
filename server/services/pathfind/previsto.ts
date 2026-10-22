@@ -27,11 +27,19 @@ export function planoEmMinutos(paradas: ParadaPf[]): { parada: ParadaPf; chegada
   });
 }
 
-/** Rota do Pathfind da mesma placa simulada na véspera ou no dia de início; havendo várias, a de maior código. */
-export function escolherRota(rotas: RotaGravada[], placa: string, diaInicio: string): RotaGravada | null {
-  const alvo = normalizarPlaca(placa), desde = somaDias(diaInicio, -1);
-  return rotas.filter(r => normalizarPlaca(r.placa) === alvo && r.dataSimulacao >= desde && r.dataSimulacao <= diaInicio)
-    .sort((a, b) => Number(b.simulacao) - Number(a.simulacao))[0] ?? null;
+/**
+ * Rota do Pathfind da mesma placa simulada até 3 dias antes do início (fim de semana) ou no dia. A simulação é feita na
+ * véspera, e a do próprio dia já é a de amanhã: com os clientes da rota do CheckNow, vale a que mais tem clientes em
+ * comum (nenhum em comum = não é esta rota); empate ou sem clientes, a de maior código.
+ */
+export function escolherRota(rotas: RotaGravada[], placa: string, diaInicio: string, clientesDaRota?: string[]): RotaGravada | null {
+  const alvo = normalizarPlaca(placa), desde = somaDias(diaInicio, -3);
+  const daRota = clientesDaRota && new Set(clientesDaRota.map(semZeros));
+  const comuns = (r: RotaGravada) => (daRota ? r.paradas.filter(p => daRota.has(semZeros(p.codCliente))).length : 0);
+  const melhor = rotas.filter(r => normalizarPlaca(r.placa) === alvo && r.dataSimulacao >= desde && r.dataSimulacao <= diaInicio)
+    .map(r => ({ r, n: comuns(r) }))
+    .sort((a, b) => b.n - a.n || Number(b.r.simulacao) - Number(a.r.simulacao))[0];
+  return !melhor || (daRota && melhor.n === 0) ? null : melhor.r;
 }
 
 export interface Previsto {
@@ -43,14 +51,20 @@ export interface Previsto {
 
 const atraso = (real: Date | null, previsto: Date | null) => (real && previsto ? Math.round((real.getTime() - previsto.getTime()) / 60000) : null);
 
-export function previstoDaLinha(l: ResultadoLinha, diaInicio: string, rotas: RotaGravada[]): Previsto | null {
-  const r = escolherRota(rotas, l.linha.placa, diaInicio);
+/** Da rota do CheckNow: todos os clientes (para escolher a simulação) e as baixas do dia no app (linha sem GPS). */
+export interface DaRotaCheckNow { clientesDaRota?: string[]; baixasApp?: { codCliente: string; baixaEm: Date | null }[] }
+
+export function previstoDaLinha(l: ResultadoLinha, diaInicio: string, rotas: RotaGravada[], daRota: DaRotaCheckNow = {}): Previsto | null {
+  const r = escolherRota(rotas, l.linha.placa, diaInicio, daRota.clientesDaRota);
   if (!r) return null;
   const plano = new Map<string, { chegadaMin: number; saidaMin: number }>();
   for (const x of planoEmMinutos(r.paradas)) if (!plano.has(semZeros(x.parada.codCliente))) plano.set(semZeros(x.parada.codCliente), x);
   // Clientes atendidos no dia que estão no plano, com a chegada real (GPS; sem parada no raio, a baixa do app).
-  const atendidos = l.baixas.map(b => ({ cod: semZeros(b.entrega.codCliente), real: b.paradasNoRaio[0]?.inicio ?? b.entrega.baixaEm }))
-    .filter((c): c is { cod: string; real: Date } => !!c.real && plano.has(c.cod));
+  // Linha sem GPS não tem baixas cruzadas: vale a hora da baixa no app.
+  const reais = l.baixas.length
+    ? l.baixas.map(b => ({ cod: semZeros(b.entrega.codCliente), real: b.paradasNoRaio[0]?.inicio ?? b.entrega.baixaEm }))
+    : (daRota.baixasApp ?? []).map(b => ({ cod: semZeros(b.codCliente), real: b.baixaEm }));
+  const atendidos = reais.filter((c): c is { cod: string; real: Date } => !!c.real && plano.has(c.cod));
   const reancorado = l.linha.data !== diaInicio;
   const ancora = reancorado ? [...atendidos].sort((a, b) => a.real.getTime() - b.real.getTime())[0] : null;
   const quando = (min: number): Date => ancora

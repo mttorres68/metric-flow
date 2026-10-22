@@ -36,6 +36,15 @@ describe("escolherRota", () => {
     expect(escolherRota(rotas, "SOL-6B13", "2026-10-24")?.simulacao).toBe("1290");
     expect(escolherRota(rotas, "UHQ-5H38", "2026-10-22")).toBeNull();
   });
+  it("caminhão que sai todo dia: a simulação da véspera (clientes em comum), não a de hoje feita para amanhã", () => {
+    const ontem = rota({ simulacao: "1288", dataSimulacao: "2026-10-21", paradas: [p(1, "00074565", "07:22", "07:34"), p(2, "00072912", "09:30", "09:40")] });
+    const hoje = rota({ simulacao: "1289", dataSimulacao: "2026-10-22", paradas: [p(1, "555", "07:10", "07:20"), p(2, "666", "08:00", "08:10")] });
+    expect(escolherRota([ontem, hoje], "SOL-6B13", "2026-10-22", ["74565", "72912", "777"])?.simulacao).toBe("1288");
+    expect(escolherRota([ontem, hoje], "SOL-6B13", "2026-10-22", ["999"])).toBeNull(); // nenhum cliente em comum
+  });
+  it("saída na segunda com simulação do sábado ainda casa", () => {
+    expect(escolherRota([rota({ dataSimulacao: "2026-10-24" })], "SOL-6B13", "2026-10-26", ["74565"])?.simulacao).toBe("1288");
+  });
   it("rota de ontem e de hoje da mesma placa: cada dia de início pega a sua", () => {
     const rotas = [rota({ simulacao: "1288", dataSimulacao: "2026-10-21" }), rota({ simulacao: "1300", dataSimulacao: "2026-10-26" })];
     expect(escolherRota(rotas, "SOL-6B13", "2026-10-22")?.simulacao).toBe("1288");
@@ -71,6 +80,14 @@ describe("previstoDaLinha", () => {
     expect(r.fimPrevisto).toEqual(brt("2026-10-22T07:34"));
   });
 
+  it("linha sem GPS: o previsto usa a hora da baixa no app", () => {
+    const l = linha("2026-10-22", [], null) as unknown as { app: { ultima: Date | null } };
+    l.app.ultima = brt("2026-10-22T10:00");
+    const r = previstoDaLinha(l as never, "2026-10-22", [rota()], { baixasApp: [{ codCliente: "00072912", baixaEm: brt("2026-10-22T09:50") }] })!;
+    expect(r.clientes["72912"]).toEqual({ chegadaPrevista: brt("2026-10-22T09:30"), atrasoMin: 20 });
+    expect(r.fimPrevisto).toEqual(brt("2026-10-22T09:40"));
+    expect(r.atrasoMin).toBe(20);
+  });
   it("sem rota no Pathfind → null", () => {
     expect(previstoDaLinha(linha("2026-10-22", [["74565", null, "2026-10-22T08:00"]], null), "2026-10-22", [])).toBeNull();
   });

@@ -3,15 +3,14 @@
  * Só leitura: login → roteirização → simulações da data → carregar → expandir cada rota.
  * A senha nunca entra em log nem em mensagem de erro.
  */
-import { ColetaError } from "../checknow/repo";
 import { Sessao } from "../portal/sessao";
+import { PathfindError } from "./erro";
 import { diaBRT } from "@shared/entregas";
 import { lerParadas, lerRotas, lerSimulacoes, redirecionouParaLogin, viewStateParcial, type ParadaPf, type RotaPf } from "./ler";
 
 export type ContaPathfind = { base: string; usuario: string; senha: string };
 
-/** Erros do Pathfind: "login recusado", "sessão expirada", "sem simulação", "tela do Pathfind mudou (…)". */
-export class PathfindError extends ColetaError {}
+export { PathfindError };
 
 export const novaSessao = (f: typeof fetch) => new Sessao(f, "Pathfind", PathfindError);
 const telaDeLogin = (html: string) => /id="loginForm"|name="usuario"/.test(html);
@@ -52,7 +51,10 @@ async function roteirizacao(conta: ContaPathfind, f: typeof fetch, pausaMs: numb
   const ajax = async (campos: Record<string, string>) => {
     const { res } = await s.post(tela, { "javax.faces.partial.ajax": "true", ...campos, "javax.faces.ViewState": vs }, true, tela);
     const xml = await textoDe(res);
-    if (redirecionouParaLogin(xml)) throw new PathfindError("sessão expirada");
+    // Sessão que caiu: <redirect> do JSF ou o HTML do login depois de um redirect HTTP.
+    if (redirecionouParaLogin(xml) || telaDeLogin(xml)) throw new PathfindError("sessão expirada");
+    const erro = xml.match(/<error>[\s\S]*?<error-name>([^<]*)<\/error-name>/)?.[1];
+    if (erro) throw new PathfindError(`Pathfind recusou a requisição (${erro.split(".").pop()})`);
     vs = viewStateParcial(xml) ?? vs;
     if (pausaMs) await new Promise(r => setTimeout(r, pausaMs));
     return xml;

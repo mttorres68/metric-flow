@@ -27,7 +27,7 @@ export async function cruzarDia(revendaId: number, de: string, ate: string, cerc
   const inicioDaRota = new Map(entregas.filter(e => e.rotaInicio).map(e => [e.routeId, diaBRT(e.rotaInicio!)]));
   const inicios = res.linhas.map(l => inicioDaRota.get(l.linha.routeId) ?? l.linha.data).sort();
   const rotasPf = inicios.length
-    ? (await rotasPathfind(revendaId, new Date(Date.parse(`${inicios[0]}T12:00:00Z`) - 86_400_000).toISOString().slice(0, 10), ate).catch(avisar("rotas do Pathfind"))) ?? []
+    ? (await rotasPathfind(revendaId, new Date(Date.parse(`${inicios[0]}T12:00:00Z`) - 3 * 86_400_000).toISOString().slice(0, 10), ate).catch(avisar("rotas do Pathfind"))) ?? []
     : [];
   const linhas = await Promise.all(res.linhas.map(async l => {
     const volume = (docs: string[]) => (docs.length ? volumeEntrega(docs, itens) : null);
@@ -38,7 +38,11 @@ export async function cruzarDia(revendaId: number, de: string, ate: string, cerc
       .map(e => ({ situacao: e.situacao, vol: volume(e.documentos) })) : [];
     await erpRepo.gravarPontos(revendaId, pontosDaLinha(l, volumes)).catch(avisar("gravar pontos"));
     const p4 = (await erpRepo.pontosDoMotorista(revendaId, l.linha.motorista, desde, l.linha.data).catch(avisar("pontos de 4 semanas"))) ?? [];
-    const previsto = previstoDaLinha(l, inicioDaRota.get(l.linha.routeId) ?? l.linha.data, rotasPf);
+    const daRota = entregas.filter(e => e.routeId === l.linha.routeId);
+    const previsto = previstoDaLinha(l, inicioDaRota.get(l.linha.routeId) ?? l.linha.data, rotasPf, {
+      clientesDaRota: daRota.map(e => e.codCliente),
+      baixasApp: daRota.filter(e => e.baixaEm && diaBRT(e.baixaEm) === l.linha.data),
+    });
     return { ...l, volumes, produtividade: produtividadeLinha(l, volumes, config.raioM, p4, semGps), previsto };
   }));
   return { linhas, rotas: res.rotas, entregas };

@@ -27,6 +27,12 @@ describe("leitor do Pathfind (respostas reais reduzidas)", () => {
     expect(p[4]).toMatchObject({ chegada: "23:53", saida: "00:01" });
   });
 
+  it("tabela ausente na resposta é tela mudada/erro, não 'nenhuma simulação' nem '0 rotas'", () => {
+    const outra = "<partial-response><changes><update id=\"x\"><![CDATA[<div>outra coisa</div>]]></update></changes></partial-response>";
+    expect(() => lerSimulacoes(outra)).toThrow(/tela do Pathfind mudou/);
+    expect(() => lerRotas(outra)).toThrow(/tela do Pathfind mudou/);
+  });
+
   it("ViewState novo da resposta parcial e sessão expirada (redirect para o login)", () => {
     expect(viewStateParcial(fx("rotas.xml"))).toBe("VS-NOVO-123");
     expect(redirecionouParaLogin(fx("expirou.xml"))).toBe(true);

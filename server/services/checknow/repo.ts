@@ -161,6 +161,32 @@ export interface SalvarConta {
   pathfindSenha?: string;          // vazio/ausente = mantém
 }
 
+/** Só o Pathfind de verdade recebe a senha: https em routing.pathfindsistema.com.br. */
+export function enderecoPathfindValido(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && u.hostname === "routing.pathfindsistema.com.br";
+  } catch {
+    return false;
+  }
+}
+
+const semBarra = (s: string | null | undefined) => s?.trim().replace(/\/+$/, "") || null;
+
+/**
+ * Campos do Pathfind a gravar: ausente = mantém; senha vazia = mantém. Trocar o endereço sem mandar a senha de novo
+ * apaga a senha guardada — a senha nunca segue para um endereço que não foi cadastrado junto com ela.
+ */
+export function camposPathfind(atual: { pathfindBase: string | null }, c: SalvarConta) {
+  const base = c.pathfindBase !== undefined ? semBarra(c.pathfindBase) : undefined;
+  const trocouEndereco = base !== undefined && base !== semBarra(atual.pathfindBase);
+  return {
+    ...(base !== undefined ? { pathfindBase: base } : {}),
+    ...(c.pathfindUsuario !== undefined ? { pathfindUsuario: c.pathfindUsuario?.trim() || null } : {}),
+    ...(c.pathfindSenha ? { pathfindSenha: cifrar(c.pathfindSenha) } : trocouEndereco ? { pathfindSenha: null } : {}),
+  };
+}
+
 /** Pathfind: só com endereço cadastrado e sem login recusado pendente (mesma regra do CheckNow). */
 export const deveColetarPathfind = (c: { pathfindBase: string | null; pathfindUltimaColetaOk: boolean | null; pathfindUltimaColetaErro: string | null }) =>
   !!c.pathfindBase && !(c.pathfindUltimaColetaOk === false && c.pathfindUltimaColetaErro === "login recusado");
@@ -186,12 +212,7 @@ export async function salvarConta(c: SalvarConta) {
     ...(c.checknowSenha ? { checknowSenha: cifrar(c.checknowSenha) } : {}),
     ...(c.infleetToken === null ? { infleetToken: null } : c.infleetToken ? { infleetToken: cifrar(c.infleetToken) } : {}),
   };
-  // Pathfind: ausente = mantém; senha vazia = mantém. Mudar qualquer campo libera de novo a coleta parada.
-  const pathfind = {
-    ...(c.pathfindBase !== undefined ? { pathfindBase: c.pathfindBase?.trim().replace(/\/+$/, "") || null } : {}),
-    ...(c.pathfindUsuario !== undefined ? { pathfindUsuario: c.pathfindUsuario?.trim() || null } : {}),
-    ...(c.pathfindSenha ? { pathfindSenha: cifrar(c.pathfindSenha) } : {}),
-  };
+  const pathfind = camposPathfind(atual ?? { pathfindBase: null }, c);
   const mudouPathfind = Object.keys(pathfind).length > 0;
   if (atual) {
     // Editar a conta libera de novo a coleta automática parada por login recusado.
