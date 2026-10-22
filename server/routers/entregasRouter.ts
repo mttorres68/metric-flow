@@ -17,6 +17,7 @@ import { periodoAte } from "./periodo";
 import * as repo from "../services/checknow/repo";
 import { coletarRevenda, importarPlanilha } from "../services/checknow/sincronizar";
 import { testarLogin } from "../services/checknow/coletor";
+import { testarLogin as testarPathfind } from "../services/pathfind/coletor";
 import { cofreDisponivel } from "../services/checknow/cofre";
 import { importarPedidos, importarProdutos } from "../services/erp/importar";
 import { ArquivoErpInvalidoError } from "../services/erp/parseProdutos";
@@ -54,6 +55,11 @@ const contas = router({
     const c = await repo.contaComSegredos(input.revendaId);
     if (!c) throw new repo.ColetaError("revenda sem conta do CheckNow");
     return testarLogin(c);
+  })),
+  testarPathfind: publicProcedure.input(z.object({ revendaId: z.number().int() })).mutation(({ input }) => amigavel(async () => {
+    const c = await repo.contaPathfind(input.revendaId);
+    if (!c) throw new repo.ColetaError("revenda sem conta do Pathfind");
+    return testarPathfind(c);
   })),
   testarInfleet: publicProcedure.input(z.object({ revendaId: z.number().int() })).mutation(async ({ input }) =>
     ({ veiculos: (await mapaVeiculos(await repo.tokenInfleet(input.revendaId))).size })),

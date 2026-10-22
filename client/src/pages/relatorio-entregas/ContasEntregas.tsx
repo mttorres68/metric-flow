@@ -25,6 +25,7 @@ export function ContasEntregas({ onMudou }: { onMudou: () => void }) {
   const ativar = trpc.entregas.contas.ativar.useMutation();
   const testarCN = trpc.entregas.contas.testarCheckNow.useMutation();
   const testarIF = trpc.entregas.contas.testarInfleet.useMutation();
+  const testarPF = trpc.entregas.contas.testarPathfind.useMutation();
   const [form, setForm] = useState<Form | null>(null);
   const importarProdutos = trpc.entregas.erp.importarProdutos.useMutation();
   const importarPedidos = trpc.entregas.erp.importarPedidos.useMutation();
@@ -88,9 +89,10 @@ export function ContasEntregas({ onMudou }: { onMudou: () => void }) {
     }
   }
 
-  async function testar(tipo: "cn" | "if", revendaId: number) {
+  async function testar(tipo: "cn" | "if" | "pf", revendaId: number) {
     try {
       if (tipo === "cn") toast.success(`CheckNow ok — ${(await testarCN.mutateAsync({ revendaId })).filial}`);
+      else if (tipo === "pf") toast.success(`Pathfind ok — ${(await testarPF.mutateAsync({ revendaId })).simulacoesHoje} simulação(ões) hoje`);
       else toast.success(`Infleet ok — ${(await testarIF.mutateAsync({ revendaId })).veiculos} veículos`);
     } catch (e) {
       toast.error((e as Error).message);
@@ -133,6 +135,7 @@ export function ContasEntregas({ onMudou }: { onMudou: () => void }) {
             <button className={botaoSec} onClick={() => setForm({ ...vazio, revendaId: c.revendaId, nova: false, checknowUsuario: c.checknowUsuario, pathfindBase: c.pathfindBase ?? "", pathfindUsuario: c.pathfindUsuario ?? "" })}>Editar</button>
             <button className={botaoSec} disabled={testarCN.isPending} onClick={() => testar("cn", c.revendaId)}>Testar CheckNow</button>
             <button className={botaoSec} disabled={testarIF.isPending} onClick={() => testar("if", c.revendaId)}>Testar Infleet</button>
+            {c.pathfindBase && <button className={botaoSec} disabled={testarPF.isPending} onClick={() => testar("pf", c.revendaId)}>Testar Pathfind</button>}
           </div>
         </div>
       ))}
