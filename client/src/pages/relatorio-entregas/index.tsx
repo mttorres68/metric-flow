@@ -122,6 +122,37 @@ const primeiroNome = (nome: string) => nome.trim().split(/\s+/)[0] || nome;
 const distancia = (m: number) =>
   m < 1000 ? `${Math.round(m)} m` : `${num1(Math.round(m / 100) / 10)} km`;
 
+type Previsto = NonNullable<Resultado["previsto"]>;
+/** "+1h30", "+37", "−12" (minutos de atraso; negativo = adiantado). */
+const atrasoTxt = (min: number) => {
+  const a = Math.abs(min), s = min > 0 ? "+" : min < 0 ? "−" : "";
+  return a >= 60 ? `${s}${Math.floor(a / 60)}h${String(a % 60).padStart(2, "0")}` : `${s}${a}`;
+};
+const corAtraso = (min: number, tol: number) => (min > tol ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400");
+
+/** Linha: fim previsto pelo Pathfind → fim realizado, com o atraso. */
+function HrPrevista({ p, tol }: { p: Previsto | null; tol: number }) {
+  if (!p?.fimPrevisto) return vazio;
+  const titulo = `Pathfind ${p.rota} · simulação ${p.simulacao}${p.reancorado ? " · ritmo do plano a partir da 1ª chegada do dia" : ""} · previsto ${hora(p.fimPrevisto)}, realizado ${hora(p.fimRealizado)}`;
+  return (
+    <span className="whitespace-nowrap" title={titulo}>
+      {hora(p.fimPrevisto)} <span className="text-slate-400">→</span> {hora(p.fimRealizado)}
+      {p.atrasoMin !== null && <b className={`ml-1 ${corAtraso(p.atrasoMin, tol)}`}>{atrasoTxt(p.atrasoMin)}</b>}
+    </span>
+  );
+}
+
+/** Cliente: chegada prevista pelo Pathfind e o atraso. */
+function PrevistoCliente({ p, tol }: { p: Previsto["clientes"][string] | undefined; tol: number }) {
+  if (!p) return vazio;
+  return (
+    <span className="whitespace-nowrap">
+      {hora(p.chegadaPrevista)}
+      {p.atrasoMin !== null && <b className={`ml-1 ${corAtraso(p.atrasoMin, tol)}`}>{atrasoTxt(p.atrasoMin)}</b>}
+    </span>
+  );
+}
+
 /** Hora da entrega no app × passagem do caminhão pelo cliente. */
 function MomentoEntrega({ m }: { m: Baixa["momentoBaixa"] }) {
   if (!m) return vazio;
@@ -289,12 +320,14 @@ function TabelaBaixas({
   itens,
   comPlaca,
   raioM,
+  tol,
 }: {
   itens: { r: Resultado; b: Baixa }[];
   comPlaca?: boolean;
   raioM: number;
+  tol: number; // tolerância do previsto (⚙ › Limites)
 }) {
-  const colunas = comPlaca ? 10 : 9;
+  const colunas = comPlaca ? 11 : 10;
   const ordenados = [...itens].sort(
     (x, y) => ordemVisita(x.b) - ordemVisita(y.b)
   );
@@ -336,6 +369,12 @@ function TabelaBaixas({
               title={`Chegada e saída do caminhão a até ${raioM} m do cliente, pelo GPS`}
             >
               Caminhão no cliente (hora)
+            </th>
+            <th
+              className="px-2 py-1.5 text-center"
+              title="Chegada prevista pelo Pathfind e o atraso da chegada real (GPS; sem parada, o app). Nos dias seguintes ao 1º, no ritmo do plano a partir da 1ª chegada do dia"
+            >
+              Previsto (Pathfind)
             </th>
             <th
               className="px-2 py-1.5 text-center"
@@ -396,6 +435,9 @@ function TabelaBaixas({
                 </Td>
                 <Td center mono>
                   <ParadasNoCliente b={b} />
+                </Td>
+                <Td center mono>
+                  <PrevistoCliente p={r.previsto?.clientes[b.entrega.codCliente.replace(/^0+/, "") || "0"]} tol={tol} />
                 </Td>
                 <Td center mono>
                   {b.distMaisProximaM === null ? (
@@ -1057,6 +1099,7 @@ export default function RelatorioEntregas() {
                             itens={excecoesDia}
                             comPlaca
                             raioM={raioM}
+                            tol={cfg.previstoToleranciaMin}
                           />
                         ) : (
                           <p className="text-xs text-slate-500">
@@ -1127,6 +1170,12 @@ export default function RelatorioEntregas() {
                               title={`Entregas com chegada ao cliente no intervalo de almoço (${cfg.almocoDe}–${cfg.almocoAte}, ⚙ › Limites) / entregas do dia`}
                             >
                               Almoço
+                            </Th>
+                            <Th
+                              center
+                              title={`Fim previsto pelo Pathfind → fim realizado (saída do último cliente). Verde até ${cfg.previstoToleranciaMin} min de atraso (⚙ › Limites)`}
+                            >
+                              Hr prevista
                             </Th>
                             <Th
                               center
@@ -1354,6 +1403,9 @@ export default function RelatorioEntregas() {
                                       : vazio}
                                   </Td>
                                   <Td center mono>
+                                    <HrPrevista p={r.previsto} tol={cfg.previstoToleranciaMin} />
+                                  </Td>
+                                  <Td center mono>
                                     {gps && r.baixasComCoord > 0 ? (
                                       <span
                                         className={
@@ -1472,7 +1524,7 @@ export default function RelatorioEntregas() {
                                 {aberta && (
                                   <tr>
                                     <td
-                                      colSpan={17}
+                                      colSpan={18}
                                       className="bg-slate-50/60 dark:bg-slate-800/30 px-6 py-3 border-b border-slate-100 dark:border-slate-700/40"
                                     >
                                       {gps ? (
@@ -1483,6 +1535,7 @@ export default function RelatorioEntregas() {
                                               b,
                                             }))}
                                             raioM={raioM}
+                                            tol={cfg.previstoToleranciaMin}
                                           />
                                         ) : (
                                           <p className="text-xs text-slate-500">
