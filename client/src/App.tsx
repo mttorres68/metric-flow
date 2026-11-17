@@ -1,14 +1,9 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Redirect, Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-import VendedoresLista from "./pages/VendedoresLista";
-import VendedorDetalhes from "./pages/VendedorDetalhes";
-import Compliance from "./pages/Compliance";
-import Clientes from "./pages/Clientes";
 import RelatorioEntregas from "./pages/relatorio-entregas";
 import Analise from "./pages/Analise";
 import AnaliseSemanal from "./pages/analise/AnaliseSemanal";
@@ -25,12 +20,8 @@ function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/vendedores"} component={VendedoresLista} />
-      <Route path={"/vendedor/:revenda/:vendedor"} component={VendedorDetalhes} />
+      <Route path={"/"}>{() => <Redirect to="/relatorio-entregas" />}</Route>
       <Route path={"/404"} component={NotFound} />
-      <Route path="/compliance" component={Compliance} />
-      <Route path="/clientes" component={Clientes} />
       <Route path="/relatorio-entregas" component={RelatorioEntregas} />
       <Route path="/analises" component={Analise} />
       <Route path="/analises/semanal" component={AnaliseSemanal} />

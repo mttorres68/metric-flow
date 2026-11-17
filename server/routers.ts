@@ -3,10 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { dashboardRouter } from "./routers/dashboardRouter";
-import { vendedoresRouter } from "./routers/vendedoresRouter";
-import { complianceRouter } from "./routers/complianceRouter ";
 import { clientesRouter } from "./routers/clientesRouter";
-import { infleetRouter } from "./routers/infleetRouter";
 import { ptRouter } from "./routers/ptRouter";
 import { analiseRouter } from "./routers/analiseRouter";
 import { analiseGestorRouter } from "./routers/analiseGestorRouter";
@@ -16,7 +13,6 @@ import { automacaoRouter } from "./routers/automacaoRouter";
 import { assessmentRouter } from "./routers/assessmentRouter";
 import { crmRouter } from "./routers/crmRouter";
 import { configRouter } from "./routers/configRouter";
-import { appCampeaoRouter } from "./routers/appCampeaoRouter";
 import { entregasRouter } from "./routers/entregasRouter";
 import { pernoiteRouter } from "./routers/pernoiteRouter";
 import { desvioRouter } from "./routers/desvioRouter";
@@ -26,10 +22,7 @@ export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   dashboard: dashboardRouter,
-  vendedores: vendedoresRouter,
-  compliance: complianceRouter,
   clientes: clientesRouter,
-  infleet: infleetRouter,
   pt: ptRouter,
   analise: analiseRouter,
   analiseGestor: analiseGestorRouter,
@@ -39,7 +32,6 @@ export const appRouter = router({
   assessment: assessmentRouter,
   crm: crmRouter,
   config: configRouter,
-  appCampeao: appCampeaoRouter,
   entregas: entregasRouter,
   pernoite: pernoiteRouter,
   desvio: desvioRouter,

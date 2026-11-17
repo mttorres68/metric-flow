@@ -7,26 +7,20 @@
 import {
   Award,
   BarChart2,
-  BarChartHorizontal,
   CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  CircleCheckBig,
-  Home,
   LineChart,
-  Map,
   Menu,
   MessageCircle,
   Moon,
   ShoppingCart,
-  SquareUserRound,
   Sun,
   Trello,
   TrendingUp,
   Trophy,
   Truck,
-  UsersRound,
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -59,23 +53,7 @@ interface NavItemDef {
 // ─── Dados de navegação ────────────────────────────────────────────────────────
 
 const navItems: NavItemDef[] = [
-  { id: "dashboard",        label: "Dashboard",     icon: Home,              route: "/" },
-  { id: "vendedores",       label: "Vendedores",    icon: SquareUserRound,   route: "/vendedores" },
-  { id: "compliance",       label: "Compliance",    icon: CircleCheckBig,    route: "/compliance" },
-  { id: "clientes",         label: "Clientes",      icon: UsersRound,        route: "/clientes" },
-  { id: "relatorio",        label: "Relatórios",    icon: BarChart2,         route: "/relatorio" },
-  { id: "relatorio_semanal",label: "Rel. Semanal",  icon: BarChartHorizontal,route: "/relatorio-semanal" },
   { id: "relatorio_entregas",label: "Rel. Entregas", icon: Truck,            route: "/relatorio-entregas" },
-  {
-    id: "rota_coaching",
-    label: "Rota Coaching",
-    icon: Map,
-    children: [
-      { id: "rota_coaching",       label: "Rota Coaching", route: "/rota-coaching" },
-      { id: "app_campeao",         label: "App Campeão",   route: "/rota-coaching/app-campeao" },
-      { id: "agenda_ga_coaching",  label: "Agenda GA",     route: "/rota-coaching/agenda-ga" },
-    ],
-  },
   {
     id: "analises",
     label: "Análise",
