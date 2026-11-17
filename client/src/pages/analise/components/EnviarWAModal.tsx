@@ -13,7 +13,6 @@ interface EnviarWAModalProps {
     revendasOrdenadas: string[];
     data: string;
     getAnalise: (rev: string) => string;
-    getAnaliseGAs: (rev: string) => string;
     onClose: () => void;
 }
 
@@ -40,7 +39,7 @@ function saveSelecoes(rows: RevState[]) {
     localStorage.setItem(WA_SEL_KEY, JSON.stringify(map));
 }
 
-export function EnviarWAModal({ revendasOrdenadas, data, getAnalise, getAnaliseGAs, onClose }: EnviarWAModalProps) {
+export function EnviarWAModal({ revendasOrdenadas, data, getAnalise, onClose }: EnviarWAModalProps) {
     const destQuery = trpc.evolution.listDestinatarios.useQuery();
     const statusQuery = trpc.evolution.getStatus.useQuery();
     const sendPDF = trpc.evolution.sendPDF.useMutation();
@@ -130,7 +129,7 @@ export function EnviarWAModal({ revendasOrdenadas, data, getAnalise, getAnaliseG
             let base64 = "", filename = "";
             try {
                 ({ base64, filename } = await fetchPDFBase64(data, rev, {
-                    [rev]: { vendedores: getAnalise(rev), gas: getAnaliseGAs(rev) },
+                    [rev]: { vendedores: getAnalise(rev) },
                 }));
             } catch (e: any) {
                 setRowStatus(rev, "error", `PDF: ${e.message}`);
@@ -177,9 +176,9 @@ export function EnviarWAModal({ revendasOrdenadas, data, getAnalise, getAnaliseG
         setSending(true);
         setUnifiedStatus({ status: "generating", detail: "Gerando PDF unificado…" });
 
-        const analisesPayload: Record<string, { vendedores: string; gas: string }> = {};
+        const analisesPayload: Record<string, { vendedores: string }> = {};
         revendasOrdenadas.forEach(rev => {
-            analisesPayload[rev] = { vendedores: getAnalise(rev), gas: getAnaliseGAs(rev) };
+            analisesPayload[rev] = { vendedores: getAnalise(rev) };
         });
 
         let base64 = "", filename = "";

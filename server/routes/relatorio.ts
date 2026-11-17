@@ -6,7 +6,7 @@
  *     → Compatibilidade retroativa; análises lidas do MySQL se disponível.
  *
  *   POST /api/relatorio/gerar
- *     → Body: { data, revenda?, analises: { [revenda]: { vendedores: string, gas: string } } }
+ *     → Body: { data, revenda?, analises: { [revenda]: { vendedores: string } } }
  *     → Análises passadas inline no body (sem dependência de MySQL).
  *
  *   GET /api/relatorio/datas-disponiveis
@@ -17,36 +17,24 @@ import { Router, Request, Response } from "express";
 import JSZip from "jszip";
 import { PDFDocument } from "pdf-lib";
 import { and, eq } from "drizzle-orm";
-import { getVisitasData, getRotaCoachingData } from "../services/dataCache";
+import { getVisitasData } from "../services/dataCache";
 import { calcularAnalisePeriodo } from "../services/analise";
 import { getConfigMetricas } from "../services/configService";
 import {
   gerarPDFRevenda,
   gerarPDFRecorrencia,
-  type CoachingKPIs,
-  type CoachingRecord,
   type VendedorRow,
   type ClienteForaRaioSetor,
 } from "../services/pdfService";
 import { getDb } from "../db";
 import { analises } from "../../drizzle/schema";
-import { calcularKpisRota, dedupRotaPorGA } from "@shared/rotaKpis";
 
 export const relatorioRouter = Router();
-
-// Mapeamento canônico: nome do database.xlsx → nome no coaching JSON
-const REVENDA_COACHING_MAP: Record<string, string> = {
-  "duttra floriano": "duttra fl",
-  "duttra ma":       "duttra ma",
-  "duttra srn":      "duttra sr",
-  "forte aracati":   "forte ar",
-  "forte quixada":   "forte qx",
-};
 
 // ---------------------------------------------------------------------------
 // Tipo para análises inline (passadas no body do POST)
 // ---------------------------------------------------------------------------
-type AnalisesInline = Record<string, { vendedores?: string; gas?: string }>;
+type AnalisesInline = Record<string, { vendedores?: string }>;
 
 // ---------------------------------------------------------------------------
 // Calcula clientes visitados fora do raio de 300m
@@ -141,7 +129,6 @@ async function gerarPDFsParaData(
   data: string,
   revendas: string[],
   visitasData: any[],
-  coachingAll: any[],
   analisesInline: AnalisesInline
 ): Promise<{ zip: JSZip; erros: string[] }> {
   const zip = new JSZip();
@@ -153,71 +140,18 @@ async function gerarPDFsParaData(
     try {
       const visitasRevenda = visitasData.filter((v) => v.revenda === revenda);
 
-      // Matching canônico coaching
-      const nomeCoaching = REVENDA_COACHING_MAP[revenda.toLowerCase()];
-      const registrosData = (coachingAll as any[]).filter((r) => {
-        if (!r?.revenda || !r?.data) return false;
-        const nomeR = String(r.revenda).toLowerCase();
-        const alvo = nomeCoaching ?? revenda.toLowerCase();
-        // Aceita prefixo: "duttra fl" bate "duttra flo", "duttra fl", etc.
-        const matchRevenda = nomeR === alvo || nomeR.startsWith(alvo) || alvo.startsWith(nomeR);
-        const dataR = String(r.data).substring(0, 10);
-        return matchRevenda && dataR === data;
-      });
-
-      // KPIs unificados (shared/rotaKpis): dedup por GA/dia/revenda + taxa ponderada —
-      // mesma regra usada pelo dashboard e pelo PDF cliente.
-      const k = calcularKpisRota(registrosData);
-      // Tabela do PDF mantém também linhas não agendadas (exibidas com colunas vazias).
-      const linhasTabela = dedupRotaPorGA(registrosData);
-
-      const coachingKPIs: CoachingKPIs = {
-        ok: k.ok, parcial: k.parcial, nok: k.nok, total: k.total, taxa: k.taxa ?? 0,
-        registros: linhasTabela.map((r): CoachingRecord => {
-          const vendIdValido = r.vendId && r.vendId !== "-" ? String(r.vendId) : "";
-          const codVendedor = String(r.vendedor_agenda || r.vendedor_no_app || vendIdValido || "").trim() || undefined;
-          const atividade = String(r.atividade || "").trim() || undefined;
-          return {
-            gaId: String(r.gaId ?? r.ga ?? "—"),
-            ga: String(r.ga ?? "—"),
-            atividade,
-            codVendedor,
-            status: String(r.status ?? "na"),
-            pdvsProg: Number(r.pdvsProg ?? 0),
-            pdvsVis: Number(r.pdvsVis ?? 0),
-            gaVis: Number(r.gaVis ?? 0),
-            conformidade_pct: Number(r.conformidade_pct ?? r.pctGA ?? 0),
-          };
-        }),
-      };
-
-      // Análises: prioridade ao inline (POST body / localStorage)
-      // Fallback: MySQL se disponível
-      // Nota: análises de GAs são salvas pelo RotaCoaching com o nome curto do coaching
-      // (ex: "duttra fl"), então a busca no banco usa nomeCoaching como chave primária.
+      // Análise do gestor: prioridade ao inline (POST body / localStorage);
+      // fallback: banco (tabela analises, tipo "vendedores").
       let analiseVendedores = analisesInline[revenda]?.vendedores ?? "";
-      let analiseGAs        = analisesInline[revenda]?.gas        ?? "";
 
-      if (!analiseVendedores || !analiseGAs) {
+      if (!analiseVendedores) {
         try {
           const db = await getDb();
           if (db) {
-            // GAs são salvas com o nome do coaching JSON (ex: "duttra fl"), não o nome das visitas
-            const revendaGA = nomeCoaching ?? revenda;
-            const [avRows, agRows] = await Promise.all([
-              !analiseVendedores
-                ? db.select({ conteudo: analises.conteudo }).from(analises)
-                    .where(and(eq(analises.revenda, revenda), eq(analises.data, data), eq(analises.tipo, "vendedores")))
-                    .limit(1)
-                : Promise.resolve([]),
-              !analiseGAs
-                ? db.select({ conteudo: analises.conteudo }).from(analises)
-                    .where(and(eq(analises.revenda, revendaGA), eq(analises.data, data), eq(analises.tipo, "gas")))
-                    .limit(1)
-                : Promise.resolve([]),
-            ]);
-            analiseVendedores = analiseVendedores || avRows[0]?.conteudo || "";
-            analiseGAs        = analiseGAs        || agRows[0]?.conteudo || "";
+            const avRows = await db.select({ conteudo: analises.conteudo }).from(analises)
+              .where(and(eq(analises.revenda, revenda), eq(analises.data, data), eq(analises.tipo, "vendedores")))
+              .limit(1);
+            analiseVendedores = avRows[0]?.conteudo || "";
           }
         } catch (dbErr) {
           console.warn(`[relatorio] não foi possível carregar análises do banco para ${revenda}:`, dbErr);
@@ -246,7 +180,7 @@ async function gerarPDFsParaData(
       const clientesForaRaio = calcularClientesForaRaio(visitasRevenda);
 
       const pdfBuffer = await gerarPDFRevenda({
-        revenda, data, vendedoresRows, coachingKPIs, analiseVendedores, analiseGAs, clientesForaRaio,
+        revenda, data, vendedoresRows, analiseVendedores, clientesForaRaio,
       });
 
       const nomeArquivo = `${revenda.replace(/[^a-z0-9\s]/gi, "").trim().replace(/\s+/g, "_")}_${data}.pdf`;
@@ -393,10 +327,7 @@ relatorioRouter.get("/gerar", async (req: Request, res: Response) => {
   }
 
   try {
-    const [visitasData, coachingAll] = await Promise.all([
-      getVisitasData({ dataInicio: data, dataFim: data }),
-      getRotaCoachingData(),
-    ]);
+    const visitasData = await getVisitasData({ dataInicio: data, dataFim: data });
 
     if (visitasData.length === 0) {
       res.status(404).json({ error: `Sem dados para a data ${data}.` });
@@ -407,7 +338,7 @@ relatorioRouter.get("/gerar", async (req: Request, res: Response) => {
     const revendas = await resolverRevendas(visitasData, revendasFiltro, res, data);
     if (!revendas) return;
 
-    const { zip, erros } = await gerarPDFsParaData(data, revendas, visitasData, coachingAll, {});
+    const { zip, erros } = await gerarPDFsParaData(data, revendas, visitasData, {});
     await enviarResposta(res, zip, erros, data, revendasFiltro);
   } catch (err) {
     console.error("[relatorio] erro geral:", err);
@@ -418,7 +349,7 @@ relatorioRouter.get("/gerar", async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // POST /api/relatorio/gerar
 // Body: { data: string, revenda?: string, analises: AnalisesInline }
-// analises: { "Duttra Floriano": { vendedores: "<html>", gas: "<html>" }, ... }
+// analises: { "Duttra Floriano": { vendedores: "<html>" }, ... }
 // ---------------------------------------------------------------------------
 relatorioRouter.post("/gerar", async (req: Request, res: Response) => {
   const { data, revenda: revendaFiltro, analises: analisesBody } = req.body ?? {};
@@ -433,10 +364,7 @@ relatorioRouter.post("/gerar", async (req: Request, res: Response) => {
     : {};
 
   try {
-    const [visitasData, coachingAll] = await Promise.all([
-      getVisitasData({ dataInicio: data, dataFim: data }),
-      getRotaCoachingData(),
-    ]);
+    const visitasData = await getVisitasData({ dataInicio: data, dataFim: data });
 
     if (visitasData.length === 0) {
       res.status(404).json({ error: `Sem dados para a data ${data}.` });
@@ -447,7 +375,7 @@ relatorioRouter.post("/gerar", async (req: Request, res: Response) => {
     const revendas = await resolverRevendas(visitasData, revendasFiltro, res, data);
     if (!revendas) return;
 
-    const { zip, erros } = await gerarPDFsParaData(data, revendas, visitasData, coachingAll, analisesInline);
+    const { zip, erros } = await gerarPDFsParaData(data, revendas, visitasData, analisesInline);
     await enviarResposta(res, zip, erros, data, revendasFiltro);
   } catch (err) {
     console.error("[relatorio] erro geral (POST):", err);
@@ -472,10 +400,7 @@ relatorioRouter.post("/gerar-unificado", async (req: Request, res: Response) => 
     : {};
 
   try {
-    const [visitasData, coachingAll] = await Promise.all([
-      getVisitasData({ dataInicio: data, dataFim: data }),
-      getRotaCoachingData(),
-    ]);
+    const visitasData = await getVisitasData({ dataInicio: data, dataFim: data });
 
     if (visitasData.length === 0) {
       res.status(404).json({ error: `Sem dados para a data ${data}.` });
@@ -485,7 +410,7 @@ relatorioRouter.post("/gerar-unificado", async (req: Request, res: Response) => 
     const revendas = await resolverRevendas(visitasData, undefined, res, data);
     if (!revendas) return;
 
-    const { zip, erros } = await gerarPDFsParaData(data, revendas, visitasData, coachingAll, analisesInline);
+    const { zip, erros } = await gerarPDFsParaData(data, revendas, visitasData, analisesInline);
 
     const filesGerados = Object.keys(zip.files);
     if (filesGerados.length === 0) {

@@ -45,18 +45,6 @@ export const REVENDA_ALIASES: Record<string, string> = {
     "forte qx": "FORTE QX",
 };
 
-export const REVENDA_COACHING_MAP: Record<string, string> = {
-    "duttra floriano": "duttra fl",
-    "duttra fl": "duttra fl",
-    "duttra ma": "duttra ma",
-    "duttra srn": "duttra srn",
-    "duttra sr": "duttra srn",
-    "forte aracati": "forte ar",
-    "forte ar": "forte ar",
-    "forte quixada": "forte qx",
-    "forte qx": "forte qx",
-};
-
 export const FLAG_SHORT: Record<string, string> = {
     relampagoAlto: "Relâmp.",
     inicioTardio: "Início tardio",

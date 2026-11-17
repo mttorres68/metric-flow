@@ -10,7 +10,7 @@ export async function blobToBase64(blob: Blob): Promise<string> {
 export async function fetchPDFBase64(
     data: string,
     rev: string,
-    analises: Record<string, { vendedores: string; gas: string }>
+    analises: Record<string, { vendedores: string }>
 ): Promise<{ base64: string; filename: string }> {
     const resp = await fetch("/api/relatorio/gerar", {
         method: "POST",
@@ -46,7 +46,7 @@ export async function fetchThumbnail(pdfBase64: string): Promise<string | null> 
 
 export async function fetchUnifiedPDFBase64(
     data: string,
-    analises: Record<string, { vendedores: string; gas: string }>
+    analises: Record<string, { vendedores: string }>
 ): Promise<{ base64: string; filename: string }> {
     const resp = await fetch("/api/relatorio/gerar-unificado", {
         method: "POST",

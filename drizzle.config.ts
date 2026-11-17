@@ -12,6 +12,9 @@ export default defineConfig({
   dbCredentials: {
     url: connectionString,
   },
-  // crm_config existe no banco mas não está no schema (tabela legada de config)
-  tablesFilter: ["!crm_config"],
+  // Tabelas que existem no banco mas foram desconectadas da aplicação (fora do schema).
+  // O filtro impede o drizzle-kit de gerar DROP para elas. Os dados ficam preservados.
+  //  - crm_config: tabela legada de config
+  //  - rota_coaching, agenda_ga, gas_code: módulo Rota Coaching / Agenda GA (removido em 2026-11)
+  tablesFilter: ["!crm_config", "!rota_coaching", "!agenda_ga", "!gas_code"],
 });

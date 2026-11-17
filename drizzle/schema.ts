@@ -251,62 +251,6 @@ export type CrmAgendaCiclo = typeof crmAgendaCiclo.$inferSelect;
 export type InsertCrmAgendaCiclo = typeof crmAgendaCiclo.$inferInsert;
 
 // ---------------------------------------------------------------------------
-// Rota Coaching — resultado do processamento por GA + vendedor + dia
-// Arrays de clientes e geo_detalhes armazenados como JSONB (não filtrados no banco).
-// UNIQUE: (data, revenda, gaId, vendedorId) — vendedorId '' quando ausente.
-// ---------------------------------------------------------------------------
-export const rotaCoaching = pgTable(
-  "rota_coaching",
-  {
-    id: serial("id").primaryKey(),
-    data: date("data").notNull(),
-    revenda: varchar("revenda", { length: 50 }).notNull(),
-    gaId: varchar("gaId", { length: 20 }).notNull(),
-    /** Código do vendedor ou '' quando não há vendedor associado */
-    vendedorId: varchar("vendedorId", { length: 20 }).notNull().default(""),
-    atividade: varchar("atividade", { length: 100 }),
-    tipoAtividade: varchar("tipoAtividade", { length: 30 }).notNull().default(""),
-    fonte: varchar("fonte", { length: 10 }),
-    agendado: boolean("agendado").default(true),
-    // KPIs numéricos
-    pdvsProgramados: integer("pdvsProgramados").default(0),
-    pdvsVisitados: integer("pdvsVisitados").default(0),
-    visitasGa: integer("visitasGa").default(0),
-    pctConformidade: numeric("pctConformidade", { precision: 5, scale: 2 }),
-    pctVisitados: numeric("pctVisitados", { precision: 5, scale: 2 }),
-    pctGeoConfirmado: numeric("pctGeoConfirmado", { precision: 5, scale: 2 }),
-    /** Cobertura: |GA ∩ visitados válidos| / pdvsVisitados (regra 12/06/2026) */
-    pctCobertura: numeric("pctCobertura", { precision: 5, scale: 2 }),
-    /** Setor declarado na agenda (preenchido mesmo na linha de outro vendedor visto no app) */
-    setorAgendado: varchar("setorAgendado", { length: 20 }),
-    /** Todos os setores que o GA registrou no app no dia (caso multi-setor) */
-    setoresApp: jsonb("setoresApp"),
-    // Status
-    status: varchar("status", { length: 10 }),
-    statusPy: varchar("statusPy", { length: 20 }),
-    gaFezCoaching: boolean("gaFezCoaching"),
-    mesmoVendedor: boolean("mesmoVendedor"),
-    vendedorAgenda: varchar("vendedorAgenda", { length: 20 }),
-    vendedorNoApp: varchar("vendedorNoApp", { length: 20 }),
-    // Arrays e objetos complexos como JSONB
-    clientesVendedor: jsonb("clientesVendedor"),
-    clientesGa: jsonb("clientesGa"),
-    clientesComuns: jsonb("clientesComuns"),
-    clientesSoVend: jsonb("clientesSoVend"),
-    clientesSoGa: jsonb("clientesSoGa"),
-    clientesDentroRaio: jsonb("clientesDentroRaio"),
-    clientesForaRaio: jsonb("clientesForaRaio"),
-    clientesSemCoords: jsonb("clientesSemCoords"),
-    geoDetalhes: jsonb("geoDetalhes"),
-    criadoEm: timestamp("criadoEm").defaultNow().notNull(),
-  },
-  (t) => [unique("uq_rota_coaching").on(t.data, t.revenda, t.gaId, t.vendedorId, t.tipoAtividade)],
-);
-
-export type RotaCoaching = typeof rotaCoaching.$inferSelect;
-export type InsertRotaCoaching = typeof rotaCoaching.$inferInsert;
-
-// ---------------------------------------------------------------------------
 // Configuração de métricas — thresholds das flags de análise/recorrência.
 // Tabela single-row (id=1 sempre); gerenciada via modal de config na UI.
 // Os valores aqui sobrepõem os defaults de shared/const.ts em runtime.
@@ -769,46 +713,3 @@ export const pathtrackerVisitas = pgTable(
 
 export type PathtrackerVisita = typeof pathtrackerVisitas.$inferSelect;
 export type InsertPathtrackerVisita = typeof pathtrackerVisitas.$inferInsert;
-
-// ---------------------------------------------------------------------------
-// Agenda GA — códigos disponíveis por revenda (tabela de referência)
-// Cada revenda tem vários codes (ex: FL004, FL005, FLGV).
-// ---------------------------------------------------------------------------
-export const gasCode = pgTable(
-  "gas_code",
-  {
-    id: serial("id").primaryKey(),
-    revenda: varchar("revenda", { length: 120 }).notNull(),
-    code: varchar("code", { length: 20 }).notNull(),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-  },
-  (t) => [unique("uq_gas_code").on(t.revenda, t.code)],
-);
-
-export type GasCode = typeof gasCode.$inferSelect;
-export type InsertGasCode = typeof gasCode.$inferInsert;
-
-// ---------------------------------------------------------------------------
-// Agenda GA — entradas de agenda semanal por code × dia
-// Geradas pelo form: uma linha por dia útil (Seg–Sab) por code × semana.
-// ---------------------------------------------------------------------------
-export const agendaGa = pgTable(
-  "agenda_ga",
-  {
-    id: serial("id").primaryKey(),
-    revenda: varchar("revenda", { length: 120 }).notNull(),
-    semanaInicio: varchar("semanaInicio", { length: 10 }).notNull(), // YYYY-MM-DD (segunda-feira)
-    code: varchar("code", { length: 20 }).notNull(),
-    data: varchar("data", { length: 10 }).notNull(), // YYYY-MM-DD
-    diaSemana: varchar("diaSemana", { length: 10 }).notNull(), // Seg, Ter, Qua, Qui, Sex, Sab
-    atividade: varchar("atividade", { length: 100 }).notNull().default("Outra Atividade"),
-    vendedor: varchar("vendedor", { length: 100 }),
-    descricao: text("descricao"),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-  },
-  (t) => [unique("uq_agenda_ga").on(t.semanaInicio, t.code, t.data)],
-);
-
-export type AgendaGa = typeof agendaGa.$inferSelect;
-export type InsertAgendaGa = typeof agendaGa.$inferInsert;

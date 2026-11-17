@@ -33,18 +33,6 @@ export function useAnalisesRevenda(dataInicio: string, dataFim: string) {
             return merged;
         });
 
-        const gasStored: Record<string, string> = (() => {
-            try { return JSON.parse(localStorage.getItem("metricflow:analises-ga") || "{}"); }
-            catch { return {}; }
-        })();
-        let gasAtualizado = false;
-        dbAnalises.forEach((r: { revenda: string; tipo: string; conteudo: string }) => {
-            if (r.tipo === "gas") {
-                gasStored[`${r.revenda}__${dataInicio}`] = r.conteudo;
-                gasAtualizado = true;
-            }
-        });
-        if (gasAtualizado) localStorage.setItem("metricflow:analises-ga", JSON.stringify(gasStored));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dbAnalises]);
 

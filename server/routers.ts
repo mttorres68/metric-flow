@@ -10,7 +10,6 @@ import { infleetRouter } from "./routers/infleetRouter";
 import { ptRouter } from "./routers/ptRouter";
 import { analiseRouter } from "./routers/analiseRouter";
 import { analiseGestorRouter } from "./routers/analiseGestorRouter";
-import { rotaCoachingRouter } from "./routers/rotaCoachingRouter";
 import { trelloRouter } from "./routers/trelloRouter";
 import { evolutionRouter } from "./routers/evolutionRouter";
 import { automacaoRouter } from "./routers/automacaoRouter";
@@ -18,7 +17,6 @@ import { assessmentRouter } from "./routers/assessmentRouter";
 import { crmRouter } from "./routers/crmRouter";
 import { configRouter } from "./routers/configRouter";
 import { appCampeaoRouter } from "./routers/appCampeaoRouter";
-import { agendaGaRouter } from "./routers/agendaGaRouter";
 import { entregasRouter } from "./routers/entregasRouter";
 import { pernoiteRouter } from "./routers/pernoiteRouter";
 import { desvioRouter } from "./routers/desvioRouter";
@@ -35,7 +33,6 @@ export const appRouter = router({
   pt: ptRouter,
   analise: analiseRouter,
   analiseGestor: analiseGestorRouter,
-  rotaCoaching: rotaCoachingRouter,
   trello: trelloRouter,
   evolution: evolutionRouter,
   automacao: automacaoRouter,
@@ -43,7 +40,6 @@ export const appRouter = router({
   crm: crmRouter,
   config: configRouter,
   appCampeao: appCampeaoRouter,
-  agendaGa: agendaGaRouter,
   entregas: entregasRouter,
   pernoite: pernoiteRouter,
   desvio: desvioRouter,

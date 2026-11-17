@@ -1,9 +1,7 @@
 import fs from "fs";
-import path from "path";
 import { loadGoogleSheetsData, processarVisitas, ProcessedVisita, getDbStatus }
     from "../services/xlsxService";
 import { loadFromDatabase, VisitasFiltro } from "../services/pgDataService";
-import { loadRotaCoachingFromDatabase } from "../services/pgRotaCoachingService";
 
 let cachedVisitas: ProcessedVisita[] | null = null;
 let cachedFileMtime = 0;
@@ -11,10 +9,6 @@ let cachedAt = 0;
 // TTL do cache quando fonte é PostgreSQL (padrão: 5 min)
 const PG_CACHE_TTL_MS = parseInt(process.env.PG_CACHE_TTL_MS ?? "300000", 10);
 let loadingPromise: Promise<ProcessedVisita[]> | null = null;
-
-let cachedRotaCoaching: any[] | null = null;
-let lastRotaCacheTime = 0;
-const ROTA_CACHE_DURATION_MS = 5 * 60 * 1000;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers internos
@@ -113,63 +107,11 @@ export async function getVisitasData(filtro: VisitasFiltro = {}): Promise<Proces
     return loadFromDatabase(filtro);
 }
 
-/** Filtra por período (YYYY-MM-DD, inclusivo). Sem filtro → retorna tudo. */
-function filtrarPorPeriodo(data: any[], dateStart?: string, dateEnd?: string): any[] {
-    if (!dateStart && !dateEnd) return data;
-    return data.filter(r =>
-        (!dateStart || r.data >= dateStart) && (!dateEnd || r.data <= dateEnd));
-}
-
-export async function getRotaCoachingData(dateStart?: string, dateEnd?: string): Promise<any[]> {
-    const now = Date.now();
-
-    if (cachedRotaCoaching && now - lastRotaCacheTime < ROTA_CACHE_DURATION_MS) {
-        console.log("[Cache] Usando dados Rota Coaching em cache");
-        return filtrarPorPeriodo(cachedRotaCoaching, dateStart, dateEnd);
-    }
-
-    if (process.env.DATABASE_URL) {
-        console.log("[Cache] Carregando Rota Coaching do PostgreSQL...");
-        try {
-            const data = await loadRotaCoachingFromDatabase();
-            cachedRotaCoaching = data;
-            lastRotaCacheTime = now;
-            console.log(`[Cache] ✓ ${data.length} rota coaching do banco`);
-            return filtrarPorPeriodo(data, dateStart, dateEnd);
-        } catch (error) {
-            console.error("[Cache] Erro ao carregar Rota Coaching do banco:", error);
-            if (cachedRotaCoaching) return filtrarPorPeriodo(cachedRotaCoaching, dateStart, dateEnd);
-            throw error;
-        }
-    }
-
-    console.log("[Cache] Carregando rota_coaching_all.json do disco...");
-    try {
-        const filePath = process.env.COACHING_DATA_PATH
-            ?? path.join(process.cwd(), "client", "public", "rota_coaching_all.json");
-        const rawContent = fs.readFileSync(filePath, "utf-8");
-        const data = JSON.parse(rawContent);
-        cachedRotaCoaching = data;
-        lastRotaCacheTime = now;
-        console.log(`[Cache] ✓ ${data.length} rota coaching do arquivo`);
-        return filtrarPorPeriodo(data, dateStart, dateEnd);
-    } catch (error) {
-        console.error("[Cache] Erro ao carregar rota coaching:", error);
-        if (cachedRotaCoaching) {
-            console.log("[Cache] Usando cache expirado como fallback");
-            return filtrarPorPeriodo(cachedRotaCoaching, dateStart, dateEnd);
-        }
-        throw error;
-    }
-}
-
 /** Força nova leitura do arquivo na próxima chamada. */
 export function invalidarCache(): void {
     cachedVisitas = null;
     cachedFileMtime = 0;
     loadingPromise = null;
-    cachedRotaCoaching = null;
-    lastRotaCacheTime = 0;
     console.log("[Cache] Cache invalidado");
 }
 

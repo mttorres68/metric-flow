@@ -20,7 +20,7 @@ import { useColumnVisibility } from "./lib/hooks/useColumnVisibility";
 import { useFiltroPersistido } from "./lib/hooks/useFiltroPersistido";
 import { useAnalisesRevenda } from "./lib/hooks/useAnalisesRevenda";
 
-import { SCROLL_TO_REVENDA_KEY, REVENDA_COACHING_MAP } from "./lib/constants";
+import { SCROLL_TO_REVENDA_KEY } from "./lib/constants";
 import { pct } from "./lib/formatters";
 import { buildMensagensHTML } from "./lib/mensagens";
 import type { AcaoTipo, AcaoVendState } from "./lib/types";
@@ -146,19 +146,6 @@ export default function Analise() {
         return { revendasOrdenadas: Object.keys(groups).sort(), groupedData: groups };
     }, [sorted]);
 
-    const getAnaliseGAs = useCallback((revenda: string): string => {
-        try {
-            const stored: Record<string, string> = JSON.parse(localStorage.getItem("metricflow:analises-ga") || "{}");
-            const storedLower = Object.fromEntries(Object.entries(stored).map(([k, v]) => [k.toLowerCase(), v]));
-            const nomeCoaching = REVENDA_COACHING_MAP[revenda.toLowerCase()];
-            for (const nome of nomeCoaching ? [nomeCoaching, revenda] : [revenda]) {
-                const val = storedLower[`${nome.toLowerCase()}__${filtros.dataInicio}`];
-                if (val) return val;
-            }
-            return "";
-        } catch { return ""; }
-    }, [filtros.dataInicio]);
-
     const downloadPDF = useCallback(async (revenda?: string) => {
         const chave = revenda ?? "__all__";
         setDownloadingPDF(chave);
@@ -166,13 +153,13 @@ export default function Analise() {
             const data = filtros.dataInicio;
             if (!data) { toast.error("Selecione uma data primeiro."); return; }
 
-            const analisesPayload: Record<string, { vendedores: string; gas: string }> = {};
+            const analisesPayload: Record<string, { vendedores: string }> = {};
             if (revenda) {
-                analisesPayload[revenda] = { vendedores: getAnalise(revenda), gas: getAnaliseGAs(revenda) };
+                analisesPayload[revenda] = { vendedores: getAnalise(revenda) };
             } else {
                 const todasAnalises = analisesDoPeríodo();
                 revendasOrdenadas.forEach(rev => {
-                    analisesPayload[rev] = { vendedores: todasAnalises[rev] ?? "", gas: getAnaliseGAs(rev) };
+                    analisesPayload[rev] = { vendedores: todasAnalises[rev] ?? "" };
                 });
             }
 
@@ -202,7 +189,7 @@ export default function Analise() {
         } finally {
             setDownloadingPDF(null);
         }
-    }, [filtros.dataInicio, getAnalise, getAnaliseGAs, analisesDoPeríodo, revendasOrdenadas]);
+    }, [filtros.dataInicio, getAnalise, analisesDoPeríodo, revendasOrdenadas]);
 
     const downloadPDFUnificado = useCallback(async () => {
         setDownloadingUnified(true);
@@ -211,9 +198,9 @@ export default function Analise() {
             if (!data) { toast.error("Selecione uma data primeiro."); return; }
 
             const todasAnalises = analisesDoPeríodo();
-            const analisesPayload: Record<string, { vendedores: string; gas: string }> = {};
+            const analisesPayload: Record<string, { vendedores: string }> = {};
             revendasOrdenadas.forEach(rev => {
-                analisesPayload[rev] = { vendedores: todasAnalises[rev] ?? "", gas: getAnaliseGAs(rev) };
+                analisesPayload[rev] = { vendedores: todasAnalises[rev] ?? "" };
             });
 
             const resp = await fetch("/api/relatorio/gerar-unificado", {
@@ -242,7 +229,7 @@ export default function Analise() {
         } finally {
             setDownloadingUnified(false);
         }
-    }, [filtros.dataInicio, analisesDoPeríodo, getAnaliseGAs, revendasOrdenadas]);
+    }, [filtros.dataInicio, analisesDoPeríodo, revendasOrdenadas]);
 
     function toggleSort(column: string) {
         if (sortBy === column) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -474,7 +461,6 @@ export default function Analise() {
                     revendasOrdenadas={revendasOrdenadas}
                     data={filtros.dataInicio || ""}
                     getAnalise={getAnalise}
-                    getAnaliseGAs={getAnaliseGAs}
                     onClose={() => setWaModalOpen(false)}
                 />
             )}

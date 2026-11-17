@@ -1,9 +1,9 @@
 /**
  * MetricFlow — PDF Report Service
  *
- * Gera relatórios em PDF por revenda com duas páginas:
+ * Gera relatórios em PDF por revenda:
  *   - Página 1: tabela de vendedores (mesmo padrão do Word) + análise do gestor
- *   - Página 2: tabela de GAs / Rota Coaching + análise do gestor
+ *   - Página 2: clientes visitados fora do raio
  *
  * Usa @react-pdf/renderer v4 (server-side rendering, sem necessidade de browser).
  */
@@ -43,27 +43,6 @@ export interface VendedorRow {
   relampDenom: number;
 }
 
-export interface CoachingRecord {
-  gaId: string;
-  ga: string;
-  atividade?: string;
-  codVendedor?: string;
-  status: string;
-  pdvsProg: number;
-  pdvsVis: number;
-  gaVis: number;
-  conformidade_pct: number;
-}
-
-export interface CoachingKPIs {
-  ok: number;
-  parcial: number;
-  nok: number;
-  total: number;
-  taxa: number;
-  registros: CoachingRecord[];
-}
-
 export interface ClienteForaRaioItem {
   cliente: string;
   codCliente: string;
@@ -84,9 +63,7 @@ export interface PDFReportData {
   revenda: string;
   data: string;
   vendedoresRows: VendedorRow[];
-  coachingKPIs: CoachingKPIs;
   analiseVendedores: string; // HTML — será convertido para texto plano
-  analiseGAs: string;        // HTML — será convertido para texto plano
   clientesForaRaio: ClienteForaRaioSetor[];
 }
 
@@ -103,11 +80,8 @@ const TEXTO_BRANCO = "#FFFFFF";
 const MUTED = "#94a3b8";
 const BORDER_COLOR = "#D0D0D0";
 
-// Cores de status GA
-const COR_OK = "#16a34a";
+// Cor de destaque (PDF de Recorrência)
 const COR_PARCIAL = "#d97706";
-const COR_NOK = "#dc2626";
-const COR_NA = "#94a3b8";
 
 // ---------------------------------------------------------------------------
 // Larguras das colunas — Vendedores (total ≈ 539pt para A4 com padding 28)
@@ -133,18 +107,6 @@ const CF = {
   tempo: 43,
   dist: 65,
   pedido: 80,
-} as const;
-
-// Larguras das colunas — GAs
-const CG = {
-  ga: 45,
-  atividade: 90,
-  codVend: 48,
-  status: 68,
-  pdvProg: 52,
-  gaVis: 50,
-  pdvVis: 50,
-  conf: 76,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -409,25 +371,6 @@ function mediaHora(rows: VendedorRow[], campo: "hrInicio" | "hrFim"): string {
   return `${String(Math.floor(media / 60)).padStart(2, "0")}:${String(media % 60).padStart(2, "0")}`;
 }
 
-function statusColor(s: string): string {
-  switch (s?.toLowerCase()) {
-    case "ok": return COR_OK;
-    case "partial": case "parcial": return COR_PARCIAL;
-    case "nok": return COR_NOK;
-    default: return COR_NA;
-  }
-}
-
-function statusLabel(s: string): string {
-  switch (s?.toLowerCase()) {
-    case "ok": return "Completo";
-    case "partial": case "parcial": return "Parcial";
-    case "nok": return "Não Realizado";
-    case "na": return "N/A";
-    default: return s ?? "—";
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Rodapé fixo
 // ---------------------------------------------------------------------------
@@ -667,106 +610,7 @@ const PaginaClientesForaRaio = ({ d }: { d: PDFReportData }) => {
 };
 
 // ---------------------------------------------------------------------------
-// Página 3 — GAs / Rota Coaching
-// ---------------------------------------------------------------------------
-
-const PaginaGAs = ({ d }: { d: PDFReportData }) => {
-  const { coachingKPIs: ck } = d;
-  const analise = stripHtml(d.analiseGAs);
-
-  // Linha Geral GAs
-  const somaConf = ck.registros.reduce((a, r) => a + (r.conformidade_pct ?? 0), 0);
-  const percConfG = ck.registros.length > 0 ? somaConf / ck.registros.length : 0;
-  const somaPdvProg = ck.registros.reduce((a, r) => a + r.pdvsProg, 0);
-  const somaGaVis = ck.registros.reduce((a, r) => a + r.gaVis, 0);
-  const somaPdvVis = ck.registros.reduce((a, r) => a + r.pdvsVis, 0);
-
-  return (
-    <Page size="A4" style={s.page}>
-      <View style={s.pageHeader}>
-        <Text style={s.pageHeaderTitle}>Relatório de Rota Coaching — GAs</Text>
-        <Text style={s.pageHeaderMeta}>
-          Revenda: {d.revenda} · Data: {fmtDate(d.data)}
-        </Text>
-      </View>
-
-      <View style={s.content}>
-        {/* Tabela de GAs */}
-        <Text style={s.sectionTitle}>Detalhamento por GA</Text>
-
-        {ck.registros.length > 0 ? (
-          <View>
-            {/* Header */}
-            <View style={s.tblHeaderRow}>
-              <Text style={[s.th, { width: CG.ga }]}>GA</Text>
-              <Text style={[s.th, { width: CG.atividade, textAlign: "left" }]}>Atividade</Text>
-              <Text style={[s.th, { width: CG.codVend }]}>Cod.{"\n"}Vendedor</Text>
-              <Text style={[s.th, { width: CG.status }]}>Status</Text>
-              <Text style={[s.th, { width: CG.pdvProg }]}>PDVs Carteira</Text>
-              <Text style={[s.th, { width: CG.gaVis }]}>Vis. GA</Text>
-              <Text style={[s.th, { width: CG.pdvVis }]}>Vis. Vendedor</Text>
-              <Text style={[s.th, { width: CG.conf }]}>Conformidade</Text>
-            </View>
-
-            {/* Linhas de GAs */}
-            {ck.registros.map((r, i) => {
-              const rowStyle = i % 2 === 1 ? s.tblRowAlt : s.tblRow;
-              return (
-                <View key={i} style={rowStyle}>
-                  <Text style={[s.td, { width: CG.ga }]}>{r.gaId || r.ga}</Text>
-                  <Text style={[s.td, { width: CG.atividade, textAlign: "left" }]}>{r.atividade || "—"}</Text>
-                  <Text style={[s.td, { width: CG.codVend }]}>{r.codVendedor || "—"}</Text>
-                  <Text style={[s.td, { width: CG.status, color: statusColor(r.status) }]}>
-                    {statusLabel(r.status)}
-                  </Text>
-                  <Text style={[s.td, { width: CG.pdvProg }]}>{r.pdvsProg ?? "—"}</Text>
-                  <Text style={[s.td, { width: CG.gaVis }]}>{r.gaVis ?? "—"}</Text>
-                  <Text style={[s.td, { width: CG.pdvVis }]}>{r.pdvsVis ?? "—"}</Text>
-
-                  // SE MENOR QUE 80% FUNDO AMARELO TEXTO BRANCO
-                  // SE MAIOR OU IGUAL A 80% FUNDO VERDE TEXTO BRANCO
-                  // ESTÁ FICANDO VERDE COM 52% DE CONFORMIDADE E NÃO PODE, SOMENTE ACIMA OU IGUAL A 80%
-                  <Text style={[s.td, { width: CG.conf, backgroundColor: r.conformidade_pct < 80 ? "#ff0" : "#0f0", color: "#1f1f1f", fontWeight: "bold" }]}>
-                    {r.conformidade_pct != null ? fmtPct(r.conformidade_pct, 1) : "—"}
-                  </Text>
-                </View>
-              );
-            })}
-
-            {/* Linha Geral */}
-            <View style={s.tblResumoRow}>
-              <Text style={[s.tdResumo, { width: CG.ga }]}>Geral</Text>
-              <Text style={[s.tdResumo, { width: CG.atividade }]}>—</Text>
-              <Text style={[s.tdResumo, { width: CG.codVend }]}>—</Text>
-              <Text style={[s.tdResumo, { width: CG.status }]}>
-                —
-              </Text>
-              <Text style={[s.tdResumo, { width: CG.pdvProg }]}>{somaPdvProg}</Text>
-              <Text style={[s.tdResumo, { width: CG.gaVis }]}>{somaGaVis}</Text>
-              <Text style={[s.tdResumo, { width: CG.pdvVis }]}>{somaPdvVis}</Text>
-              {/* <Text style={[s.tdResumo, { width: CG.conf }]}>{fmtPct(percConfG, 1)}</Text> */}
-            </View>
-          </View>
-        ) : (
-          <View style={s.emptyBox}>
-            <Text style={s.emptyText}>Sem dados de rota coaching para esta revenda / data.</Text>
-          </View>
-        )}
-
-        {/* Análise do gestor */}
-        <Text style={s.sectionTitle}>Análise — GAs</Text>
-        <View style={s.analysisBox}>
-          {analise ? renderAnalise(analise) : <Text style={s.analysisEmpty}></Text>}
-        </View>
-      </View>
-
-      <FooterBar data={d.data} revenda={d.revenda} />
-    </Page>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Documento completo (2 páginas)
+// Documento completo
 // ---------------------------------------------------------------------------
 
 const RelatorioRevenda = ({ d }: { d: PDFReportData }) => (
@@ -777,7 +621,6 @@ const RelatorioRevenda = ({ d }: { d: PDFReportData }) => (
   >
     <PaginaVendedores d={d} />
     <PaginaClientesForaRaio d={d} />
-    <PaginaGAs d={d} />
   </Document>
 );
 
